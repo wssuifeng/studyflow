@@ -1,0 +1,6 @@
+{% extends "base.html" %}
+{% block title %}文档索引 · StudyFlow{% endblock %}
+{% block content %}
+<header class="page-header"><div><span class="eyebrow">DOCUMENT INDEX</span><h1>文档不是入口，是证据库。</h1><p class="lede">课程页面负责学习，原始 Markdown 负责追溯。文件状态异常会在这里被明确指出。</p></div><a href="/today" class="button button-secondary">回到今日 →</a></header>
+<section class="document-list">{% for document in documents %}<div class="document-row"><div><span class="eyebrow">{{ document.document_type }}</span><h3>{{ document.relative_path }}</h3><small>{{ document.file_size }} bytes · {{ document.status }}</small></div><span class="state-badge state-{{ document.status|lower }}">{{ document.status }}</span></div>{% else %}<div class="empty-card">还没有索引记录。课程或 CLI 检查文档后会出现在这里。</div>{% endfor %}</section>
+{% endblock %}

@@ -1,0 +1,3 @@
+interface:
+  display_name: "StudyFlow Agent"
+  short_description: "Operate StudyFlow safely through its Agent-neutral CLI"

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}我的计划 · StudyFlow{% endblock %}
+{% block content %}
+<header class="page-header plans-header">
+  <div><div class="eyebrow">STUDYFLOW / PLANS</div><h1>我的计划</h1><p class="lede">从这里选择一条计划，再进入它的课程顺序和进度详情。首页只负责告诉你今天该做什么。</p></div>
+  <div class="header-actions"><a class="button button-primary" href="/console">回到学习控制台 <span>↗</span></a></div>
+</header>
+<section class="plan-grid">
+{% for plan in plans %}
+  <a class="plan-card" href="/plans/{{ plan.id }}">
+    <div class="plan-card-top"><span class="plan-index">{{ "%02d"|format(loop.index) }}</span><span class="state-chip">{{ plan.status }}</span></div>
+    <h2>{{ plan.name }}</h2><p>{{ plan.course_total }} 门课程 · 今日 {{ plan.today_course_count }} 门</p>
+    <div class="plan-progress"><div><span>完成课程</span><strong>{{ plan.completed_courses }}/{{ plan.course_total }}</strong></div><div class="progress-track"><i style="width: {{ plan.progress_percent }}%"></i></div></div>
+    <div class="plan-card-footer"><span>{% if plan.current_course %}当前：{{ plan.current_course.title }}{% else %}计划已完成或暂无课程{% endif %}</span><b>查看详情 →</b></div>
+  </a>
+{% else %}<div class="empty-card">还没有可用计划。请让 Agent 通过 CLI 创建计划并导入课程。</div>{% endfor %}
+</section>
+{% endblock %}

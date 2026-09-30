@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block title %}StudyFlow 学习控制台 · {{ data.date }}{% endblock %}
+{% block content %}
+<header class="console-header">
+  <div><div class="eyebrow">STUDYFLOW / {{ data.date }}</div><h1>今天，推进一格。</h1><p class="lede">今日学习只保留一个入口：先看当前课程，再按顺序完成课程中的多个知识点和练习。</p></div>
+  <div class="header-actions"><span class="live-pill"><i></i>本地工作区在线</span><a class="button button-ghost" href="/plans">查看我的计划 <span>↗</span></a></div>
+</header>
+<section class="today-learning panel-surface">
+  <div class="today-learning-head"><div><div class="eyebrow">TODAY LEARNING</div><h2>今日学习</h2><p>课程列表已经包含当前课程，不再重复展示。</p></div><div class="today-summary"><strong>{{ data.courses|length }}</strong><span>门计划课程</span></div></div>
+  <div class="today-course-list">
+  {% for course in data.courses %}
+    <a class="today-course {% if data.current_course and course.id == data.current_course.id %}is-current{% endif %}" href="/course/{{ course.id }}">
+      <div class="today-course-index">{{ "%02d"|format(course.plan_sequence or loop.index) }}</div>
+      <div class="today-course-body"><div class="today-course-top"><span>{{ course.plan_line.name if course.plan_line else '个人学习' }}</span>{% if course.schedule_item and course.schedule_item.start_time %}<time>{{ course.schedule_item.start_time.strftime('%H:%M') }}{% if course.schedule_item.end_time %}—{{ course.schedule_item.end_time.strftime('%H:%M') }}{% endif %}</time>{% else %}<time>计划顺序 {{ course.plan_sequence or loop.index }}</time>{% endif %}</div><h3>{{ course.title }}</h3><p>{{ course.summary or '进入课程查看知识点。' }}</p><div class="today-course-bottom"><span>{{ course.knowledge_completed }}/{{ course.knowledge_total }} 个知识点 · {{ course.exercise_completed }}/{{ course.exercise_total }} 个练习</span><strong>{{ course.progress_percent }}%</strong></div><div class="mini-progress"><i style="width: {{ course.progress_percent }}%"></i></div></div><span class="today-course-arrow">{% if data.current_course and course.id == data.current_course.id %}继续 →{% else %}进入 →{% endif %}</span>
+    </a>
+  {% else %}<div class="empty-card">今天还没有课程。请让 Agent 通过 CLI 创建计划课程，控制台会自动显示。</div>{% endfor %}
+  </div>
+</section>
+<section class="console-two-column">
+  <div><div class="section-head compact"><div><div class="eyebrow">TODAY TASKS</div><h2>今日任务</h2></div><span class="section-count">{{ data.tasks|length }} 项</span></div><div class="timeline">{% for task in data.tasks %}<div class="timeline-item"><span class="timeline-dot {% if task.status == 'DONE' %}done{% endif %}"></span><div><strong>{{ task.title }}</strong><small>{{ task.status }} · {{ task.task_kind }}{% if task.plan_line %} · {{ task.plan_line.name }}{% endif %}</small></div></div>{% else %}<div class="empty-card">没有排入今日的任务。</div>{% endfor %}</div></div>
+  <div><div class="section-head compact"><div><div class="eyebrow">AGENT QUEUE</div><h2>需要处理</h2></div><span class="section-count">{{ data.pending|length }} 项</span></div><div class="agent-queue"><div class="queue-lane queue-review"><span class="queue-count">{{ data.queue_counts.waiting_review }}</span><div><strong>等待批改</strong><small>外部 Agent 读取原始作答</small></div></div><div class="queue-lane queue-revise"><span class="queue-count">{{ data.queue_counts.needs_revision }}</span><div><strong>需要修正</strong><small>用户创建不可覆盖的修正版</small></div></div><div class="queue-lane queue-retest"><span class="queue-count">{{ data.queue_counts.waiting_retest }}</span><div><strong>等待复测</strong><small>用户完成复测后再次进入批改</small></div></div></div></div>
+</section>
+<section class="section-head compact"><div><div class="eyebrow">NEXT ACTION</div><h2>下一步</h2></div></section>
+<section class="queue-detail-list">{% for item in data.pending %}<a href="/submission/{{ item.id }}" class="queue-detail"><span class="queue-status status-{{ item.status|lower }}">{{ item.queue_label }}</span><strong>{{ item.exercise.title }}</strong><small>{{ item.exercise.lesson.course.title }} · {{ item.next_action or '查看详情' }}</small></a>{% else %}<div class="empty-card">作答队列已清空。继续当前课程即可。</div>{% endfor %}</section>
+{% endblock %}

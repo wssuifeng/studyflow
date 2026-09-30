@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}StudyFlow{% endblock %}</title>
+  <link rel="stylesheet" href="{{ url_for('static', path='app.css') }}">
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <a class="brand" href="/console"><span class="brand-mark">S</span><span><strong>StudyFlow</strong><small>LEARNING CONTROL</small></span></a>
+      <nav class="nav-list" aria-label="主导航">
+        <a href="/console" class="nav-item {% if request.url.path in ['/console', '/today'] %}is-active{% endif %}"><span>01</span><b>学习控制台</b><small>Console</small></a>
+        <a href="/plans" class="nav-item {% if request.url.path.startswith('/plans') %}is-active{% endif %}"><span>02</span><b>我的计划</b><small>Plans</small></a>
+        <a href="/documents" class="nav-item {% if request.url.path == '/documents' %}is-active{% endif %}"><span>03</span><b>文档索引</b><small>Library</small></a>
+      </nav>
+      <div class="sidebar-status"><span class="status-dot"></span><div><strong>LOCAL MODE</strong><small>本地数据已保存</small></div></div>
+      <div class="sidebar-note"><span class="eyebrow">AGENT READY</span><p>课程、批改与队列由外部 Agent 通过统一 CLI 协作；你只需专注学习和作答。</p></div>
+    </aside>
+    <main class="main-content">
+      <div class="feedback-region" aria-live="polite" aria-atomic="true">{% if message %}<div class="flash"><span>●</span>{{ message }}</div>{% endif %}</div>
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+  <script>
+    document.addEventListener('submit', function(event) {
+      const button = event.target.querySelector('button[type="submit"]');
+      if (button) { button.dataset.originalText = button.textContent; button.textContent = '处理中…'; button.classList.add('is-loading'); button.disabled = true; }
+    });
+  </script>
+</body>
+</html>

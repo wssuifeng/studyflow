@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}{{ course.title }} · StudyFlow{% endblock %}
+{% block content %}
+<header class="page-header course-header"><div><a class="back-link" href="/console">← 返回学习控制台</a><div class="eyebrow">COURSE {% if course.plan_sequence %}{{ course.plan_sequence }}/{{ course.plan_total }}{% endif %} · VERSION {{ course.version }}</div><h1>{{ course.title }}</h1><p class="lede">{{ course.summary }}</p><div class="course-progress-note"><strong>{{ course.knowledge_completed }}/{{ course.knowledge_total }}</strong><span>知识点完成 · {{ course.exercise_total }} 个练习贯穿本课程</span></div><div class="meta-row"><span>{{ course.plan_line.name if course.plan_line else "个人学习" }}</span><span>{{ course.subject or "通用学习" }}</span><span>{{ course.content_type }}</span><span>{{ course.knowledge_completed }}/{{ course.knowledge_total }} 知识点完成</span></div></div><div class="course-stamp"><strong>{{ course.progress_percent }}%</strong><small>课程进度</small></div></header>
+<div class="lesson-stack">
+{% for lesson in course.lessons %}
+<article class="lesson-card {% if lesson.progress_state == 'DONE' %}is-done{% endif %}">
+  <div class="lesson-number">{{ "%02d"|format(loop.index) }}</div>
+  <div class="lesson-body">
+    <div class="lesson-top"><div><div class="eyebrow">KNOWLEDGE POINT {{ loop.index }}/{{ course.lessons|length }}</div><h2>{{ lesson.title }}</h2></div><span class="state-chip">{% if lesson.progress_state == 'DONE' %}已完成{% else %}待学习{% endif %}</span></div>
+    <p>{{ lesson.summary }}</p>
+    <details class="source-details"><summary>查看课程文档</summary><div class="lesson-copy"><a class="text-link" href="/documents">查看原始 Markdown →</a>{% if lesson.document_status == "PRESENT" %}<div class="markdown-rendered">{{ lesson.rendered_html|safe }}</div>{% else %}<p class="document-warning">正文文件当前不可用：{{ lesson.document_status }}</p>{% endif %}</div></details>
+    {% for exercise in lesson.exercises %}<form class="exercise-card" method="post" action="/exercises/{{ exercise.id }}/submit"><div class="exercise-head"><span class="eyebrow">{{ exercise.exercise_type }} · PRACTICE {{ loop.index }}</span><h3>{{ exercise.title }}</h3></div><p class="prompt">{{ exercise.prompt }}</p><div class="requirements"><strong>验收要点</strong><span>{{ exercise.requirements }}</span></div><label for="answer-{{ exercise.id }}">我的回答</label><textarea id="answer-{{ exercise.id }}" name="answer_text" rows="8" placeholder="写下你自己的理解，再提交给外部 Agent 批改。" required></textarea><button class="button button-primary" type="submit">保存并提交 <span>↗</span></button></form>{% endfor %}
+  </div>
+</article>
+{% else %}<div class="empty-card">这门课程还没有知识点。</div>{% endfor %}
+</div>
+{% endblock %}

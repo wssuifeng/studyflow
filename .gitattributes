@@ -1,0 +1,4 @@
+# Normalize source text in Git; retain native binary icon bytes.
+* text=auto eol=lf
+*.png binary
+*.ico binary

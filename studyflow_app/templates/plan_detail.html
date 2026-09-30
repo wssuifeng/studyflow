@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ plan.name }} · 我的计划 · StudyFlow{% endblock %}
+{% block content %}
+<header class="page-header plan-detail-header">
+  <div><a class="back-link" href="/plans">← 返回我的计划</a><div class="eyebrow">PLAN / {{ "%02d"|format(plan.priority) }} · {{ plan.status }}</div><h1>{{ plan.name }}</h1><p class="lede">按顺序推进课程；课程内部再按知识点学习和提交练习。这里是计划详情，不再把完整轨道塞回首页。</p></div>
+  <div class="plan-detail-score"><strong>{{ plan.progress_percent }}%</strong><small>课程完成率</small></div>
+</header>
+<section class="plan-stats"><div><span>课程总数</span><strong>{{ plan.course_total }}</strong></div><div><span>已完成</span><strong>{{ plan.completed_courses }}</strong></div><div><span>今日课程</span><strong>{{ plan.today_course_count }}</strong></div><div><span>当前课程</span><strong>{% if plan.current_course %}{{ plan.current_course.plan_sequence }}/{{ plan.course_total }}{% else %}—{% endif %}</strong></div></section>
+<section class="plan-track">
+  <div class="section-head compact"><div><div class="eyebrow">COURSE SEQUENCE</div><h2>课程顺序</h2></div><span class="section-count">{{ plan.course_total }} 门</span></div>
+  <div class="sequence-list">
+  {% for course in plan.courses %}
+    <article class="sequence-item {% if plan.current_course and course.id == plan.current_course.id %}is-current{% endif %} {% if course.progress_percent >= 100 %}is-done{% endif %}">
+      <div class="sequence-marker">{{ "%02d"|format(course.plan_sequence or loop.index) }}</div>
+      <div class="sequence-content"><div class="sequence-top"><span>{{ course.subject or '通用学习' }}</span><span>{% if course.progress_percent >= 100 %}已完成{% elif plan.current_course and course.id == plan.current_course.id %}当前推进{% else %}待学习{% endif %}</span></div><h3>{{ course.title }}</h3><p>{{ course.summary }}</p><div class="sequence-meta"><span>{{ course.knowledge_completed }}/{{ course.knowledge_total }} 个知识点</span><span>{{ course.exercise_completed }}/{{ course.exercise_total }} 个练习</span><a class="text-link" href="/course/{{ course.id }}">进入课程 ↗</a></div><div class="mini-progress"><i style="width: {{ course.progress_percent }}%"></i></div></div>
+    </article>
+  {% else %}<div class="empty-card">计划中还没有课程。</div>{% endfor %}
+  </div>
+</section>
+{% endblock %}
