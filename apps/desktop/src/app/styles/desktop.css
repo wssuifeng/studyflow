@@ -1,0 +1,33 @@
+.app-shell { grid-template-columns:228px minmax(0,1fr); }
+.sidebar { background:#edf0f5; color:#647187; padding:31px 18px; border:0; }
+.brand strong { color:#26344a; font-size:21px; }
+.brand-mark { width:34px; height:38px; border-radius:10px; font-size:23px; background:#7664e3; box-shadow:none; }
+.brand span { color:#748197; }
+.nav-caption { color:#8c97a8; margin:39px 14px 17px; }
+.nav-item { color:#66738a; }
+.nav-item:hover { background:#e2e6ee; color:#26344a; }
+.nav-item.active { background:#e5e1f7; color:#5946c2; box-shadow:inset 3px 0 #8371e0; }
+.sidebar-bottom .small { color:#8590a2; }
+.connection.connected i { background:#349b87; box-shadow:none; }
+.main-content { padding:29px clamp(24px,4vw,66px) 20px; margin:0 auto; }
+.topbar { margin-bottom:27px; }
+.topbar h1 { font-size:25px; font-weight:650; }
+.topbar .secondary-button { padding:10px 14px; font-size:12px; background:transparent; }
+.compact-topbar { margin-bottom:17px; }
+.compact-topbar h1 { font-size:13px; font-weight:550; color:var(--muted); letter-spacing:0; }
+.compact-topbar .eyebrow { display:none; }
+.app-footer { margin-top:30px; }
+.window-titlebar { position:fixed; z-index:90; inset:0 0 auto; height:44px; display:flex; align-items:center; background:#f6f7fa; user-select:none; color:#66738a; }
+.window-titlebar.unfocused { color:#969fad; }
+.window-brand { display:flex; align-items:center; gap:9px; font-size:12px; font-weight:650; min-width:228px; height:100%; padding:0 24px; background:#edf0f5; }
+.window-mark { display:grid; place-items:center; width:21px; height:21px; border-radius:6px; background:#7664e3; color:white; font-size:13px; }
+.window-context { font-size:11px; margin-left:24px; opacity:.8; }
+.window-drag-space { flex:1; height:100%; }
+.window-controls { height:100%; display:flex; }
+.window-controls button { width:47px; height:100%; border-radius:0; background:transparent; display:grid; place-items:center; color:#627086; }
+.window-controls button:hover { background:#e6eaf1; }
+.window-controls button:active:not(:disabled) { transform:none; background:#dbe1eb; }
+.window-controls button.window-close:hover { background:#dc4d56; color:#fff; }
+.window-controls svg { width:15px; height:15px; stroke:currentColor; stroke-width:1.25; fill:none; }
+.desktop-shell { margin-top:44px; min-height:calc(100vh - 44px); }
+.desktop-shell .sidebar { top:44px; height:calc(100vh - 44px); }

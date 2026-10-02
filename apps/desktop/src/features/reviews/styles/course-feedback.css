@@ -1,0 +1,8 @@
+.course-feedback-list { display:grid; gap:18px; }
+.course-feedback-card { border:1px solid #e2e6ee; border-radius:12px; background:#fff; padding:24px 26px 13px; }
+.course-feedback-card>header { display:flex; align-items:center; justify-content:space-between; gap:20px; margin-bottom:18px; }
+.course-feedback-card h3 { font-size:18px; margin:5px 0 8px; }
+.course-feedback-card .primary-button { font-size:12px; padding:11px 15px; }
+.feedback-question-list { display:grid; }
+.feedback-question-list>div { display:flex; align-items:center; gap:12px; padding:14px 0; border-top:1px solid #eef0f5; font-size:12px; }
+.feedback-question-list small { margin-left:auto; color:#929aac; font-size:10px; }

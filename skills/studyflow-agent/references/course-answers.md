@@ -42,3 +42,8 @@ studyflow course answers submit --id <course-id> --file <answers.json> --idempot
 - Successful submit returns `WAITING_REVIEW`. Follow-ups preserve parents and use `REVISION`/`RETEST`. CLI source is `AGENT_CLI`, not learner UI `USER_WEB`.
 
 Re-read `course answers get` and `assignment queue`; report exact IDs, question states and next action. Reviews still use `review write` per queued leaf. A product-test lifecycle is not evidence of learner mastery.
+
+
+## Fixed local study context
+
+When `course_study_get` is advertised, use the queued `study_session_id` with `course study-detail --study-id <id> --format json` for the frozen question set. `course detail` remains the live source and may include changed/new questions not in the current round. Pass `study_session_id` in authorized answer JSON. Do not substitute live material for `submission get.study_context`; missing historical context is explicitly `LEGACY_UNVERSIONED`. The learner uses knowledge and questions in one UI, can skip while saving drafts, and formally submits at course end; no per-knowledge-point formal submission is required.

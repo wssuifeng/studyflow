@@ -1,4 +1,4 @@
-# StudyFlow Agent CLI Contract · Skill v1.5 (app 1.3.0 / protocol 1.2)
+# StudyFlow Agent CLI Contract · Skill v1.6 (app 1.3.0 / protocol 1.2)
 
 ## CLI versus desktop Engine boundary
 
@@ -9,7 +9,7 @@ The desktop Vue frontend uses a separate JSON-RPC protocol over the Python Engin
 The preferred interface is an installed `studyflow` executable. For this repository's development checkout, invoke:
 
 ```powershell
-.\studyflow_app\.venv\Scripts\python.exe -m studyflow <command>
+.\packages\core\.venv\Scripts\python.exe -m studyflow <command>
 ```
 
 Use `--format json` for advertised automation commands. `init` has text-only output; do not append an unsupported flag or run init on healthy existing data. Verify initialization with JSON doctor. Human-readable text is not a machine contract.
@@ -149,3 +149,8 @@ Course detail returns ordered `lessons`, separate reading `progress` and exercis
 ## Whole-course answers (app 1.3.0)
 
 CLI `course answers get/save/submit` correspond to Engine `course.answers.get`, `course.answers.draft.save`, `course.answers.submit`; they are different syntaxes. See [batch contract](course-answers.md) for payload and retry rules. UI writes are course-level; review queues/history remain per exercise.
+
+
+## Study rounds (additive capability)
+
+`course study-open --id <id> --idempotency-key <key> [--new-version] --format json` returns `study` (id, revision, content_hash, progress_version, source_changed), frozen lessons and derived course status. `course study-detail --study-id <id> --format json` is read-only. Current course answer writes accept `study_session_id` inside the JSON object. Queue items include frozen `study_context` or explicit `LEGACY_UNVERSIONED`; `batches` reports course submission grouping and reviewed counts. Read available capabilities before using these methods on older installations.

@@ -1,0 +1,3 @@
+/* S5: one learning space, plan-level grouping and a real custom titlebar. */
+:root { --ink:#243145; --muted:#68768a; --line:#e1e6ef; --accent:#6553d8; background:#f6f7fa; color:var(--ink); }
+h4 { margin:0; }

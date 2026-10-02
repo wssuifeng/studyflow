@@ -1,0 +1,15 @@
+.markdown-body{font-size:14px;line-height:1.95;color:#455069;overflow-wrap:anywhere}
+.markdown-body p{margin:12px 0;line-height:1.95}
+.markdown-body h1{font-size:23px;margin:10px 0 22px}
+.markdown-body h2{font-size:20px;margin:29px 0 14px;padding-bottom:9px;border-bottom:1px solid #eceef4}
+.markdown-body h3{font-size:16px;margin:23px 0 12px}
+.markdown-body ul,.markdown-body ol{padding-left:22px;margin:14px 0}
+.markdown-body li{padding-left:3px;margin:6px 0}
+.markdown-body pre{padding:17px 21px;border-radius:10px;background:#f5f6fa;color:#596381;line-height:1.75;font-size:12px;margin:18px 0}
+.markdown-body code:not(pre code){background:#f0edf9;color:#8064bd;border-radius:4px;padding:2px 5px;font-size:.88em}
+.markdown-body blockquote{margin:18px 0;border-left:3px solid #bdb0ef;padding:1px 18px;background:#f8f7fd;color:#83769f}
+.markdown-body table{width:100%;border-collapse:collapse;font-size:12px;margin:19px 0}
+.markdown-body th,.markdown-body td{border:1px solid #e7eaf2;padding:9px 12px;text-align:left}
+.markdown-body th{background:#f7f8fb}
+.markdown-body img{max-width:100%}
+.lesson-body{max-height:60vh;min-height:260px;overflow-y:auto;padding-right:13px;scrollbar-width:thin;scrollbar-color:#d3cde7 transparent}

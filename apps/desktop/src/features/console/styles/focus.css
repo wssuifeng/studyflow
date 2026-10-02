@@ -1,0 +1,25 @@
+.focus-panel{position:relative;overflow:hidden;border-radius:22px;background:radial-gradient(ellipse at 88% 15%,#dee7ff 0%,transparent 65%),linear-gradient(120deg,#efeafb,#f3f0fa 62%,#e6f0f2);padding:36px 40px;box-shadow:var(--shadow);border:1px solid #e9e5f6;margin-bottom:31px}
+.focus-panel:after{content:'';position:absolute;width:250px;height:250px;border:1px solid #c2bbe544;border-radius:50%;right:-65px;top:70px;pointer-events:none}
+.focus-art{position:absolute;right:50px;top:22px;font-size:100px;color:#b3a9df55;transform:rotate(-15deg);pointer-events:none}
+.focus-panel>.eyebrow{margin-bottom:12px}
+.focus-panel>.muted{font-size:12px;color:#8777ab;margin-bottom:10px}
+.focus-panel h2{font-size:30px;max-width:80%;color:#322851;line-height:1.6}
+.focus-description{font-size:13px;color:#7d748e;margin-top:9px;max-width:75%}
+.focus-bottom{display:flex;align-items:center;gap:27px;margin-top:32px;position:relative;z-index:1}
+.focus-progress{width:170px;font-size:10px;color:#8b7fa6}
+.progress-track{height:5px;border-radius:5px;background:#e4e2ee;overflow:hidden}
+.progress-track i{display:block;height:100%;border-radius:5px;background:linear-gradient(90deg,#8e7ce8,#6c5cdc);transition:width .4s}
+.focus-progress .progress-track{margin-top:9px}
+.section-heading{display:flex;align-items:center;justify-content:space-between;gap:15px;margin:24px 0 17px}
+.section-heading h3{font-size:15px}
+.course-strip{display:grid;gap:10px}
+.course-row{display:flex;align-items:center;gap:20px;width:100%;background:white;border:1px solid var(--line);border-radius:13px;padding:17px 23px;text-align:left;box-shadow:0 3px 10px #18233302}
+.course-row:hover{border-color:#c8bef1;transform:translateY(-2px);box-shadow:var(--shadow)}
+.course-number{font-size:21px;font-weight:350;color:#b4bacc;min-width:25px}
+.course-row strong{font-size:13px}
+.course-row p{font-size:11px;color:var(--muted);margin-top:4px}
+.row-arrow{margin-left:auto;color:#aaa2c8;font-size:20px}
+.feedback-link{margin-top:24px;border-top:1px solid var(--line);padding:23px 2px;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.feedback-link strong{font-size:12px;color:#607088}
+.feedback-link p{font-size:11px;color:var(--muted);margin-top:5px}
+.feedback-link .text-button{font-size:12px}

@@ -2,7 +2,7 @@
 name: studyflow-agent
 description: Use the local StudyFlow CLI from any external Agent or script to discover the workspace, inspect current learning state, create or import courses, process review queues, and write lifecycle-safe feedback. Use when operating an explicit StudyFlow data workspace, including an installed desktop app-data workspace; do not use it for direct database access or unrelated project files.
 metadata:
-  version: "1.5.0"
+  version: "1.6.0"
 ---
 
 # StudyFlow Agent
@@ -22,15 +22,15 @@ Use this skill when an external Agent needs to operate StudyFlow. The CLI is Age
 ## Minimal discovery sequence
 
 1. Resolve the data workspace from the user's explicit path or the desktop's confirmed workspace. The installation directory is not the data workspace. An installed desktop normally uses `$env:APPDATA\local.studyflow.desktop`; a source checkout and a smoke workspace are separate roots. Set `STUDYFLOW_WORKSPACE` only in this process and verify the absolute `workspace.root` returned by the CLI before any write. Do not use `setx` or silently switch roots.
-2. Prefer an available `studyflow` CLI. MSI 1.3.0 includes desktop/Engine, not a standalone CLI, and does not add PATH. For a known source checkout:
+2. Prefer an available `studyflow` CLI. MSI 1.3.0 includes the desktop application and managed Engine, not a standalone CLI, and does not add PATH. For a known source checkout:
 
    ```powershell
    $env:STUDYFLOW_WORKSPACE = '<explicit-data-workspace>'
-   & '<source-checkout>\studyflow_app\.venv\Scripts\python.exe' -X utf8 -m studyflow <command>
+   & '<source-checkout>\packages\core\.venv\Scripts\python.exe' -X utf8 -m studyflow <command>
    ```
 
 3. Run `version`, `capabilities`, `doctor` and `today` with `--format json`. Verify zero exit status, valid JSON, `ok=true`, and the intended workspace. Discover commands rather than assuming version support.
-4. If `doctor.healthy` is false, stop writes and follow its `next_action`. `workspace.governance_ready=false` alone is not a failure: app-data can be healthy without project docs/control files. Never initialize/reset an existing workspace or copy a governance skeleton there to change that flag.
+4. Before writes, require both `doctor.healthy=true` and `workspace.writable=true`. A reachable/read-only database can still produce `healthy=true`; it is not write authorization. If either flag is false, stop writes and follow the diagnostic next action. Do not change ACLs, clear file protection, bypass the Agent sandbox, or silently switch data workspaces. `workspace.governance_ready=false` alone is not a failure: app-data can be healthy without project docs/control files. Never initialize/reset an existing workspace or copy a governance skeleton there to change that flag.
 5. Read project governance only if present and relevant. In an app-data workspace, use `today`, plan/course details, queue context and relevant documents via CLI. Do not ingest all content.
 
 The stable response envelope is in [CLI contract](references/cli-contract.md). Vue has a separate Engine protocol; `course.answers.submit` and other Engine method names are not shell commands. External Agents use only CLI commands advertised by `capabilities`.
@@ -130,3 +130,13 @@ Every completed operation report should include:
 - validation command and result.
 
 Read the supporting contract only when exact fields, exit behavior, or a command example is needed.
+
+
+### Frozen course rounds (core learning flow)
+
+- Discover support first. `course study-open --id <id> --idempotency-key <key> --format json` starts/resumes a local round; this is a write, not passive inspection. Do not start on behalf of a learner without authorization. `course study-detail --study-id <id> --format json` is read-only.
+- Use `assignment queue` and `submission get` frozen `study_context` for review. A `markdown_path` may now contain newer material; never replace the submitted context with its live contents. `snapshot_status=LEGACY_UNVERSIONED` means no original snapshot exists; state this limitation rather than inventing one.
+- Queue `batches` groups a course submission while each item remains a precise review task. `study_session_id` and `batch_id` identify the round and submission group. Waiting for review does not block ordinary course progression.
+- User answers belong to one round. Authorized course answer JSON may include `study_session_id`; preserve returned draft versions and original request keys. Navigation saves drafts; only final whole-course submission creates formal review work.
+- `--new-version` is explicit and only allowed after the previous round closes. Do not silently change the learner's current material or copy passed answers into a new round.
+- For a retest, put a clear new problem in feedback `detail_markdown` and an actionable `next_action`; distinguish retest from correction. The learner sees it beside the original material/answer. Do not generate a fake learner answer.

@@ -14,15 +14,15 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 TOP_FILES = {".gitignore", ".gitattributes", "README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"}
-TREES = {"desktop", "studyflow_app", "docs", "skills", "scripts", ".github"}
-APP_TREES = {"studyflow", "migrations", "tests", "templates", "static"}
-APP_FILES = {"pyproject.toml", "alembic.ini", ".env.example", "engine_entry.py", "README.md"}
+TREES = {"apps", "packages", "docs", "skills", "scripts", ".github"}
+APP_TREES = {"src", "tests"}
+APP_FILES = {"pyproject.toml", ".env.example", "engine_entry.py", "README.md"}
 DESKTOP_TREES = {"src", "scripts", "src-tauri"}
 DESKTOP_FILES = {"package.json", "package-lock.json", "index.html", "tsconfig.json", "tsconfig.node.json", "vite.config.ts"}
 TAURI_TREES = {"src", "capabilities", "icons"}
 TAURI_FILES = {"Cargo.toml", "Cargo.lock", "build.rs", "tauri.conf.json"}
-DEMO = "studyflow_app/content/lessons/java-reference.md"
-BINARY_ASSETS = {"desktop/src-tauri/icons/icon.png", "desktop/src-tauri/icons/icon.ico"}
+DEMO = "packages/core/src/studyflow/resources/content/lessons/java-reference.md"
+BINARY_ASSETS = {"apps/desktop/src-tauri/icons/icon.png", "apps/desktop/src-tauri/icons/icon.ico"}
 TEXT_SUFFIXES = {".md", ".py", ".ps1", ".vue", ".ts", ".css", ".html", ".svg", ".rs", ".json", ".toml", ".lock", ".ini", ".yaml", ".yml", ".example", ".mako"}
 GENERATED_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", "node_modules", "target", "dist", "build", "out", "test-results", "runtime", ".studyflow", "gen"}
 PRIVATE_PARTS = {"就业计划", "英语四级计划", "软考_软件设计师计划", "项目理解与掌握计划", "归档", "示例PDF与PDF生成参考提示词", "design-explorations"}
@@ -49,28 +49,38 @@ def path_problem(relative: str) -> str | None:
         return None if relative in TOP_FILES else "unapproved-root-file"
     if parts[0] not in TREES:
         return "unapproved-root-directory"
-    if parts[0] == "studyflow_app":
+    if parts[0] == "packages":
+        if len(parts) < 3 or parts[1] != "core":
+            return "unapproved-package"
+        tail = parts[2:]
         if relative == DEMO:
             return None
-        if len(parts) == 2 and parts[1] not in APP_FILES:
-            return "unapproved-app-file"
-        if len(parts) > 2 and parts[1] not in APP_TREES:
-            return "unapproved-app-directory"
-    if parts[0] == "desktop":
-        if len(parts) == 2 and parts[1] not in DESKTOP_FILES:
+        if len(tail) == 1 and tail[0] not in APP_FILES:
+            return "unapproved-core-file"
+        if len(tail) > 1 and tail[0] not in APP_TREES:
+            return "unapproved-core-directory"
+        if tail[0] == "src" and (len(tail) < 3 or tail[1] != "studyflow"):
+            return "unapproved-source-package"
+        if "content" in tail:
+            return "unapproved-learning-content"
+    if parts[0] == "apps":
+        if len(parts) < 3 or parts[1] != "desktop":
+            return "unapproved-application"
+        tail = parts[2:]
+        if len(tail) == 1 and tail[0] not in DESKTOP_FILES:
             return "unapproved-desktop-file"
-        if len(parts) > 2 and parts[1] not in DESKTOP_TREES:
+        if len(tail) > 1 and tail[0] not in DESKTOP_TREES:
             return "unapproved-desktop-directory"
-        if len(parts) > 2 and parts[1] == "src-tauri":
-            if len(parts) == 3 and parts[2] not in TAURI_FILES:
+        if len(tail) > 1 and tail[0] == "src-tauri":
+            if len(tail) == 2 and tail[1] not in TAURI_FILES:
                 return "unapproved-tauri-file"
-            if len(parts) > 3 and parts[2] not in TAURI_TREES:
+            if len(tail) > 2 and tail[1] not in TAURI_TREES:
                 return "unapproved-tauri-directory"
-            if parts[2] == "icons" and relative not in BINARY_ASSETS:
+            if tail[1] == "icons" and relative not in BINARY_ASSETS:
                 return "unapproved-binary-asset"
     if relative in BINARY_ASSETS:
         return None
-    if path.suffix not in TEXT_SUFFIXES and relative not in {".github/CODEOWNERS"}:
+    if path.suffix not in TEXT_SUFFIXES and relative not in {".github/CODEOWNERS", "apps/desktop/scripts/test-course-answers.cjs"}:
         return "unapproved-file-type"
     return None
 
@@ -108,10 +118,16 @@ def main() -> int:
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--tracked", action="store_true")
     mode.add_argument("--all", action="store_true")
+    mode.add_argument("--worktree", action="store_true", help="Inspect tracked and non-ignored new files, excluding deleted paths")
     args = parser.parse_args()
-    if args.tracked:
-        result = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, check=True)
+    if args.tracked or args.worktree:
+        command = ["git", "ls-files", "-z"]
+        if args.worktree:
+            command += ["--cached", "--others", "--exclude-standard"]
+        result = subprocess.run(command, cwd=ROOT, capture_output=True, check=True)
         paths = [p for p in result.stdout.decode("utf-8").split("\0") if p]
+        if args.worktree:
+            paths = [p for p in paths if (ROOT / p).is_file() or (ROOT / p).is_symlink()]
     else:
         paths = []
         for file in ROOT.rglob("*"):

@@ -1,0 +1,29 @@
+@media(max-width:1100px) {
+ .app-shell { grid-template-columns:205px minmax(0,1fr); }
+ .window-brand { min-width:205px; }
+ .main-content { padding:24px 25px 18px; }
+ .course-answer-sheet,.seamless-reader { padding:24px; }
+ .course-row-progress { min-width:70px; }
+ .course-write-bar { gap:12px; padding:14px; }
+ .write-buttons button { padding:10px 12px; font-size:11px; }
+ .today-plan-card { padding:22px 23px 5px; }
+}
+@media(max-width:800px) {
+ .app-shell { grid-template-columns:75px minmax(0,1fr); }
+ .sidebar { padding:26px 10px; }
+ .window-brand { min-width:75px; padding:0 26px; }
+ .window-brand>span:last-child { display:none; }
+ .console-intro { align-items:flex-start; }
+ .console-intro h2 { font-size:22px; }
+ .console-intro .text-button { display:none; }
+ .plan-course-item { gap:13px; }
+ .course-row-progress>span:first-child { display:none; }
+ .course-title-line h4 { font-size:14px; }
+ .course-write-bar { flex-wrap:wrap; }
+ .write-buttons { margin-left:auto; }
+ .course-feedback-card>header { align-items:flex-start; flex-direction:column; }
+ .feedback-question-list>div { flex-wrap:wrap; }
+ .feedback-question-list small { margin:0; }
+ .status-banner { right:15px; max-width:calc(100vw - 100px); }
+}
+@media(prefers-reduced-motion:reduce) { .course-enter b,.answer-question textarea { transition:none; } }

@@ -1,0 +1,7 @@
+.empty-state,.error-state,.loading-state{text-align:center;border:1px dashed var(--line);background:#ffffff85;border-radius:17px;padding:48px 25px;color:var(--muted);font-size:13px}
+.empty-state h2,.empty-state h3,.error-state h2{color:#536078;margin:13px 0;font-weight:550}
+.empty-symbol{font-size:30px;color:#a99ce2}
+.empty-state button,.error-state button{margin-top:20px}
+.initial-loading{min-height:420px;display:flex;flex-direction:column;align-items:center;justify-content:center;border:none;background:transparent}
+.loading-orbit{width:35px;height:35px;border-radius:50%;border:2px solid #e0dcf2;border-top-color:var(--accent);animation:spin .8s linear infinite;margin-bottom:20px}
+.initial-loading h2{font-size:21px;margin-bottom:12px}

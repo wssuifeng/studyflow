@@ -1,0 +1,36 @@
+/* Quiet native scrollbars: retain scrolling and a real draggable thumb. */
+:root {
+  --scrollbar-thumb: rgba(113, 126, 151, .24);
+  --scrollbar-thumb-hover: rgba(113, 126, 151, .44);
+  --scrollbar-thumb-active: rgba(94, 108, 137, .6);
+}
+@supports selector(::-webkit-scrollbar) {
+  /* Non-auto standard properties override these pseudo-elements in Chromium. */
+  * { scrollbar-width: auto; scrollbar-color: auto; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb {
+    background: var(--scrollbar-thumb);
+    background-clip: padding-box;
+    border: 2px solid transparent;
+    border-radius: 8px;
+    min-height: 36px;
+  }
+  ::-webkit-scrollbar-thumb:hover { background-color: var(--scrollbar-thumb-hover); }
+  ::-webkit-scrollbar-thumb:active { background-color: var(--scrollbar-thumb-active); }
+  ::-webkit-scrollbar-button { display: none; width: 0; height: 0; }
+  ::-webkit-scrollbar-corner { background: transparent; }
+}
+@supports not selector(::-webkit-scrollbar) {
+  * { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+}
+@media (forced-colors: active) {
+  /* Keep system contrast and full interaction when Windows high contrast is on. */
+  * { scrollbar-width: auto; scrollbar-color: auto; }
+  ::-webkit-scrollbar-thumb {
+    background-color: CanvasText;
+    border: 1px solid Canvas;
+    forced-color-adjust: auto;
+  }
+  ::-webkit-scrollbar-track { background: Canvas; }
+}

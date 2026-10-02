@@ -22,17 +22,17 @@
 **/out/
 **/*.tsbuildinfo
 **/gen/schemas/
-desktop/src-tauri/binaries/
-desktop/test-results/
+apps/desktop/src-tauri/binaries/
+apps/desktop/test-results/
 # Learning workspaces / runtime / private data
 **/.studyflow/
 **/runtime/
 **/content/
-!studyflow_app/content/
-studyflow_app/content/**
-!studyflow_app/content/lessons/
-studyflow_app/content/lessons/**
-!studyflow_app/content/lessons/java-reference.md
+!packages/core/src/studyflow/resources/content/
+packages/core/src/studyflow/resources/content/**
+!packages/core/src/studyflow/resources/content/lessons/
+packages/core/src/studyflow/resources/content/lessons/**
+!packages/core/src/studyflow/resources/content/lessons/java-reference.md
 **/*.db*
 **/*.sqlite*
 **/*.log
@@ -70,3 +70,6 @@ pytest-of-*/
 .vscode/
 .DS_Store
 Thumbs.db
+
+# Legacy local environment/runtime is retained, never republished.
+studyflow_app/

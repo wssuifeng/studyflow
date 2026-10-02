@@ -26,10 +26,21 @@
 
 ## 三、项目信息
 
-- Vue/TypeScript 唯一正式 UI 在 `desktop/src/`；Tauri/Rust只承载窗口和Engine。旧FastAPI/Jinja2是兼容开发层，不新建第二套前端。
-- Python Core/CLI/Engine和测试在 `studyflow_app/`；默认SQLite自动管理，可选MySQL只读环境变量。
+- Vue/TypeScript 唯一正式 UI 在 `apps/desktop/src/`；Tauri/Rust只承载窗口和Engine。旧FastAPI/Jinja2是兼容开发层，不新建第二套前端。
+- Python Core/CLI/Engine和测试在 `packages/core/`；默认SQLite自动管理，可选MySQL只读环境变量。
 - 工程文档在 `docs/`；公共Skill源在 `skills/studyflow-agent/`，外部Agent按Skill和CLI返回值操作，不依赖聊天记忆。
 - 源码、安装目录、数据工作区独立；模拟作答需要明确授权，不直接SQL，不复制活SQLite，不提交私人内容。
 - 当前app1.3.0用户体验仍待复验；公开源码不代表正式阶段验收。
 - 构建见 `docs/40_开发实施/构建与开发.md`。新分支默认 `codex/`，Conventional Commit，精准staging，不强推main，不擅改仓库权限。
 - 使用简体中文；代码、命令、路径、API保持原文。
+
+## 四、模块化维护纪律
+
+- 后端六个业务模块：planning、courses、learning、reviews、documents、workspace。模型、服务和必要DTO/查询辅助按业务归属，不机械复制Java空层次。
+- AppService仅装配和委派；跨模块只读聚合属于application，不把新业务SQL堆回Facade或CLI/Engine适配器。
+- 各模块共用一个Runtime；整课保存/提交必须沿用同一Session、单事务与幂等凭据，禁止按模块各自commit。
+- 持久化Base和模型注册只有一套；旧Python导入入口仅做兼容，不新增第二份模型、规则或命令实现。
+- Vue按app/features/shared维护；shared不能反向依赖features。组件按功能归位，公共API契约不依赖页面组件。
+- 样式拆分保持既有层叠顺序；结构重构不顺带改UI需求。Tauri仅承载窗口、Engine进程和协议桥，不写业务规则。
+- 包内resources只读并随wheel/Engine打包；学习工作区、安装目录、源码分离，不把site-packages或冻结解压目录当作数据目录。
+- 公开检查只允许apps/desktop与packages/core两个明确子项目；源码目录迁移后先跑worktree检查，不把旧本地环境/运行数据纳入提交。
