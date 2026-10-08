@@ -62,13 +62,13 @@ def main():
             page.goto(url+"/#/plan/"+plan.id);page.wait_for_load_state("networkidle")
             expect(page.get_by_role("button",name="计划学习笔记",exact=True)).to_be_visible()
             page.get_by_role("button",name="计划学习笔记",exact=True).click()
-            page.get_by_role("button",name="＋ 写笔记",exact=True).click()
+            page.get_by_role("button",name="＋ 写一段",exact=True).click()
             page.get_by_role("textbox",name="笔记：计划",exact=True).fill("中文检索与连续计划笔记。")
             page.wait_for_timeout(1600)
-            page.get_by_role("textbox",name="搜索计划笔记").fill("中文检索")
-            page.get_by_role("button",name="阅读模式",exact=True).click()
+            page.get_by_role("textbox",name="搜索笔记与摘录").fill("中文检索")
+            page.get_by_role("button",name="阅读",exact=True).click()
             expect(page.locator(".notebook-reading")).to_contain_text("中文检索")
-            with page.expect_download() as download:page.get_by_role("button",name="导出 Markdown",exact=True).click()
+            with page.expect_download() as download:page.get_by_role("button",name="导出",exact=True).click()
             download.value.save_as(str(RESULT/"synthetic-notes.md"))
             screenshots=[]
             for route,name in [("/today","console-v17"),("/queue","queue-v17"),("/plan/"+plan.id,"plan-v17"),("/settings","workspace-v17")]:
