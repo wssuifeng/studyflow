@@ -18,7 +18,8 @@ def latest_attempts(db: Session, exercise_ids: list[str], include_drafts: bool =
         query = query.where(Submission.status != "DRAFT")
     rows = db.scalars(query.order_by(Submission.attempt_number, Submission.created_at)).all()
     latest: dict[str, Submission] = {}
-    for row in rows:
+    from .write_contract import effective_rows
+    for row in effective_rows(db, rows):
         current = latest.get(row.exercise_id)
         if current is None or (row.attempt_number, row.created_at or datetime.min) >= (current.attempt_number, current.created_at or datetime.min):
             latest[row.exercise_id] = row

@@ -20,17 +20,32 @@ class StudyFlowEngine:
 
     def __init__(self, settings: Settings | None = None, service: AppService | None = None):
         self.settings = settings or (service.settings if service else Settings.from_env())
-        self.settings.ensure_layout()
+        from studyflow.infrastructure.leases import workspace_lease
         self.engine = None
-        if service is None:
-            self.engine = build_engine(self.settings)
-            init_db(self.engine)
-            service = AppService(self.settings, build_session_factory(self.engine))
-        self.service = service
+        self._lease = None
+        lease = workspace_lease(self.settings.workspace_root)
+        lease.__enter__()
+        self._lease = lease
+        try:
+            self.settings.ensure_layout()
+            if service is None:
+                self.engine = build_engine(self.settings)
+                init_db(self.engine)
+                service = AppService(self.settings, build_session_factory(self.engine))
+            self.service = service
+        except Exception:
+            self.close()
+            raise
 
     def close(self) -> None:
-        if self.engine is not None:
-            self.engine.dispose()
+        try:
+            if self.engine is not None:
+                self.engine.dispose()
+                self.engine = None
+        finally:
+            if self._lease is not None:
+                self._lease.__exit__(None, None, None)
+                self._lease = None
 
     def handle(self, request: dict[str, Any]) -> dict[str, Any]:
         request_id = request.get("id") if isinstance(request, dict) else None
@@ -50,10 +65,14 @@ class StudyFlowEngine:
             if not isinstance(exc, DomainError):
                 diagnostic = record_engine_error(self.settings.log_root, exc)
                 error.update(diagnostic)
-                error["next_action"] = "打开工作区 .studyflow/logs 中的 Engine 错误日志，并提供 diagnostic_id；答案已保留，重试请使用原幂等键。"
+                error["next_action"] += " 诊断日志暂时无法写入，请检查磁盘空间和工作区可写性。" if error.get("diagnostic_unavailable") else " 诊断见工作区.studyflow/logs；保留原请求与本机输入。"
             return make_response(request_id, error=error)
 
     def _dispatch(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
+        from .schemas import validate
+        params=validate(method,params)
+        from .extensions import METHODS, dispatch
+        if method in METHODS: return dispatch(self,method,params)
         if method == "system.version":
             return version_payload(self.settings)
         if method == "system.capabilities":
@@ -64,6 +83,10 @@ class StudyFlowEngine:
             return self._today(params)
         if method == "assignment.queue":
             return {"protocol_version": PROTOCOL_VERSION, **self.service.agent_queue(params.get("plan_line_id"))}
+        if method == "plan.notebook.get":
+            return {"protocol_version": PROTOCOL_VERSION, **self.service.plan_notebook(self._required_string(params,"plan_line_id"))}
+        if method == "plan.notebook.save":
+            return {"protocol_version": PROTOCOL_VERSION, **self.service.save_plan_notebook(self._required_string(params,"plan_line_id"), params.get("blocks"), params.get("expected_version"), params.get("idempotency_key"))}
         if method == "plan.list":
             rows = self.service.list_plan_lines(bool(params.get("include_inactive", False)))
             return {"protocol_version": PROTOCOL_VERSION, "plans": [self._plan(row) for row in rows]}
@@ -80,7 +103,7 @@ class StudyFlowEngine:
             return {"protocol_version": PROTOCOL_VERSION, **self.service.course_detail(self._required_string(params, "course_id"))}
         if method == "course.study.open":
             return {"protocol_version": PROTOCOL_VERSION, **self.service.open_course_study(
-                self._required_string(params, "course_id"), self._required_string(params, "idempotency_key"), params.get("new_version", False))}
+                self._required_string(params, "course_id"), self._required_string(params, "idempotency_key"), params.get("new_version", False), params.get("review_round",False))}
         if method == "course.study.get":
             return {"protocol_version": PROTOCOL_VERSION, **self.service.course_study_detail(self._required_string(params, "study_session_id"))}
         if method == "course.study.progress.save":
@@ -89,6 +112,10 @@ class StudyFlowEngine:
                 params.get("progress_percent"), params.get("last_position", ""), params.get("expected_version"))}
         if method == "course.study.reading.complete":
             return {"protocol_version": PROTOCOL_VERSION, **self.service.complete_course_reading(self._required_string(params, "study_session_id"))}
+        if method == "course.notes.get":
+            return {"protocol_version": PROTOCOL_VERSION, **self.service.study_notes(self._required_string(params,"study_session_id"))}
+        if method == "course.notes.save":
+            return {"protocol_version": PROTOCOL_VERSION, **self.service.save_study_note(self._required_string(params,"study_session_id"),self._required_string(params,"lesson_id"),params.get("text"),params.get("expected_version"),params.get("idempotency_key"))}
         if method == "course.answers.get":
             return {"protocol_version": PROTOCOL_VERSION, **self.service.course_answer_sheet(self._required_string(params, "course_id"), params.get("study_session_id"))}
         if method in {"course.answers.draft.save", "course.answers.submit"}:
@@ -145,7 +172,7 @@ class StudyFlowEngine:
                 bool(params.get("needs_revision", False)),
                 params.get("idempotency_key"),
                 source=str(params.get("source", "AGENT_CLI")),
-                decision=params.get("decision"),
+                decision=params.get("decision"), issues=params.get("issues"),
                 next_action=str(params.get("next_action", "")),
             )
             return {"protocol_version": PROTOCOL_VERSION, "review_id": feedback.id, "submission_id": feedback.submission_id, "decision": feedback.decision, "next_action": feedback.next_action, "needs_revision": feedback.needs_revision}
@@ -181,7 +208,16 @@ class StudyFlowEngine:
         from sqlalchemy import text
         with self.service.session() as session:
             session.execute(text("SELECT 1"))
-        return {"protocol_version": PROTOCOL_VERSION, "healthy": True, "workspace": {"root": str(self.settings.workspace_root), "exists": self.settings.workspace_root.is_dir(), "writable": self.settings.workspace_root.is_dir()}, "database": {"driver": self.settings.database_url.split(":", 1)[0], "status": "ready", "managed_by_app": self.settings.database_url.startswith("sqlite"), "reachable": True}, "capabilities": [item["name"] for item in CAPABILITIES], "next_action": "调用 study.today 查看当前学习状态。"}
+        from studyflow.infrastructure.health import write_probe, sqlite_write_probe
+        from sqlalchemy.engine import make_url
+        access=write_probe(self.settings.workspace_root)
+        database={"driver":self.settings.database_url.split(":",1)[0],"status":"ready","managed_by_app":self.settings.database_url.startswith("sqlite"),"reachable":True}
+        if database["managed_by_app"]:
+            url=make_url(self.settings.database_url)
+            db_access=sqlite_write_probe(Path(url.database))
+            database.update(writable=db_access["writable"],write_access=db_access)
+        healthy=access["writable"] and database.get("writable",True)
+        return {"protocol_version":PROTOCOL_VERSION,"healthy":healthy,"workspace":{"root":str(self.settings.workspace_root),"exists":self.settings.workspace_root.is_dir(),"writable":access["writable"],"write_access":access},"database":database,"capabilities":[item["name"] for item in CAPABILITIES],"next_action":"调用study.today查看学习。" if healthy else "当前进程不可写，核对工作区授权和解释器完整性级别；不改ACL或切换工作区。"}
 
     def _today(self, params: dict[str, Any]) -> dict[str, Any]:
         target = date.fromisoformat(str(params["date"])) if params.get("date") else date.today()
@@ -197,7 +233,7 @@ class StudyFlowEngine:
 
     @staticmethod
     def _plan(row: Any) -> dict[str, Any]:
-        return {"id": row.id, "name": row.name, "priority": row.priority, "status": row.status}
+        return {"id": row.id, "name": row.name, "priority": row.priority, "status": row.status, "version":row.version, "focus_course_id":row.focus_course_id}
 
     @staticmethod
     def _course(row: Any) -> dict[str, Any]:

@@ -20,10 +20,10 @@ from studyflow.modules.reviews.repository import queue_submissions, decorate_que
 
 class AppService:
     """Compatibility facade: composes modules, contains no domain rules or SQL."""
-    def __init__(self, settings: Settings, session_factory: sessionmaker[Session]):
+    def __init__(self, settings: Settings, session_factory: sessionmaker[Session], read_only: bool = False):
         self.settings = settings
         self.session_factory = session_factory
-        self.runtime = Runtime(settings, session_factory)
+        self.runtime = Runtime(settings, session_factory, read_only=read_only)
         self.planning = PlanningService(self.runtime)
         self.courses = CoursesService(self.runtime)
         self.learning = LearningService(self.runtime)
@@ -33,11 +33,17 @@ class AppService:
         self.demo = DemoService(self.runtime)
         self.workspace = WorkspaceService(self.runtime, self.queries.dashboard)
 
-    def session(self):
-        return self.runtime.session()
+    def session(self, read_only: bool | None = None):
+        return self.runtime.session(read_only=read_only)
 
     def _event(self, *args, **kwargs):
         return self.runtime.event(*args, **kwargs)
+
+    def plan_notebook(self, plan_line_id):
+        return self.learning.plan_notebook(plan_line_id)
+
+    def save_plan_notebook(self, plan_line_id, blocks, expected_version, idempotency_key, source="USER_WEB"):
+        return self.learning.save_plan_notebook(plan_line_id, blocks, expected_version, idempotency_key, source)
 
     def create_plan_line(self, name: str, priority: int=1) -> PlanLine:
         return self.planning.create_plan_line(name, priority)
@@ -68,6 +74,18 @@ class AppService:
 
     def list_courses(self, plan_line_id: str | None=None) -> list[Course]:
         return self.courses.list_courses(plan_line_id)
+
+    def preview_course_purge(self, course_ids: list[str] | None = None):
+        return self.courses.preview_course_purge(course_ids=course_ids)
+
+    def purge_courses(self, confirm: bool = False, course_ids: list[str] | None = None):
+        return self.courses.purge_courses(confirm=confirm, course_ids=course_ids)
+
+    def validate_course_package(self, source_path):
+        return self.courses.validate_course_package(source_path)
+
+    def import_course_package(self, source_path):
+        return self.courses.import_course_package(source_path)
 
     def import_course_markdown(self, source_path: str | Path) -> dict:
         return self.courses.import_course_markdown(source_path)
@@ -102,14 +120,20 @@ class AppService:
     def course_detail(self, course_id: str) -> dict:
         return self.courses.course_detail(course_id)
 
-    def open_course_study(self, course_id, idempotency_key, new_version=False):
-        return self.learning.open_course_study(course_id, idempotency_key, new_version)
+    def open_course_study(self, course_id, idempotency_key, new_version=False, review_round=False):
+        return self.learning.open_course_study(course_id, idempotency_key, new_version, review_round)
 
     def course_study_detail(self, study_session_id):
         return self.learning.course_study_detail(study_session_id)
 
     def save_study_progress(self, study_session_id, lesson_id, progress_percent, last_position="", expected_version=None):
         return self.learning.save_study_progress(study_session_id, lesson_id, progress_percent, last_position, expected_version)
+
+    def study_notes(self, study_session_id):
+        return self.learning.study_notes(study_session_id)
+
+    def save_study_note(self, study_session_id, lesson_id, text, expected_version, idempotency_key, source="USER_WEB"):
+        return self.learning.save_study_note(study_session_id, lesson_id, text, expected_version, idempotency_key, source)
 
     def complete_course_reading(self, study_session_id):
         return self.learning.complete_course_reading(study_session_id)
@@ -141,8 +165,8 @@ class AppService:
     def list_pending_submissions(self) -> list[Submission]:
         return self.reviews.list_pending_submissions()
 
-    def write_review(self, submission_id: str, summary: str, detail_markdown: str='', issue_count: int=0, needs_revision: bool=False, idempotency_key: str | None=None, source: str=AGENT_SOURCE, *, decision: str | None=None, next_action: str='') -> ReviewFeedback:
-        return self.reviews.write_review(submission_id, summary, detail_markdown, issue_count, needs_revision, idempotency_key, source, decision=decision, next_action=next_action)
+    def write_review(self, submission_id: str, summary: str, detail_markdown: str='', issue_count: int=0, needs_revision: bool=False, idempotency_key: str | None=None, source: str=AGENT_SOURCE, *, decision: str | None=None, next_action: str='', issues: list | None=None) -> ReviewFeedback:
+        return self.reviews.write_review(submission_id, summary, detail_markdown, issue_count, needs_revision, idempotency_key, source, decision=decision, next_action=next_action, issues=issues)
 
     def update_task_status(self, task_id: str, target: str, reason: str='', next_action: str='') -> Task:
         return self.planning.update_task_status(task_id, target, reason, next_action)
@@ -155,12 +179,6 @@ class AppService:
 
     def read_document(self, relative_path: str, render: bool=True) -> dict:
         return self.documents.read_document(relative_path, render)
-
-    def _replay_submission_write(self, db: Session, key: str | None, operation: str, exercise_id: str | None=None, submission_id: str | None=None) -> Submission | None:
-        return self.learning._replay_submission_write(db, key, operation, exercise_id, submission_id)
-
-    def _record_submission_write(self, db: Session, key: str | None, operation: str, row: Submission) -> None:
-        return self.learning._record_submission_write(db, key, operation, row)
 
     def _check_task(self, db: Session, task_id: str | None) -> Task | None:
         return require_task(db, task_id)

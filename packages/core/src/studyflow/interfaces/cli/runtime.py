@@ -21,7 +21,13 @@ from .registry import app
 PROTOCOL_VERSION = "1.2"
 
 CAPABILITIES = [
+    {"name": "course_package_validate", "command": "studyflow course validate-package --file <package.json> --format json", "kind": "read"},
+    {"name": "course_package_import", "command": "studyflow course import-package --file <package.json> --format json", "kind": "write"},
+    {"name":"plan_notebook_get","command":"studyflow plan notebook-get --id <plan-id> --format json","kind":"read"},
+    {"name":"plan_notebook_save","command":"studyflow plan notebook-save --id <plan-id> --file <notebook.json> --expected-version <n> --idempotency-key <key> --format json","kind":"write"},
     {"name": "plan_detail", "command": "studyflow plan detail --id <id> --format json", "kind": "read"},
+    {"name":"course_notes_get","command":"studyflow course notes-get --study-id <id> --format json","kind":"read"},
+    {"name":"course_notes_save","command":"studyflow course notes-save --study-id <id> --lesson-id <id> --file <note.txt> --expected-version <n> --idempotency-key <key> --format json","kind":"write"},
     {"name": "document_read", "command": "studyflow document read --path <path> --format json", "kind": "read"},
     {"name": "version", "command": "studyflow version --format json", "kind": "read"},
     {"name": "capabilities", "command": "studyflow capabilities --format json", "kind": "read"},
@@ -41,6 +47,7 @@ CAPABILITIES = [
     {"name": "submission_retest", "command": "studyflow submission retest --parent <id> --file <path> --format json", "kind": "write"},
     {"name": "snapshot_generate", "command": "studyflow snapshot generate --format json", "kind": "write"},
     {"name": "workspace_export", "command": "studyflow workspace export --output <backup.zip> --format json", "kind": "write"},
+    {"name": "workspace_purge_courses", "command": "studyflow workspace purge-courses --dry-run --format json", "kind": "maintenance"},
     {"name": "workspace_import", "command": "studyflow workspace import --file <backup.zip> --target <workspace-dir> --format json", "kind": "write"},
 ]
 
@@ -71,13 +78,8 @@ def _database_url_without_password(database_url: str) -> str:
         return database_url
 
 def _is_writable(path: Path) -> bool:
-    probe = path / ".studyflow-write-check"
-    try:
-        probe.write_text("", encoding="utf-8")
-        probe.unlink()
-        return True
-    except OSError:
-        return False
+    from studyflow.infrastructure.health import write_probe
+    return write_probe(path)["writable"]
 
 def _workspace_summary(settings: Settings) -> dict[str, Any]:
     root = settings.workspace_root
@@ -90,11 +92,14 @@ def _workspace_summary(settings: Settings) -> dict[str, Any]:
         "docs/00_总控.md",
     ]
     present = {relative: (governance_root / relative).is_file() for relative in governance_files}
+    from studyflow.infrastructure.health import write_probe
+    write_access = write_probe(root)
     return {
         "root": str(root),
         "governance_root": str(governance_root),
         "exists": root.is_dir(),
-        "writable": root.is_dir() and _is_writable(root),
+        "writable": write_access["writable"],
+        "write_access": write_access,
         "governance_files": present,
         "governance_ready": all(present.values()),
         "content_root": str(settings.content_root),
@@ -123,6 +128,9 @@ def _database_diagnostic(settings: Settings) -> dict[str, Any]:
         if not db_path.is_absolute():
             db_path = (Path.cwd() / db_path).resolve()
         result["path"] = str(db_path)
+        from studyflow.infrastructure.health import sqlite_write_probe
+        result["write_access"] = sqlite_write_probe(db_path)
+        result["writable"] = result["write_access"]["writable"]
         if not db_path.exists():
             result["status"] = "not_initialized"
             result["next_action"] = "运行 studyflow init 初始化本地数据库。"
@@ -212,12 +220,37 @@ def _dashboard_payload(data: dict[str, Any], target_date: date, settings: Settin
         "capabilities": [item["name"] for item in CAPABILITIES],
     }
 
-def service() -> AppService:
+def service(*, read_only: bool = False) -> AppService:
+    """Build the CLI service with an explicit read/write runtime boundary.
+
+    Read-only commands must be usable from a workspace whose parent directory
+    is not writable. They therefore do not create a lease, create directories,
+    or run schema migrations. Write commands keep the historical exclusive
+    lease and initialization path.
+    """
     settings = Settings.from_env()
-    settings.ensure_layout()
-    engine = build_engine(settings)
-    init_db(engine)
-    return AppService(settings, build_session_factory(engine))
+    from studyflow.infrastructure.leases import workspace_lease
+    import atexit
+    lease = None
+    if not read_only:
+        lease = workspace_lease(settings.workspace_root)
+        lease.__enter__()
+    try:
+        if not read_only:
+            settings.ensure_layout()
+        engine = build_engine(settings)
+        if not read_only:
+            init_db(engine)
+    except Exception:
+        if lease is not None:
+            lease.__exit__(None, None, None)
+        raise
+    def release():
+        engine.dispose()
+        if lease is not None:
+            lease.__exit__(None, None, None)
+    atexit.register(release)
+    return AppService(settings, build_session_factory(engine), read_only=read_only)
 
 def output(payload: Any, format: str = "text") -> None:
     if format == "json":
@@ -242,7 +275,10 @@ def fail(error: Exception) -> None:
     if isinstance(error, DomainError):
         payload = {"ok": False, "error_code": error.code, "message": error.message, "next_action": error.next_action}
     else:
-        payload = {"ok": False, "error_code": "INTERNAL_ERROR", "message": _safe_error_message(error), "next_action": "查看命令参数或运行日志"}
+        from studyflow.infrastructure.errors import database_error_payload
+        from studyflow.infrastructure.diagnostics import record_engine_error
+        safe = database_error_payload(error) or {"code":"INTERNAL_ERROR","message":"CLI内部错误，请查看诊断编号。","next_action":"运行doctor并保留诊断编号；不要修改真实数据库。"}
+        payload = {"ok":False,"error_code":safe["code"],"message":safe["message"],"next_action":safe["next_action"],**record_engine_error(Settings.from_env().log_root,error)}
     # 错误输出保持结构化 JSON，便于任意 Agent/脚本稳定解析；人类可读信息仍包含在 message 字段中。
     typer.echo(json.dumps(payload, ensure_ascii=False, default=str), err=True)
     raise typer.Exit(code=1)

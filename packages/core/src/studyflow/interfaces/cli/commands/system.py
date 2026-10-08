@@ -71,7 +71,8 @@ def capabilities(format: str = typer.Option("text", "--format")) -> None:
         "protocol_version": PROTOCOL_VERSION,
         "app_version": __version__,
         **_discovery_metadata(settings),
-        "capabilities": CAPABILITIES,
+        "capabilities": CAPABILITIES+[{"name":"engine_call","command":"call --method <method> --file <json> --format json","kind":"transport"}],
+        "engine_capabilities": __import__("studyflow.interfaces.engine.protocol",fromlist=["all_capabilities"]).all_capabilities(),
         "next_action": "运行 studyflow doctor --format json，再按当前任务选择能力。",
     }, format)
 
@@ -82,7 +83,7 @@ def doctor(format: str = typer.Option("text", "--format")) -> None:
         settings = Settings.from_env()
         workspace = _workspace_summary(settings)
         database = _database_diagnostic(settings)
-        healthy = bool(workspace["exists"] and database["status"] in {"ready", "not_initialized"})
+        healthy = bool(workspace["exists"] and workspace["writable"] and database.get("writable", True) and database["status"] in {"ready", "not_initialized"})
         output({
             "ok": True,
             "protocol_version": PROTOCOL_VERSION,
@@ -90,7 +91,7 @@ def doctor(format: str = typer.Option("text", "--format")) -> None:
             "database": database,
             "capabilities": [item["name"] for item in CAPABILITIES],
             "healthy": healthy,
-            "next_action": database.get("next_action") or ("运行 studyflow today --format json 查看今日学习。" if healthy else "检查工作区路径和环境变量。"),
+            "next_action": ("当前进程不可写；核对工作区授权和Python完整性级别，不切换工作区或改ACL。" if not workspace["writable"] or database.get("writable") is False else database.get("next_action") or ("运行 studyflow today --format json 查看今日学习。" if healthy else "检查工作区路径和环境变量。")),
         }, format)
     except Exception as exc:
         fail(exc)

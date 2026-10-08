@@ -52,7 +52,7 @@ def test_empty_database_runs_checked_in_alembic_chain(tmp_path):
     check = sqlite3.connect(db_path)
     tables = {row[0] for row in check.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
     assert {"plan_lines", "tasks", "courses", "exercises", "alembic_version", "course_write_receipts"}.issubset(tables)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0006_course_study"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0012_plan_management"
     assert "task_kind" in {row[1] for row in check.execute("PRAGMA table_info(tasks)")}
     assert "content_type" in {row[1] for row in check.execute("PRAGMA table_info(courses)")}
     assert "exercise_type" in {row[1] for row in check.execute("PRAGMA table_info(exercises)")}
@@ -84,7 +84,7 @@ def test_current_legacy_database_gets_version_stamp_without_data_loss(tmp_path):
     result = upgrade_sqlite(settings)
     assert result["status"] == "LEGACY_STAMPED_UPGRADED"
     check = sqlite3.connect(db_path)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0006_course_study"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0012_plan_management"
     assert check.execute("SELECT name FROM plan_lines WHERE id='p1'").fetchone()[0] == "Current Plan"
     assert "learning_progress" in {row[0] for row in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     check.close()
@@ -101,7 +101,7 @@ def test_empty_alembic_version_table_is_stamped_without_rebuilding(tmp_path):
     result = upgrade_sqlite(settings)
     assert result["status"] == "LEGACY_STAMPED_UPGRADED"
     check = sqlite3.connect(db_path)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0006_course_study"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0012_plan_management"
     assert check.execute("SELECT name FROM plan_lines WHERE id='p1'").fetchone()[0] == "Unstamped Plan"
     check.close()
 
@@ -141,7 +141,7 @@ def test_0005_upgrade_preserves_answers_and_original_migrations(tmp_path):
     con=sqlite3.connect(tmp_path/'old.db')
     assert con.execute("SELECT answer_text,status,study_session_id,batch_id FROM submissions WHERE id='s'").fetchone()==('legacy answer','WAITING_REVIEW',None,None)
     assert con.execute("SELECT count(*) FROM course_study_sessions").fetchone()[0]==0
-    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=='0006_course_study'
+    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=='0012_plan_management'
     con.close()
 
 
@@ -155,7 +155,7 @@ def test_startup_upgrades_known_0005_with_backup_without_manual_service(tmp_path
     backups=list(tmp_path.glob("startup.backup-*.db"))
     assert len(backups)==1
     con=sqlite3.connect(tmp_path/'startup.db')
-    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0006_course_study"
+    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0012_plan_management"
     con.close();init_db(engine)
     assert len(list(tmp_path.glob("startup.backup-*.db")))==1
     engine.dispose()

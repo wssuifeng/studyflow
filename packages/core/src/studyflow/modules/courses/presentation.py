@@ -4,7 +4,7 @@ from studyflow.modules.learning.presentation import submission_summary
 
 def course_summary(row):
     schedule = getattr(row, "schedule_item", None)
-    return {"id": row.id, "title": row.title, "summary": row.summary,
+    return {"id": row.id, "content_revision":row.version, "title": row.title, "summary": row.summary,
             "subject": row.subject, "content_type": row.content_type,
             "difficulty": row.difficulty, "source_type": row.source_type,
             "study_status":getattr(row,"study_status","NOT_STARTED"),
@@ -33,6 +33,7 @@ def course_detail(row):
             "markdown_path": lesson.markdown_path, "summary": lesson.summary,
             "document_status": getattr(lesson, "document_status", "UNKNOWN"),
             "rendered_html": getattr(lesson, "rendered_html", ""),
+            "content_blocks": getattr(lesson, "content_blocks", []),
             "progress": {"progress_percent": progress.progress_percent, "status": progress.status,
                          "last_position": progress.last_position} if progress else
                         {"progress_percent": 0, "status": "NOT_STARTED", "last_position": ""},

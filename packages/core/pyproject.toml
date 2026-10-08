@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "studyflow-local"
-version = "1.3.0"
+version = "1.7.0"
 description = "Local Web UI and CLI learning workbench for a single learner"
 requires-python = ">=3.12"
 dependencies = [

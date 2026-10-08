@@ -1,0 +1,8 @@
+/* Compatibility aliases; palette values come exclusively from theme configuration. */
+:root {
+ --sf-bg-base:var(--theme-surface-panel); --sf-bg-layer-1:var(--theme-surface-canvas); --sf-bg-layer-2:var(--theme-surface-raised);
+ --sf-border-l1:var(--theme-border-subtle); --sf-border-l2:var(--theme-border-strong);
+ --sf-label-primary:var(--theme-text-primary); --sf-label-secondary:var(--theme-text-secondary); --sf-label-tertiary:var(--theme-text-muted);
+ --sf-hover:var(--theme-surface-hover); --sf-active:var(--theme-surface-active); --sf-brand:var(--theme-accent-primary);
+ --sf-caution-bg:var(--theme-status-warning-soft); --sf-caution-ink:var(--theme-status-warning); --sf-focus-ring:var(--theme-focus-ring);
+}

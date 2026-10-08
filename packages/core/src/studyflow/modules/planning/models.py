@@ -8,9 +8,11 @@ from studyflow.infrastructure.persistence.base import Base, TimestampMixin
 
 class PlanLine(TimestampMixin, Base):
     __tablename__ = "plan_lines"
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
+    focus_course_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(120), unique=True)
-    priority: Mapped[int] = mapped_column(Integer, default=1)
+    priority: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     status: Mapped[str] = mapped_column(String(24), default="ACTIVE")
     stages: Mapped[list[Stage]] = relationship(back_populates="plan_line", cascade="all, delete-orphan")
     courses: Mapped[list[Course]] = relationship(back_populates="plan_line", cascade="all, delete-orphan")
@@ -42,7 +44,7 @@ class Task(TimestampMixin, Base):
     status: Mapped[str] = mapped_column(String(24), default="TODO", index=True)
     reason: Mapped[str] = mapped_column(Text, default="")
     next_action: Mapped[str] = mapped_column(Text, default="")
-    priority: Mapped[int] = mapped_column(Integer, default=1)
+    priority: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     task_kind: Mapped[str] = mapped_column(String(40), default="OTHER", index=True)
     plan_line: Mapped[Optional[PlanLine]] = relationship(back_populates="tasks")
     stage: Mapped[Optional[Stage]] = relationship(back_populates="tasks")
@@ -67,7 +69,7 @@ class PlanCourseItem(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     plan_line_id: Mapped[str] = mapped_column(ForeignKey("plan_lines.id"), index=True)
     course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
-    sequence_number: Mapped[int] = mapped_column(Integer, default=1)
+    sequence_number: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     status: Mapped[str] = mapped_column(String(24), default="PLANNED", index=True)
     planned_start: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
     planned_end: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
@@ -82,10 +84,18 @@ class CourseScheduleItem(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     plan_course_item_id: Mapped[str] = mapped_column(ForeignKey("plan_course_items.id"), index=True)
     scheduled_date: Mapped[date] = mapped_column(Date, index=True)
-    position: Mapped[int] = mapped_column(Integer, default=1)
+    position: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     start_time: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     end_time: Mapped[Optional[time]] = mapped_column(Time, nullable=True)
     status: Mapped[str] = mapped_column(String(24), default="PLANNED", index=True)
     plan_course_item: Mapped[PlanCourseItem] = relationship(back_populates="schedule_items")
     tasks: Mapped[list[Task]] = relationship(back_populates="course_schedule_item")
     __table_args__ = (UniqueConstraint("plan_course_item_id", "scheduled_date", name="uq_course_schedule_day"),)
+
+
+class PlanWriteReceipt(TimestampMixin, Base):
+    __tablename__ = "plan_write_receipts"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    idempotency_key: Mapped[str] = mapped_column(String(160), unique=True)
+    payload_hash: Mapped[str] = mapped_column(String(64))
+    result_json: Mapped[str] = mapped_column(Text)

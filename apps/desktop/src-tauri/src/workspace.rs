@@ -10,6 +10,14 @@ pub(super) fn resolve_workspace(
     if let Some(value) = env::var_os("STUDYFLOW_WORKSPACE") {
         return Ok(PathBuf::from(value));
     }
+    if let Ok(config) = app.path().app_config_dir() {
+        if let Ok(text) = std::fs::read_to_string(config.join("workspace-path.txt")) {
+            let path = PathBuf::from(text.trim());
+            if path.is_absolute() && path.is_dir() {
+                return Ok(path);
+            }
+        }
+    }
     if cfg!(debug_assertions) {
         return source_workspace
             .map(Path::to_path_buf)

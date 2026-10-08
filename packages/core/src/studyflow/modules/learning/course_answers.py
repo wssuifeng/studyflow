@@ -26,23 +26,31 @@ def read_answer_sheet(service, course_id: str, study_session_id: str | None = No
             raise DomainError("OBJECT_NOT_FOUND", "课程不存在。", "先读取 course.detail 确认课程 ID。")
         from .study_sessions import current_study, require_study, exercise_ids, study_scope
         study = require_study(db, study_session_id, course_id) if study_session_id is not None else current_study(db, course_id)
-        ids = exercise_ids(study) if study else list(db.scalars(select(Exercise.id).join(Lesson).where(Lesson.course_id == course_id)
+        ids = exercise_ids(study) if study else list(db.scalars(select(Exercise.id).join(Lesson).where(Lesson.course_id == course_id, Lesson.included == True, Exercise.included == True)
                               .order_by(Lesson.position, Exercise.position, Exercise.id)).all())
         rows = db.scalars(select(Submission).where(Submission.exercise_id.in_(ids)).options(
             joinedload(Submission.exercise).joinedload(Exercise.lesson).joinedload(Lesson.course),
             selectinload(Submission.reviews), selectinload(Submission.parent_submission),
             selectinload(Submission.child_submissions), selectinload(Submission.study_session),
         ).where(study_scope(study) if study else True).order_by(Submission.attempt_number, Submission.created_at, Submission.id)).all()
+        from .write_contract import effective_rows
+        rows = effective_rows(db, rows)
         latest, drafts = {}, {}
         for row in rows:
             (drafts if row.status == "DRAFT" else latest)[row.exercise_id] = row
+        from studyflow.modules.reviews.models import RetestTask
+        from studyflow.modules.reviews.retests import public_task
         answers = []
         for identifier in ids:
             formal, draft = latest.get(identifier), drafts.get(identifier)
             action = _action(formal)
+            retest = db.scalar(select(RetestTask).where(RetestTask.parent_submission_id == formal.id)) if formal else None
+            if not retest and formal and formal.retest_task_id: retest=db.get(RetestTask,formal.retest_task_id)
+            if action == "RETEST" and retest is None: action = "WAITING_RETEST_TASK"
             if action == "LOCKED" or (formal and draft and draft.parent_submission_id != formal.id):
                 draft = None
             answers.append({"exercise_id": identifier, "action": action,
+                            "retest_task": public_task(retest) if retest else None,
                             "draft": submission_detail(draft) if draft else None,
                             "submission": submission_detail(formal) if formal else None})
         return {"course_id": course_id, "study_session_id": study.id if study else None, "answers": answers,
@@ -60,7 +68,7 @@ def write_answers(service, course_id: str, answers, operation: str, idempotency_
     if not isinstance(source, str) or not source or len(source) > 32:
         raise DomainError("INVALID_ARGUMENT", "source 必须是 1—32 字符的文本。", "使用 USER_WEB 或 AGENT_CLI。")
     normalized, seen = [], set()
-    allowed = {"exercise_id", "answer_text", "submission_id", "expected_version", "parent_submission_id", "task_id"}
+    allowed = {"exercise_id", "answer_text", "submission_id", "expected_version", "parent_submission_id", "task_id", "retest_task_id"}
     for entry in answers:
         if not isinstance(entry, dict) or set(entry) - allowed:
             raise DomainError("INVALID_ARGUMENT", "课程答案对象包含未知字段或格式不正确。", "按课程作答契约构造 answers。")
@@ -69,7 +77,7 @@ def write_answers(service, course_id: str, answers, operation: str, idempotency_
             raise DomainError("INVALID_ARGUMENT", "练习 ID 缺失或在同一课程中重复。", "每道题只填写一个答案。")
         if not isinstance(entry.get("answer_text"), str):
             raise DomainError("INVALID_ARGUMENT", "answer_text 必须是文本。", "草稿可为空，正式提交必须完成作答。")
-        for name in ("submission_id", "parent_submission_id", "task_id"):
+        for name in ("submission_id", "parent_submission_id", "task_id", "retest_task_id"):
             if entry.get(name) is not None and (not isinstance(entry[name], str) or not entry[name]):
                 raise DomainError("INVALID_ARGUMENT", f"{name} 必须是非空 ID。", "重新读取课程作答状态。")
         version = entry.get("expected_version")
@@ -79,7 +87,7 @@ def write_answers(service, course_id: str, answers, operation: str, idempotency_
             raise DomainError("INVALID_ARGUMENT", "更新已有草稿必须提供 expected_version。", "重新读取课程草稿版本。")
         if operation == "SUBMIT" and not entry["answer_text"].strip():
             raise DomainError("INCOMPLETE_COURSE_ANSWERS", "本课还有空白答案，未提交任何题目。", "完成所有待作答题目后统一提交。")
-        normalized.append({name: entry.get(name) for name in sorted(allowed)})
+        normalized.append({name: entry.get(name) for name in sorted(allowed) if name!="retest_task_id" or entry.get(name) is not None})
         seen.add(identifier)
     payload = {"course_id": course_id, "operation": operation, "source": source, "study_session_id": study_session_id,
                "answers": sorted(normalized, key=lambda item: item["exercise_id"])}
@@ -95,12 +103,17 @@ def write_answers(service, course_id: str, answers, operation: str, idempotency_
             raise DomainError("OBJECT_NOT_FOUND", "课程不存在。", "先读取 course.detail 确认课程 ID。")
         from .study_sessions import current_study, require_study, exercise_ids, study_attempts
         study = require_study(db, study_session_id, course_id, active=True) if study_session_id is not None else current_study(db, course_id)
-        ids = exercise_ids(study) if study else list(db.scalars(select(Exercise.id).join(Lesson).where(Lesson.course_id == course_id)).all())
+        ids = exercise_ids(study) if study else list(db.scalars(select(Exercise.id).join(Lesson).where(Lesson.course_id == course_id, Lesson.included == True, Exercise.included == True)).all())
         if not seen.issubset(set(ids)):
             raise DomainError("INVALID_ARGUMENT", "答案包含不属于本课的练习。", "仅提交当前课程的题目。")
         latest = study_attempts(db, study) if study else latest_attempts(db, ids)
         if operation == "SUBMIT":
-            required = {identifier for identifier in ids if _action(latest.get(identifier)) != "LOCKED"}
+            from studyflow.modules.reviews.models import RetestTask
+            def ready(identifier):
+                formal=latest.get(identifier)
+                action=_action(formal)
+                return action!="LOCKED" and (action!="RETEST" or db.scalar(select(RetestTask.id).where(RetestTask.parent_submission_id==formal.id)) is not None)
+            required = {identifier for identifier in ids if ready(identifier)}
             if not required.issubset(seen):
                 raise DomainError("INCOMPLETE_COURSE_ANSWERS", "本课仍有未提交的题目，未写入任何答案。", "补齐本课所有待作答或待修正题目。")
         written = []
@@ -116,6 +129,12 @@ def write_answers(service, course_id: str, answers, operation: str, idempotency_
                 raise DomainError("VERSION_CONFLICT", "修正或复测的父作答已经变化。", "重新读取课程反馈后再作答。")
             if not formal and parent_id:
                 raise DomainError("INVALID_ARGUMENT", "首次作答不能指定其他父记录。", "重新读取本课作答状态。")
+            from studyflow.modules.reviews.models import RetestTask
+            retest=db.scalar(select(RetestTask).where(RetestTask.parent_submission_id==formal.id)) if formal and action=="RETEST" else None
+            if action=="RETEST" and (not retest or entry.get("retest_task_id")!=retest.id):
+                raise DomainError("RETEST_TASK_REQUIRED","请等待Agent发布独立复测题，再读取本轮答案。")
+            if action!="RETEST" and entry.get("retest_task_id") and (not formal or entry["retest_task_id"]!=formal.retest_task_id):
+                raise DomainError("INVALID_ARGUMENT","复测任务不属于当前答案链。")
             require_task(db, entry.get("task_id"))
             row = db.get(Submission, entry["submission_id"]) if entry.get("submission_id") else None
             if entry.get("submission_id"):
@@ -146,7 +165,12 @@ def write_answers(service, course_id: str, answers, operation: str, idempotency_
                     source=source, study_session_id=study.id if study else None, status="WAITING_REVIEW" if operation == "SUBMIT" else "DRAFT", version=1,
                     attempt_number=attempt, attempt_kind=action,
                     next_action="等待外部 Agent 批改" if operation == "SUBMIT" else "继续编辑课程草稿。")
+                if formal:
+                    from .write_contract import claim_parent
+                    claim_parent(db, formal, row.id, source)
                 db.add(row); db.flush()
+            row.retest_task_id = retest.id if retest else formal.retest_task_id if formal else None
+            if retest: retest.status="WAITING_REVIEW" if operation=="SUBMIT" else "IN_PROGRESS"
             if study: row.study_session_id = study.id
             if operation == "SUBMIT": row.batch_id = batch_id
             db.flush()

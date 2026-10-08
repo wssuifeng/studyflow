@@ -55,6 +55,32 @@ try:
     ids = [lesson["exercises"][0]["id"] for lesson in detail["lessons"]]
     study = call("course.study.open", {"course_id": course_id, "idempotency_key": "packed-study-open"})
     study_id = study["study"]["id"]
+    methods = {item["method"] for item in call("system.capabilities", {})["capabilities"]}
+    assert {"course.notes.get", "course.notes.save"}.issubset(methods)
+    assert not call("course.notes.get", {"study_session_id": study_id})["notes"]
+    note_params = {"study_session_id": study_id, "lesson_id": study["lessons"][0]["id"],
+        "text": "个人推导草稿 ✅，不是答案", "expected_version": 0, "idempotency_key": "packed-note-1"}
+    note = call("course.notes.save", note_params)
+    assert call("course.notes.save", note_params) == note
+    note_params = {**note_params, "text": "第二次更新个人草稿 ✅", "expected_version": 1, "idempotency_key": "packed-note-2"}
+    note = call("course.notes.save", note_params)
+    assert note["note"]["version"] == 2
+    call("course.notes.save", {**note_params, "text": "旧版本不能覆盖", "idempotency_key": "packed-note-stale"}, "VERSION_CONFLICT")
+    assert call("course.notes.get", {"study_session_id": study_id})["notes"][0]["text"] == note_params["text"]
+    assert not call("assignment.queue", {})["items"]
+    assert {"plan.notebook.get", "plan.notebook.save"}.issubset(methods)
+    plan_id=study["course"]["plan_line_id"]
+    assert call("plan.notebook.get", {"plan_line_id":plan_id})["version"] == 0
+    notebook_params={"plan_line_id":plan_id,"blocks":[{"id":"packed-continuous","text":"全计划连续理解 ✅"},
+        {"id":"packed-quote","text":"带来源的理解","quote":"UTF-8、中文和 emoji ✅ 必须原样保存。","course_id":course_id,
+         "lesson_id":study["lessons"][0]["id"],"source_study_id":study_id}],"expected_version":0,"idempotency_key":"packed-notebook"}
+    notebook=call("plan.notebook.save",notebook_params)
+    assert call("plan.notebook.save",notebook_params)==notebook
+    assert notebook["blocks"][1]["content_hash"]==study["study"]["content_hash"]
+    call("plan.notebook.save",{**notebook_params,"idempotency_key":"packed-notebook-stale"},"VERSION_CONFLICT")
+    readback=call("plan.notebook.get",{"plan_line_id":plan_id})
+    assert readback["blocks"][0]["text"]=="全计划连续理解 ✅" and readback["legacy_notes"][0]["text"]==note_params["text"]
+    assert not call("assignment.queue",{})["items"]
     assert study["course"]["study_status"] == "IN_PROGRESS"
     progress = call("course.study.progress.save", {"study_session_id": study_id,
         "lesson_id": study["lessons"][0]["id"], "progress_percent": 100, "last_position": "{}", "expected_version": 1})
@@ -79,11 +105,19 @@ try:
     params = {"course_id": course_id, "answers": payload, "idempotency_key": "batch-save"}
     saved = call("course.answers.draft.save", params)
     assert call("course.answers.draft.save", params) == saved
+    for iteration in (2, 3):
+        repeated = [{**entry, "submission_id": row["id"], "expected_version": row["version"]}
+                    for entry, row in zip(payload, saved["submissions"])]
+        previous_versions = [row["version"] for row in saved["submissions"]]
+        saved = call("course.answers.draft.save", {"course_id": course_id,
+            "answers": repeated, "idempotency_key": f"batch-repeat-{iteration}"})
+        assert [row["version"] for row in saved["submissions"]] == [version + 1 for version in previous_versions]
     submit_payload = [{**item, "submission_id": row["id"], "expected_version": row["version"]} for item, row in zip(payload, saved["submissions"])]
     stale = [dict(item) for item in submit_payload]; stale[1]["expected_version"] += 1
     call("course.answers.submit", {"course_id": course_id, "answers": stale, "idempotency_key": "stale-batch"}, "VERSION_CONFLICT")
     after_stale = call("course.answers.get", {"course_id": course_id})
-    assert all(item["draft"]["version"] == 1 for item in after_stale["answers"])
+    expected_versions = {entry["exercise_id"]: row["version"] for entry, row in zip(payload, saved["submissions"])}
+    assert all(item["draft"]["version"] == expected_versions[item["exercise_id"]] for item in after_stale["answers"])
     params = {"course_id": course_id, "answers": submit_payload, "idempotency_key": "batch-submit"}
     result = call("course.answers.submit", params)
     frozen = call("submission.get", {"submission_id": result["submissions"][1]["id"]})
@@ -96,7 +130,8 @@ try:
     assert call("submission.get", {"submission_id": formal["id"]})["answer_text"] == answer
     for i, row in enumerate(result["submissions"]):
         call("review.write", {"submission_id": row["id"], "summary": "需要复测" if i == 0 else "通过", "decision": "RETEST_REQUIRED" if i == 0 else "PASSED", "idempotency_key": f"batch-review-{i}"})
-    retest = call("course.answers.submit", {"course_id": course_id, "answers": [{"exercise_id": ids[0], "answer_text": "新的复测答案 ✅", "parent_submission_id": result["submissions"][0]["id"]}], "idempotency_key": "batch-retest"})
+    task = call("review.retest.publish", {"parent_submission_id": result["submissions"][0]["id"], "title": "独立复测题", "prompt": "说明新的温度边界条件及原因。", "objective": "验证边界条件迁移", "idempotency_key": "batch-retest-task"})
+    retest = call("course.answers.submit", {"course_id": course_id, "answers": [{"exercise_id": ids[0], "answer_text": "新的复测答案 ✅", "parent_submission_id": result["submissions"][0]["id"], "retest_task_id": task["id"]}], "idempotency_key": "batch-retest"})
     assert retest["submissions"][0]["attempt_kind"] == "RETEST"
     call("review.write", {"submission_id": retest["submissions"][0]["id"], "summary": "通过", "decision": "PASSED", "idempotency_key": "retest-pass"})
     final = call("assignment.queue", {})

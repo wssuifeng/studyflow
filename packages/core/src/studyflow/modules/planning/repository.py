@@ -3,7 +3,7 @@ from datetime import date
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session, joinedload
 from studyflow.shared.domain import DomainError
-from studyflow.modules.courses.models import Course, Lesson
+from studyflow.modules.courses.models import Course, Lesson, Exercise
 from studyflow.modules.planning.models import CourseScheduleItem, PlanCourseItem, PlanLine, Task
 from studyflow.shared.ids import new_id
 from studyflow.modules.learning.repository import latest_attempts, annotate_course
@@ -31,7 +31,7 @@ def require_task(db: Session, task_id: str | None) -> Task | None:
 
 def build_plan_summary(db: Session, plan: PlanLine, target_date: date, include_courses: bool = False) -> dict:
     items = db.scalars(select(PlanCourseItem).options(
-        joinedload(PlanCourseItem.course).joinedload(Course.lessons).joinedload(Lesson.exercises),
+        joinedload(PlanCourseItem.course).joinedload(Course.lessons.and_(Lesson.included == True)).joinedload(Lesson.exercises.and_(Exercise.included == True)),
         joinedload(PlanCourseItem.course).joinedload(Course.plan_line),
     ).where(PlanCourseItem.plan_line_id == plan.id).order_by(PlanCourseItem.sequence_number)).unique().all()
     exercise_ids = [exercise.id for item in items for lesson in item.course.lessons for exercise in lesson.exercises]
@@ -40,7 +40,7 @@ def build_plan_summary(db: Session, plan: PlanLine, target_date: date, include_c
     if items:
         schedules = db.scalars(select(CourseScheduleItem).where(
             CourseScheduleItem.plan_course_item_id.in_([item.id for item in items]),
-            CourseScheduleItem.scheduled_date == target_date,
+            CourseScheduleItem.scheduled_date == target_date, CourseScheduleItem.status != "CANCELLED",
         )).all()
     schedule_by_item = {schedule.plan_course_item_id: schedule for schedule in schedules}
     courses = []
@@ -53,11 +53,14 @@ def build_plan_summary(db: Session, plan: PlanLine, target_date: date, include_c
         if current_course is None and not item.course.learning_submitted:
             current_course = item.course
         courses.append(item.course)
+    if plan.focus_course_id and plan.status == "ACTIVE":
+        current_course = next((c for c in courses if c.id == plan.focus_course_id),current_course)
+    if plan.status != "ACTIVE": current_course = None
     progress = round(completed_courses / len(courses) * 100) if courses else 0
     summary = {
         "id": plan.id,
         "name": plan.name,
-        "priority": plan.priority,
+        "priority": plan.priority, "version":plan.version, "focus_course_id":plan.focus_course_id,
         "status": plan.status,
         "course_total": len(courses),
         "completed_courses": completed_courses,

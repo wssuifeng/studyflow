@@ -154,3 +154,18 @@ CLI `course answers get/save/submit` correspond to Engine `course.answers.get`, 
 ## Study rounds (additive capability)
 
 `course study-open --id <id> --idempotency-key <key> [--new-version] --format json` returns `study` (id, revision, content_hash, progress_version, source_changed), frozen lessons and derived course status. `course study-detail --study-id <id> --format json` is read-only. Current course answer writes accept `study_session_id` inside the JSON object. Queue items include frozen `study_context` or explicit `LEGACY_UNVERSIONED`; `batches` reports course submission grouping and reviewed counts. Read available capabilities before using these methods on older installations.
+
+
+## Personal notes and write diagnostics (app 1.4.0)
+
+CLI `course notes-get/notes-save` correspond to Engine `course.notes.get/save`; syntax is different. See [notes contract](study-notes.md) for per-round ownership, text files, versions and replay. Private notes never create review work.
+
+Doctor includes actual filesystem/database write probes. Safe failure codes include `DATABASE_READ_ONLY`, `WORKSPACE_READ_ONLY`, `DATABASE_LOCKED`, `DATABASE_CONSTRAINT_ERROR`, `DATABASE_DISK_FULL` and `WORKSPACE_DISK_FULL`. A diagnostic ID locates safe logs; if logs cannot be written, `diagnostic_unavailable` explains that limitation without disclosing SQL/answers. An uncertain write uses its original request key after recovery.
+
+## Continuous plan notebook (1.5.0)
+
+Additive CLI commands: `plan notebook-get --id` and `plan notebook-save --id --file --expected-version --idempotency-key`. Discover first and read [the notebook contract](plan-notebooks.md) only for an authorized note task. JSON block lists replace under optimistic version control; they do not submit answers or start a course round.
+
+## Structured packages (Core/app 1.6.0)
+
+`course validate-package` is side-effect-free; `course import-package` registers a complete validated course in one transaction. See [course package contract](course-packages.md) for limits, replay and component fields. `course detail` and frozen study details include optional `content_blocks`; legacy clients may use `rendered_html`. No new required fields were added to legacy commands.\n\n## Controlled course cleanup\n\n`workspace purge-courses` is a destructive maintenance capability, not a normal course-management command. It must be discovered from `capabilities`. Use `--dry-run --format json` first; only an explicitly authorized follow-up may use `--confirm --backup <verified-backup> --format json`. The response includes the removed course-owned counts, preserved plan-line boundary, document file results and warnings. A missing lease or write permission is a hard stop; never replace it with SQL, SQLite editing, ACL changes or database deletion.\n

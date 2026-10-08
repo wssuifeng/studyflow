@@ -1,0 +1,24 @@
+{
+  "reason": "User selected sequence-light and white-violet; these three themes are no longer built in.",
+  "date": "2026-10-06",
+  "files": [
+    {
+      "id": "paper-warm",
+      "from": "apps/desktop/src/shared/themes/builtin/paper-warm.json",
+      "to": "docs/archive/2026-10-06-retired-builtin-themes/paper-warm.json",
+      "sha256": "A6DE9E6C1F1025E5B0E1E246D294C1B40A34265CB3DDD4E252E5FF3B26DAB547"
+    },
+    {
+      "id": "graphite-dark",
+      "from": "apps/desktop/src/shared/themes/builtin/graphite-dark.json",
+      "to": "docs/archive/2026-10-06-retired-builtin-themes/graphite-dark.json",
+      "sha256": "DFE4E9E648E60E9C9B8B4985A051ED337D73AC385742B29513D8E2CA26139AAD"
+    },
+    {
+      "id": "sea-glass",
+      "from": "apps/desktop/src/shared/themes/builtin/sea-glass.json",
+      "to": "docs/archive/2026-10-06-retired-builtin-themes/sea-glass.json",
+      "sha256": "4261CA4035AE1EF7AD2DD7FB37FD98E7893D18FDEEE024516DF0591A8EE6F628"
+    }
+  ]
+}

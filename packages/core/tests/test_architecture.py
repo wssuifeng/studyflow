@@ -3,7 +3,7 @@ import ast
 import importlib
 from pathlib import Path
 
-EXPECTED_TABLES = {"plan_lines", "stages", "tasks", "time_blocks", "courses", "plan_course_items", "course_schedule_items", "lessons", "exercises", "submissions", "review_feedback", "learning_progress", "submission_write_receipts", "course_write_receipts", "documents", "context_snapshots", "event_logs", "course_study_sessions"}
+EXPECTED_TABLES = {"plan_lines", "stages", "tasks", "time_blocks", "courses", "plan_course_items", "course_schedule_items", "lessons", "exercises", "submissions", "review_feedback", "learning_progress", "submission_write_receipts", "course_write_receipts", "documents", "context_snapshots", "event_logs", "course_study_sessions", "study_notes", "study_note_receipts", "plan_notebooks", "plan_notebook_receipts", "submission_chain_links", "retest_tasks", "course_revisions", "plan_write_receipts"}
 
 
 def test_business_modules_are_importable():
@@ -52,3 +52,14 @@ def test_single_src_layout_owns_the_package():
     import studyflow
     core = Path(__file__).resolve().parents[1]
     assert Path(studyflow.__file__).resolve().parent == core / "src/studyflow"
+
+
+def test_desktop_engine_ipc_runs_off_the_window_thread():
+    """Static regression guard; native-window interaction still needs real testing."""
+    root = Path(__file__).resolve().parents[3]
+    source = (root / "apps/desktop/src-tauri/src/commands.rs").read_text(encoding="utf-8")
+    for name in ("engine_call", "engine_status"):
+        signature = f"pub(super) async fn {name}("
+        assert signature in source, f"{name} must not block the window event handler"
+        body = source.split(signature, 1)[1].split("#[tauri::command]", 1)[0]
+        assert "tauri::async_runtime::spawn_blocking" in body

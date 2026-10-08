@@ -23,3 +23,17 @@
 @import "../../app/styles/sidebar.css";
 @import "./scrollbars.css";
 @import "../../features/courses/styles/study.css";
+
+@import "./workbench-tokens.css";
+@import "../../features/courses/styles/dock.css";
+@import "../../features/notes/styles/notebook.css";
+@import "../../app/styles/workspace.css";
+@import "../../features/courses/styles/teaching.css";
+
+@import "./iteration.css";
+
+@import "../themes/runtime.css";
+@import "../../features/workspace/styles/themes.css";
+@import "../../features/courses/styles/white-violet.css";
+
+@import "../../features/courses/styles/sequence-light.css";

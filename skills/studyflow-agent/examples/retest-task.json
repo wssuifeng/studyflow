@@ -1,0 +1,1 @@
+{"parent_submission_id":"<submission-id>","title":"Apply the concept to a new case","prompt":"Explain the behaviour in a new synthetic case.","objective":"Verify independent reasoning","requirements":"Give a reason, not only a conclusion.","idempotency_key":"<stable-request-key>"}

@@ -3,14 +3,18 @@ use serde_json::Value;
 use std::env;
 use std::fs;
 use std::io::{BufRead, BufReader, Write};
-use std::process::{Child, ChildStdin, ChildStdout, Stdio};
-use std::sync::Mutex;
+use std::process::{Child, Stdio};
+use std::sync::{
+    mpsc::{self, Receiver, Sender},
+    Mutex,
+};
+use std::time::Duration;
 use tauri::{AppHandle, State};
 
 pub(super) struct EngineClient {
     pub(super) child: Child,
-    stdin: ChildStdin,
-    stdout: BufReader<ChildStdout>,
+    requests: Sender<String>,
+    responses: Receiver<Result<Value, String>>,
 }
 
 impl EngineClient {
@@ -71,35 +75,62 @@ impl EngineClient {
             .stdout
             .take()
             .ok_or_else(|| "Engine stdout 初始化失败".to_string())?;
+        let (sender, responses) = mpsc::channel();
+        let (requests, outgoing) = mpsc::channel::<String>();
+        let write_errors = sender.clone();
+        std::thread::spawn(move || {
+            let mut input = stdin;
+            for line in outgoing {
+                if input
+                    .write_all(line.as_bytes())
+                    .and_then(|_| input.write_all(b"\n"))
+                    .and_then(|_| input.flush())
+                    .is_err()
+                {
+                    let _ = write_errors
+                        .send(Err("ENGINE_UNCONFIRMED: 管道写入失败，结果待确认".into()));
+                    break;
+                }
+            }
+        });
+        std::thread::spawn(move || {
+            let mut reader = BufReader::new(stdout);
+            loop {
+                let mut line = String::new();
+                let response = match reader.read_line(&mut line) {
+                    Ok(0) => Err("ENGINE_EXITED: Engine已退出，写入结果待确认".to_string()),
+                    Ok(_) => serde_json::from_str(&line)
+                        .map_err(|_| "INVALID_RESPONSE: Engine返回无效JSON".to_string()),
+                    Err(_) => Err("ENGINE_IO: Engine读取失败，写入结果待确认".to_string()),
+                };
+                let terminal = response.is_err();
+                if sender.send(response).is_err() || terminal {
+                    break;
+                }
+            }
+        });
         Ok(Self {
             child,
-            stdin,
-            stdout: BufReader::new(stdout),
+            requests,
+            responses,
         })
     }
 
     pub(super) fn call(&mut self, request: &Value) -> Result<Value, String> {
         let line =
             serde_json::to_string(request).map_err(|error| format!("请求序列化失败：{error}"))?;
-        self.stdin
-            .write_all(line.as_bytes())
-            .map_err(|error| format!("Engine 写入失败：{error}"))?;
-        self.stdin
-            .write_all(b"\n")
-            .map_err(|error| format!("Engine 写入失败：{error}"))?;
-        self.stdin
-            .flush()
-            .map_err(|error| format!("Engine 刷新失败：{error}"))?;
-        let mut response = String::new();
-        let read = self
-            .stdout
-            .read_line(&mut response)
-            .map_err(|error| format!("Engine 读取失败：{error}"))?;
-        if read == 0 {
-            return Err("Engine 已退出，没有返回响应".to_string());
-        }
-        serde_json::from_str(response.trim())
-            .map_err(|error| format!("Engine 返回了无效 JSON：{error}"))
+        self.requests
+            .send(line)
+            .map_err(|_| "ENGINE_UNCONFIRMED: Engine写入管道已关闭".to_string())?;
+        let seconds = if matches!(
+            request["method"].as_str(),
+            Some("workspace.export" | "workspace.restore" | "system.doctor")
+        ) {
+            120
+        } else {
+            20
+        };
+        receive_response(&self.responses, request, Duration::from_secs(seconds))
     }
 }
 
@@ -132,4 +163,58 @@ pub(super) fn ensure_engine(state: &State<'_, EngineState>, app: &AppHandle) -> 
         *guard = Some(EngineClient::start(app)?);
     }
     Ok(())
+}
+
+fn receive_response(
+    receiver: &Receiver<Result<Value, String>>,
+    request: &Value,
+    timeout: Duration,
+) -> Result<Value, String> {
+    let response = receiver
+        .recv_timeout(timeout)
+        .map_err(|error| match error {
+            mpsc::RecvTimeoutError::Timeout => {
+                "ENGINE_TIMEOUT: 请求超时，写入结果待确认；保留原幂等键".to_string()
+            }
+            mpsc::RecvTimeoutError::Disconnected => {
+                "ENGINE_UNCONFIRMED: Engine断线，写入结果待确认".to_string()
+            }
+        })??;
+    if response.get("id") != request.get("id") {
+        return Err("INVALID_RESPONSE: 响应ID不匹配，写入结果待确认".into());
+    }
+    Ok(response)
+}
+#[cfg(test)]
+mod rpc_tests {
+    use super::*;
+    use serde_json::json;
+    #[test]
+    fn hung_response_has_deadline() {
+        let (_sender, receiver) = mpsc::channel();
+        let started = std::time::Instant::now();
+        let result = receive_response(&receiver, &json!({"id":1}), Duration::from_millis(20));
+        assert!(result.unwrap_err().starts_with("ENGINE_TIMEOUT"));
+        assert!(started.elapsed() < Duration::from_secs(1));
+    }
+    #[test]
+    fn late_or_wrong_response_is_not_consumed_as_success() {
+        let (sender, receiver) = mpsc::channel();
+        sender.send(Ok(json!({"id":7,"ok":true}))).unwrap();
+        assert!(
+            receive_response(&receiver, &json!({"id":8}), Duration::from_secs(1))
+                .unwrap_err()
+                .starts_with("INVALID_RESPONSE")
+        );
+    }
+    #[test]
+    fn process_exit_is_unconfirmed() {
+        let (sender, receiver) = mpsc::channel();
+        drop(sender);
+        assert!(
+            receive_response(&receiver, &json!({"id":1}), Duration::from_secs(1))
+                .unwrap_err()
+                .starts_with("ENGINE_UNCONFIRMED")
+        );
+    }
 }

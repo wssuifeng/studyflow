@@ -59,7 +59,7 @@ def test_agent_queue_and_explicit_review_decision(monkeypatch, app_service):
     submission = app_service.submit_answer(seeded["exercise_id"], "答案")
     monkeypatch.setattr(cli, "service", lambda: app_service)
     runner = CliRunner()
-    queued = runner.invoke(app, ["assignment", "queue", "--format", "json"])
+    queued = runner.invoke(app, ["assignment", "queue", "--full", "--format", "json"])
     assert queued.exit_code == 0, queued.output
     assert json.loads(queued.stdout)["waiting_review"][0]["id"] == submission.id
     reviewed = runner.invoke(app, ["review", "write", "--submission", submission.id, "--summary", "已掌握", "--decision", "PASSED", "--format", "json"])
@@ -74,7 +74,7 @@ def test_agent_queue_json_preserves_chinese_text(monkeypatch, app_service):
     seeded = app_service.seed_demo()
     app_service.submit_answer(seeded["exercise_id"], "测试答案")
     monkeypatch.setattr(cli, "service", lambda: app_service)
-    result = CliRunner().invoke(app, ["assignment", "queue", "--format", "json"])
+    result = CliRunner().invoke(app, ["assignment", "queue", "--full", "--format", "json"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert "用自己的话解释引用值副本与对象字段修改。" in payload["waiting_review"][0]["exercise_title"]

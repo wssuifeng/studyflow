@@ -99,6 +99,9 @@ def test_batch_followups_keep_originals_and_join_agent_queue(app_service, multi_
     app_service.write_review(first["id"], "需要修正", "原句与解释", decision="REVISION_REQUIRED")
     app_service.write_review(second["id"], "需要复测", "再次解释", decision="RETEST_REQUIRED")
     payload = [{**item, "parent_submission_id": row["id"]} for item, row in zip(entries(ids), original["submissions"])]
+    from studyflow.modules.reviews.retests import publish
+    retest=publish(app_service.reviews,second["id"],"独立复测","解释新的场景","校验状态理解","batch-retest")
+    payload[1]["retest_task_id"]=retest["id"]
     draft = app_service.write_course_answers(course_id, payload, "DRAFT_SAVE", "followup-draft")
     assert [r["attempt_kind"] for r in draft["submissions"]] == ["REVISION", "RETEST"]
     submit_payload = [{**item, "submission_id": row["id"], "expected_version": row["version"]}

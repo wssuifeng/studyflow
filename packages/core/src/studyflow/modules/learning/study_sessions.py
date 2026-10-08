@@ -38,7 +38,8 @@ def study_attempts(db, study, include_drafts=False):
     query = select(Submission).where(Submission.exercise_id.in_(exercise_ids(study)), study_scope(study))
     if not include_drafts: query = query.where(Submission.status != "DRAFT")
     rows = db.scalars(query.order_by(Submission.attempt_number, Submission.created_at, Submission.id)).all()
-    return {row.exercise_id: row for row in rows}
+    from .write_contract import effective_rows
+    return {row.exercise_id: row for row in effective_rows(db, rows)}
 
 
 def outcome(db, study):
@@ -82,6 +83,9 @@ def capture(service, course_id):
         body = parse_front_matter(markdown)[1] if markdown.startswith(("---\n", "---\r\n")) else markdown
         lesson["markdown"] = markdown
         lesson["rendered_html"] = render_markdown(body)
+        from studyflow.modules.courses.content import render_blocks
+        blocks = render_blocks(markdown, [ex["id"] for ex in source["exercises"]]) if markdown.startswith(("---\n", "---\r\n")) else []
+        if blocks: lesson["content_blocks"] = blocks
         lesson["exercises"] = [{key: ex[key] for key in ("id", "title", "prompt", "requirements", "type", "position")} for ex in source["exercises"]]
         lessons.append(lesson)
     content = {"course": course, "lessons": lessons}
@@ -121,11 +125,13 @@ def detail(service, study_id):
                 "resume_lesson_id": study.resume_lesson_id, "next_action":"在当前知识点学习和作答，整课完成后统一提交。"}
 
 
-def open_study(service, course_id, key, new_version=False):
-    if not isinstance(key,str) or not key.strip() or len(key)>160 or not isinstance(new_version,bool):
+def open_study(service, course_id, key, new_version=False, review_round=False):
+    if not isinstance(key,str) or not key.strip() or len(key)>160 or not isinstance(new_version,bool) or not isinstance(review_round,bool):
         raise DomainError("INVALID_ARGUMENT", "学习开始需要有效幂等键和布尔new_version。", "同一请求使用原幂等键。")
     with service.session() as db:
-        digest_request = hashlib.sha256(json.dumps({"course_id":course_id,"new_version":new_version},sort_keys=True).encode()).hexdigest()
+        request_payload={"course_id":course_id,"new_version":new_version}
+        if review_round: request_payload["review_round"]=True
+        digest_request=hashlib.sha256(json.dumps(request_payload,sort_keys=True).encode()).hexdigest()
         receipt = db.scalar(select(CourseWriteReceipt).where(CourseWriteReceipt.idempotency_key==key))
         replay = db.scalar(select(CourseStudySession).where(CourseStudySession.idempotency_key == key))
         if receipt:
@@ -133,25 +139,25 @@ def open_study(service, course_id, key, new_version=False):
                 raise DomainError("IDEMPOTENCY_KEY_CONFLICT","幂等键已用于其他学习写入请求。")
             identifier=json.loads(receipt.result_json)["study_session_id"]
         elif replay:
-            if replay.course_id != course_id or replay.new_version != new_version:
+            if replay.course_id != course_id or replay.new_version != (new_version or review_round):
                 raise DomainError("IDEMPOTENCY_KEY_CONFLICT", "幂等键已用于其他学习开始请求。")
             identifier = replay.id
         else:
             current = current_study(db, course_id)
-            if current and not new_version:
+            if current and not new_version and not review_round:
                 identifier = current.id
             else:
                 if current and outcome(db,current)["study_status"] not in {"PASSED","READ_COMPLETED"}:
                     raise DomainError("COURSE_STUDY_IN_PROGRESS", "当前学习尚未收口，不能切换材料版本。", "完成当前作答与反馈后，再开始新版学习。")
                 text, digest = capture(service, course_id)
-                if current and digest == current.content_hash:
+                if current and digest == current.content_hash and not review_round:
                     raise DomainError("COURSE_VERSION_UNCHANGED", "学习材料没有更新，无需开始新版。", "继续回看当前课程即可。")
                 progress = {}
                 if not current:
                     for row in db.scalars(select(LearningProgress).where(LearningProgress.course_id == course_id)):
                         progress[row.lesson_id] = {"progress_percent":row.progress_percent,"status":row.status,"last_position":row.last_position}
                 row = CourseStudySession(id=new_id(), course_id=course_id, revision=current.revision+1 if current else 1,
-                    idempotency_key=key, new_version=new_version, snapshot_json=text, content_hash=digest,
+                    idempotency_key=key, new_version=new_version or review_round, snapshot_json=text, content_hash=digest,
                     progress_json=json.dumps(progress), version=1)
                 db.add(row); db.flush(); identifier=row.id
                 service._event(db,"USER_ENGINE","course_study",row.id,"OPEN","开始固定版本的本地学习轮次")

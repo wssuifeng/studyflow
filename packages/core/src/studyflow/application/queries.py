@@ -4,7 +4,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import joinedload
 from studyflow.modules.courses.presentation import course_summary
 from studyflow.shared.domain import TASK_KINDS, DomainError
-from studyflow.modules.courses.models import Course, Lesson
+from studyflow.modules.courses.models import Course, Lesson, Exercise
 from studyflow.modules.planning.models import CourseScheduleItem, PlanCourseItem, PlanLine, Task
 from studyflow.modules.planning.repository import build_plan_summary
 from studyflow.modules.learning.repository import latest_attempts, annotate_course
@@ -15,6 +15,13 @@ from studyflow.infrastructure.runtime import Runtime, Service
 
 
 class QueriesService(Service):
+    def change_token(self):
+        from studyflow.infrastructure.persistence.base import EventLog
+        from sqlalchemy import func, select
+        with self.session() as db:
+            count, latest=db.execute(select(func.count(EventLog.id),func.max(EventLog.created_at))).one()
+            return {"revision":str(count)+":"+str(latest or ""),"event_count":count}
+
     def plan_overviews(self, target_date: date | None = None) -> list[dict]:
         target_date = target_date or date.today()
         with self.session() as db:
@@ -47,15 +54,15 @@ class QueriesService(Service):
             item_query = select(PlanCourseItem).options(
                 joinedload(PlanCourseItem.plan_line),
                 joinedload(PlanCourseItem.course).joinedload(Course.plan_line),
-                joinedload(PlanCourseItem.course).joinedload(Course.lessons).joinedload(Lesson.exercises),
+                joinedload(PlanCourseItem.course).joinedload(Course.lessons.and_(Lesson.included == True)).joinedload(Lesson.exercises.and_(Exercise.included == True)),
             ).join(Course, Course.id == PlanCourseItem.course_id).where(Course.status == "ACTIVE").order_by(PlanCourseItem.plan_line_id, PlanCourseItem.sequence_number)
             if plan_line_id:
                 item_query = item_query.where(PlanCourseItem.plan_line_id == plan_line_id)
             plan_items = db.scalars(item_query).unique().all()
             schedule_query = select(CourseScheduleItem).options(
                 joinedload(CourseScheduleItem.plan_course_item).joinedload(PlanCourseItem.plan_line),
-                joinedload(CourseScheduleItem.plan_course_item).joinedload(PlanCourseItem.course).joinedload(Course.lessons).joinedload(Lesson.exercises),
-            ).where(CourseScheduleItem.scheduled_date == target_date).order_by(CourseScheduleItem.position, CourseScheduleItem.start_time)
+                joinedload(CourseScheduleItem.plan_course_item).joinedload(PlanCourseItem.course).joinedload(Course.lessons.and_(Lesson.included == True)).joinedload(Lesson.exercises.and_(Exercise.included == True)),
+            ).where(CourseScheduleItem.scheduled_date == target_date, CourseScheduleItem.status != "CANCELLED").order_by(CourseScheduleItem.position, CourseScheduleItem.start_time)
             if plan_line_id:
                 schedule_query = schedule_query.join(CourseScheduleItem.plan_course_item).where(PlanCourseItem.plan_line_id == plan_line_id)
             schedules = db.scalars(schedule_query).unique().all()
@@ -88,6 +95,9 @@ class QueriesService(Service):
                 "items": pending,
             }
             current_course = next((course for course in courses if not course.learning_submitted), None)
+            for plan in plans:
+                focused=next((course for course in courses if course.id==plan.focus_course_id),None)
+                if focused:current_course=focused;break
             return {
                 "date": target_date,
                 "tasks": tasks,

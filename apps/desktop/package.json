@@ -1,14 +1,16 @@
 {
   "name": "studyflow-desktop",
   "private": true,
-  "version": "1.3.0",
+  "version": "1.7.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test:learning": "node --test scripts/test-course-answers.cjs"
+    "test:learning": "node --test scripts/test-course-answers.cjs scripts/test-study-tools.cjs scripts/test-plan-notebook.cjs scripts/test-dock.cjs scripts/test-workspace-panel.cjs",
+    "test:themes": "node --test scripts/test-themes.cjs scripts/test-white-violet.cjs scripts/test-sequence-light.cjs scripts/test-workspace-shell.cjs",
+    "theme:check": "node scripts/check-theme.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",

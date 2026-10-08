@@ -27,7 +27,7 @@ def test_submission_and_review_keep_original_answer(app_service):
 def test_idempotent_submission_does_not_duplicate(app_service):
     seeded = app_service.seed_demo()
     first = app_service.submit_answer(seeded["exercise_id"], "同一答案", idempotency_key="same")
-    second = app_service.submit_answer(seeded["exercise_id"], "另一份内容", idempotency_key="same")
+    second = app_service.submit_answer(seeded["exercise_id"], "同一答案", idempotency_key="same")
     assert first.id == second.id
     assert second.answer_text == "同一答案"
 
@@ -116,6 +116,8 @@ def test_submission_lifecycle_keeps_parent_chain(app_service):
     assert revision.parent_submission_id == first.id
     assert revision.attempt_number == 2
     app_service.write_review(revision.id, "需要脱离原答案复述", decision="RETEST_REQUIRED")
+    from studyflow.modules.reviews.retests import publish
+    publish(app_service.reviews,revision.id,"独立复测题","解释一个新场景","独立应用能力","publish-"+revision.id)
     retest = app_service.retest_submission(revision.id, "这是复测答案")
     assert retest.parent_submission_id == revision.id
     assert retest.attempt_kind == "RETEST"
@@ -158,6 +160,8 @@ def test_passed_submission_can_still_start_revision_and_retest(app_service):
     revision = app_service.revise_submission(first.id, "主动补充后的修正版")
     assert revision.parent_submission_id == first.id
     app_service.write_review(revision.id, "复测前再独立组织", decision="RETEST_REQUIRED")
+    from studyflow.modules.reviews.retests import publish
+    publish(app_service.reviews,revision.id,"独立复测题","解释一个新场景","独立应用能力","publish-"+revision.id)
     retest = app_service.retest_submission(revision.id, "独立复测答案")
     assert retest.parent_submission_id == revision.id
 

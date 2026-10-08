@@ -12,11 +12,11 @@ class Course(TimestampMixin, Base):
     plan_line_id: Mapped[Optional[str]] = mapped_column(ForeignKey("plan_lines.id"), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(200))
     summary: Mapped[str] = mapped_column(Text, default="")
-    subject: Mapped[str] = mapped_column(String(120), default="")
+    subject: Mapped[str] = mapped_column(String(120), default="", server_default="")
     content_type: Mapped[str] = mapped_column(String(40), default="LESSON")
     difficulty: Mapped[str] = mapped_column(String(32), default="")
     source_type: Mapped[str] = mapped_column(String(32), default="AGENT_CLI")
-    version: Mapped[int] = mapped_column(Integer, default=1)
+    version: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     status: Mapped[str] = mapped_column(String(24), default="ACTIVE")
     plan_line: Mapped[Optional[PlanLine]] = relationship(back_populates="courses")
     plan_course_items: Mapped[list[PlanCourseItem]] = relationship(back_populates="course")
@@ -27,8 +27,10 @@ class Lesson(TimestampMixin, Base):
     __tablename__ = "lessons"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    semantic_id: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    included: Mapped[bool] = mapped_column(default=True, server_default="1")
     title: Mapped[str] = mapped_column(String(200))
-    position: Mapped[int] = mapped_column(Integer, default=1)
+    position: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     markdown_path: Mapped[str] = mapped_column(String(500))
     summary: Mapped[str] = mapped_column(Text, default="")
     course: Mapped[Course] = relationship(back_populates="lessons")
@@ -37,12 +39,28 @@ class Lesson(TimestampMixin, Base):
 
 class Exercise(TimestampMixin, Base):
     __tablename__ = "exercises"
+    semantic_id: Mapped[str] = mapped_column(String(120), default="", server_default="")
+    included: Mapped[bool] = mapped_column(default=True, server_default="1")
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     lesson_id: Mapped[str] = mapped_column(ForeignKey("lessons.id"), index=True)
     title: Mapped[str] = mapped_column(String(200))
     prompt: Mapped[str] = mapped_column(Text)
     requirements: Mapped[str] = mapped_column(Text, default="")
     exercise_type: Mapped[str] = mapped_column(String(40), default="SHORT_ANSWER", index=True)
-    position: Mapped[int] = mapped_column(Integer, default=1)
+    position: Mapped[int] = mapped_column(Integer, default=1, server_default="1")
     lesson: Mapped[Lesson] = relationship(back_populates="exercises")
     submissions: Mapped[list[Submission]] = relationship(back_populates="exercise", cascade="all, delete-orphan")
+
+
+class CourseRevision(TimestampMixin, Base):
+    __tablename__ = "course_revisions"
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)
+    number: Mapped[int] = mapped_column(Integer)
+    package_json: Mapped[str] = mapped_column(Text)
+    mapping_json: Mapped[str] = mapped_column(Text)
+    content_hash: Mapped[str] = mapped_column(String(64))
+    idempotency_key: Mapped[Optional[str]] = mapped_column(String(160), unique=True, nullable=True)
+    request_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    result_json: Mapped[str] = mapped_column(Text, default="{}")
+    __table_args__ = (UniqueConstraint("course_id", "number", name="uq_course_revision_number"),)

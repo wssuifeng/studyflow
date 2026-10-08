@@ -1,0 +1,96 @@
+{
+  "schema": "studyflow.course-package/1",
+  "package_id": "example-computer-systems-v1",
+  "plan_line": "课程组件演示",
+  "course": {
+    "title": "计算机系统 · 组件示例",
+    "summary": "七种教学组件的合法输入示例，Agent复制后按课程实际内容改写。"
+  },
+  "lessons": [
+    {
+      "id": "cpu",
+      "title": "CPU roles",
+      "blocks": [
+        {
+          "id": "idea",
+          "type": "concept",
+          "title": "Concept",
+          "body": "The **CPU** executes instructions."
+        },
+        {
+          "id": "compare",
+          "type": "comparison",
+          "title": "Registers",
+          "columns": [
+            "Name",
+            "Purpose"
+          ],
+          "rows": [
+            [
+              "PC",
+              "Address"
+            ],
+            [
+              "IR",
+              "Instruction"
+            ]
+          ]
+        },
+        {
+          "id": "flow",
+          "type": "steps",
+          "title": "Execution",
+          "items": [
+            {
+              "title": "Fetch",
+              "body": "Read instruction"
+            }
+          ]
+        },
+        {
+          "id": "example",
+          "type": "example",
+          "title": "Example",
+          "given": "PC=8",
+          "steps": [
+            {
+              "title": "Advance",
+              "body": "8+4"
+            }
+          ],
+          "conclusion": "PC=12"
+        },
+        {
+          "id": "warning",
+          "type": "callout",
+          "title": "Do not confuse",
+          "body": "Address is not instruction",
+          "tone": "warning"
+        },
+        {
+          "id": "recap",
+          "type": "summary",
+          "title": "Remember",
+          "items": [
+            "PC holds address"
+          ]
+        },
+        {
+          "id": "practice",
+          "type": "practice",
+          "title": "Try it",
+          "exercise_ids": [
+            "q1"
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "q1",
+          "title": "PC",
+          "prompt": "What does PC hold?"
+        }
+      ]
+    }
+  ]
+}

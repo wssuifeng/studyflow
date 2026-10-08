@@ -1,23 +1,27 @@
 [CmdletBinding()]
 param(
-    [switch]$InstallMissing
+    [switch]$InstallMissing,
+    [string]$PythonExecutable,
+    [string]$BuildDirectory
 )
 
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "..\..\..")).Path
 $appRoot = Join-Path $repoRoot "packages\core"
-$python = Join-Path $appRoot ".venv\Scripts\python.exe"
+$python = if ($PythonExecutable) { (Resolve-Path -LiteralPath $PythonExecutable).Path } else { Join-Path $appRoot ".venv\Scripts\python.exe" }
 $binaryRoot = Join-Path $repoRoot "apps\desktop\src-tauri\binaries"
-$buildRoot = Join-Path $appRoot "build\engine"
+$buildRoot = if ($BuildDirectory) { [IO.Path]::GetFullPath($BuildDirectory) } else { Join-Path $appRoot "build\engine" }
 $sourceRoot = Join-Path $appRoot "src"
 $resourceRoot = Join-Path $sourceRoot "studyflow\resources"
 $previousPyInstallerConfig = $env:PYINSTALLER_CONFIG_DIR
+$previousPythonPath = $env:PYTHONPATH
+$dependencyRoot = Join-Path $appRoot ".venv\Lib\site-packages"
 
 if (-not (Test-Path -LiteralPath $python)) {
     throw "Python virtual environment not found: $python"
 }
 
-$pyInstallerCheck = & $python -c "import PyInstaller; print(PyInstaller.__version__)" 2>$null
+$pyInstallerCheck = & $python -S -c "import sys; sys.path.insert(0, r'$dependencyRoot'); import PyInstaller; print(PyInstaller.__version__)" 2>$null
 if ($LASTEXITCODE -ne 0) {
     if (-not $InstallMissing) {
         throw "PyInstaller is not installed in the project environment. Run pip install pyinstaller or use -InstallMissing."
@@ -34,7 +38,7 @@ $specRoot = Join-Path $buildRoot "spec"
 New-Item -ItemType Directory -Path $distRoot,$workRoot,$specRoot -Force | Out-Null
 
 $arguments = @(
-    "-m", "PyInstaller",
+    "-S", "-m", "PyInstaller",
     "--noconfirm", "--clean", "--onefile",
     "--name", "studyflow-engine",
     "--distpath", $distRoot,
@@ -62,10 +66,12 @@ foreach ($asset in $assets) {
 $arguments += (Join-Path $appRoot "engine_entry.py")
 
 try {
+    $env:PYTHONPATH = "$sourceRoot;$dependencyRoot"
     $env:PYINSTALLER_CONFIG_DIR = Join-Path $buildRoot "cache"
     & $python @arguments
     if ($LASTEXITCODE -ne 0) { throw "PyInstaller build failed." }
 } finally {
+    if ($null -eq $previousPythonPath) { Remove-Item Env:PYTHONPATH -ErrorAction SilentlyContinue } else { $env:PYTHONPATH = $previousPythonPath }
     if ($null -eq $previousPyInstallerConfig) {
         Remove-Item Env:PYINSTALLER_CONFIG_DIR -ErrorAction SilentlyContinue
     } else {
@@ -76,5 +82,19 @@ try {
 $built = Join-Path $distRoot "studyflow-engine.exe"
 if (-not (Test-Path -LiteralPath $built)) { throw "PyInstaller did not create studyflow-engine.exe." }
 Copy-Item -LiteralPath $built -Destination (Join-Path $binaryRoot "studyflow-engine.exe") -Force
+Copy-Item -LiteralPath $built -Destination (Join-Path $binaryRoot "studyflow.exe") -Force
+Copy-Item -LiteralPath $built -Destination (Join-Path $distRoot "studyflow.exe") -Force
+Write-Output "StudyFlow CLI: $(Join-Path $binaryRoot 'studyflow.exe')"
 Write-Output "StudyFlow Engine sidecar: $(Join-Path $binaryRoot 'studyflow-engine.exe')"
 Write-Output "PyInstaller: $pyInstallerCheck"
+
+$skillSource = Join-Path $repoRoot "skills\studyflow-agent"
+$skillTarget = Join-Path $binaryRoot "studyflow-agent"
+New-Item -ItemType Directory -Path $skillTarget -Force | Out-Null
+foreach ($file in Get-ChildItem -LiteralPath $skillSource -File -Recurse) {
+    if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Linked Skill resource is not allowed" }
+    $relative = $file.FullName.Substring($skillSource.Length).TrimStart('\','/')
+    $destination = Join-Path $skillTarget $relative
+    New-Item -ItemType Directory -Path ([IO.Path]::GetDirectoryName($destination)) -Force | Out-Null
+    Copy-Item -LiteralPath $file.FullName -Destination $destination -Force
+}

@@ -208,7 +208,9 @@ def test_retest_round_closes_without_overwriting_first_attempt(app_service, stud
     for row in first["submissions"]:
         app_service.write_review(row["id"],"请独立复测",decision="RETEST_REQUIRED",detail_markdown="复测题：解释一个新的失败场景。",next_action="回答新复测题，不抄原答案。")
     assert app_service.course_study_detail(sid)["course"]["study_status"]=="RETEST_REQUIRED"
-    retry=app_service.write_course_answers(cid,[{"exercise_id":row["exercise_id"],"answer_text":"独立复测合成答案","parent_submission_id":row["id"]} for row in first["submissions"]],"SUBMIT","retest-submit",study_session_id=sid)
+    from studyflow.modules.reviews.retests import publish
+    tasks={row["id"]:publish(app_service.reviews,row["id"],"独立复测","解释一个新的失败场景。","独立解释能力","rt-"+row["id"])["id"] for row in first["submissions"]}
+    retry=app_service.write_course_answers(cid,[{"exercise_id":row["exercise_id"],"answer_text":"独立复测合成答案","parent_submission_id":row["id"],"retest_task_id":tasks[row["id"]]} for row in first["submissions"]],"SUBMIT","retest-submit",study_session_id=sid)
     for row in retry["submissions"]:
         assert row["attempt_kind"]=="RETEST"
         app_service.write_review(row["id"],"复测通过",decision="PASSED")

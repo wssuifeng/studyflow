@@ -20,4 +20,4 @@ class EventLog(TimestampMixin, Base):
     object_id: Mapped[str] = mapped_column(String(36))
     action: Mapped[str] = mapped_column(String(80))
     summary: Mapped[str] = mapped_column(Text, default="")
-    __table_args__ = (UniqueConstraint("source", "object_type", "object_id", "action", "summary", name="uq_event_signature"),)
+    # Events are append-only history. Request receipts, not text signatures, provide idempotency.

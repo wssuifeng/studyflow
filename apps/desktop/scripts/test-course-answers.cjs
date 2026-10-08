@@ -7,7 +7,7 @@ const pause=ms=>new Promise(resolve=>setTimeout(resolve,ms))
 class EngineError extends Error {constructor(code){super(code);this.code=code}}
 function fixture(seedStorage) {
   const state={answers:[{exercise_id:'e1',action:'FIRST',draft:null,submission:null},{exercise_id:'e2',action:'FIRST',draft:null,submission:null}]}
-  const store=seedStorage||new Map(),cleanup=[],calls=[];let hold=null,reject=null
+  const store=seedStorage||new Map(),cleanup=[],calls=[],errors=[];let hold=null,reject=null
   const clone=x=>JSON.parse(JSON.stringify(x))
   const api={courseAnswers:async()=>clone(state),saveCourseAnswers:async params=>{
     calls.push(clone(params));if(reject){const code=reject;reject=null;throw new EngineError(code)}
@@ -24,10 +24,10 @@ function fixture(seedStorage) {
   vm.runInNewContext(compiled,{exports:mod.exports,module:mod,console,setTimeout,clearTimeout,
     window:{addEventListener(){},removeEventListener(){}},
     localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},
-    require:name=>name==='vue'?{...vue,onBeforeUnmount:fn=>cleanup.push(fn)}:name.includes('shared/api')?{EngineError,studyApi:api}:name.includes('shared/ui')?{
-      makeRequestKey:op=>op+':'+Math.random(),notify(){},reportError(){},storageKey:k=>'test:'+k}:require(name)})
+    require:name=>name==='vue'?{...vue,onBeforeUnmount:fn=>cleanup.push(fn)}:name.includes('shared/api')?{EngineError,studyApi:api,isTauri:()=>false}:name.includes('shared/ui')?{
+      makeRequestKey:op=>op+':'+Math.random(),notify(){},reportError(cause){errors.push(cause)},storageKey:k=>'test:'+k,windowStorageKey:k=>'test:'+k}:require(name)})
   const course=vue.ref({course:{id:'c'},study:{id:'round-1'},lessons:[{id:'l',title:'合成知识点',exercises:[{id:'e1',title:'合成题1',prompt:'题面1',requirements:''},{id:'e2',title:'合成题2',prompt:'题面2',requirements:''}]}]})
-  return {model:mod.exports.useCourseAnswers(course),store,state,calls,hold(p){hold=p},reject(code){reject=code},dispose(){cleanup.forEach(f=>f())}}
+  return {model:mod.exports.useCourseAnswers(course),store,state,calls,errors,hold(p){hold=p},reject(code){reject=code},dispose(){cleanup.forEach(f=>f())}}
 }
 test('空题可保留草稿，正式提交校验完整性',async()=>{
  const f=fixture();try{await f.model.load();assert.equal(f.model.missing.value.length,2)
@@ -71,4 +71,32 @@ test('整课一次提交，多题转为只读等待批改',async()=>{
  const f=fixture();try{await f.model.load();f.model.rows.value.forEach((r,i)=>r.answer='合成答案'+i)
  assert.equal(await f.model.write('submit'),true);assert.equal(f.calls.length,1);assert.equal(f.calls[0].answers.length,2)
  assert.equal(f.calls[0].study_session_id,'round-1');assert.equal(f.model.editable.value.length,0);assert.equal(f.model.dirty.value,false)}finally{f.dispose()}
+})
+
+for (const code of ['DATABASE_CONSTRAINT_ERROR','DATABASE_LOCKED','DATABASE_DISK_FULL','WORKSPACE_DISK_FULL','DATABASE_READ_ONLY','WORKSPACE_READ_ONLY']) {
+ test(code+' 保留原请求和输入，修复后可幂等重试',async()=>{
+  const f=fixture();try {await f.model.load();f.model.rows.value[0].answer='故障时保留的合成答案';f.reject(code)
+  assert.equal(await f.model.write('save'),false);assert.ok(f.model.pending.value)
+  const key=f.calls[0].idempotency_key;assert.equal(await f.model.retry(),true)
+  assert.equal(f.calls[1].idempotency_key,key);assert.equal(f.model.rows.value[0].answer,'故障时保留的合成答案')
+  }finally{f.dispose()}
+ })
+}
+
+test('不保存离开后，迟到的答案请求失败不在新页面弹错误',async()=>{
+ const f=fixture();try{await f.model.load();let failFlight;f.hold(new Promise((_,reject)=>failFlight=reject))
+ f.model.rows.value[0].answer='明确选择不保存';const saving=f.model.write('save');await pause(5)
+ f.model.suspendAutosave();failFlight(new EngineError('CONNECTION_FAILED'));assert.equal(await saving,false)
+ assert.equal(f.errors.length,0);assert.ok(f.model.pending.value);assert.equal(await f.model.retry(),false)
+ assert.equal(f.calls.length,1);assert.equal(f.model.rows.value[0].answer,'明确选择不保存')}finally{f.dispose()}
+})
+
+for(const code of ['ENGINE_TIMEOUT','ENGINE_UNCONFIRMED','ENGINE_BUSY','INVALID_RESPONSE']){
+ test(code+'保持原幂等请求，不改键自动重发',async()=>{
+  const f=fixture();try{await f.model.load();f.model.rows.value[0].answer='结果未确认的答案';f.reject(code);assert.equal(await f.model.write('save'),false);assert.ok(f.model.pending.value);const key=f.calls[0].idempotency_key;assert.equal(await f.model.retry(),true);assert.equal(f.calls[1].idempotency_key,key)}finally{f.dispose()}
+ })
+}
+test('缓存配额不足不阻止工作区写入且释放忙态',async()=>{
+ const store=new Map();store.set=()=>{throw new Error('synthetic quota')};const f=fixture(store)
+ try{await f.model.load();f.model.rows.value[0].answer='缓存不可用仍应写入工作区';assert.equal(await f.model.write('save'),true);assert.equal(f.model.busy.value,'');assert.equal(f.model.cacheUnavailable.value,true);assert.equal(f.calls.length,1)}finally{f.dispose()}
 })

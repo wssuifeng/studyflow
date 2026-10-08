@@ -11,6 +11,15 @@ from studyflow.shared.domain import DomainError
 PROTOCOL_VERSION = "1.2"
 
 CAPABILITIES: list[dict[str, str]] = [
+    {"name":"course_update_preview","method":"course.update.preview","kind":"read"},
+    {"name":"course_update_apply","method":"course.update.apply","kind":"write"},
+    {"name":"assignment_summary","method":"assignment.summary","kind":"read"},
+    {"name":"assignment_context","method":"assignment.context","kind":"read"},
+    {"name":"retest_publish","method":"review.retest.publish","kind":"write"},
+    {"name":"system_changes","method":"system.changes","kind":"read"},
+    {"name":"system_schema","method":"system.schema","kind":"read"},
+    {"name":"plan_notebook_get","method":"plan.notebook.get","kind":"read"},
+    {"name":"plan_notebook_save","method":"plan.notebook.save","kind":"write"},
     {"name": "version", "method": "system.version", "kind": "read"},
     {"name": "capabilities", "method": "system.capabilities", "kind": "read"},
     {"name": "doctor", "method": "system.doctor", "kind": "diagnostic"},
@@ -27,6 +36,8 @@ CAPABILITIES: list[dict[str, str]] = [
     {"name": "course_answers_get", "method": "course.answers.get", "kind": "read"},
     {"name": "course_answers_draft_save", "method": "course.answers.draft.save", "kind": "write"},
     {"name": "course_answers_submit", "method": "course.answers.submit", "kind": "write"},
+    {"name": "course_notes_get", "method": "course.notes.get", "kind": "read"},
+    {"name": "course_notes_save", "method": "course.notes.save", "kind": "write"},
     {"name": "document_read", "method": "document.read", "kind": "read"},
     {"name": "submission_get", "method": "submission.get", "kind": "read"},
     {"name": "submission_draft_save", "method": "submission.draft.save", "kind": "write"},
@@ -55,9 +66,10 @@ def error_payload(error: Exception) -> dict[str, Any]:
         return {"code": error.code, "error_code": error.code,
                 "message": redact_sensitive_text(error.message),
                 "next_action": redact_sensitive_text(error.next_action) or "重新读取当前对象状态后重试。"}
-    if isinstance(error, SQLAlchemyError):
-        return {"code": "DATABASE_ERROR", "error_code": "DATABASE_ERROR", "message": "数据库操作失败，当前请求未完成。",
-                "next_action": "运行 doctor 检查数据库；写入重试请使用原幂等键。"}
+    from studyflow.infrastructure.errors import database_error_payload
+    database_error = database_error_payload(error)
+    if database_error:
+        return {**database_error, "error_code":database_error["code"]}
     if isinstance(error, OSError):
         return {"code": "FILESYSTEM_ERROR", "error_code": "FILESYSTEM_ERROR", "message": "工作区文件操作失败。",
                 "next_action": "检查工作区文件状态和读取权限后重试。"}
@@ -81,9 +93,14 @@ def discovery_metadata(settings: Settings) -> dict[str, Any]:
     }
 
 
+def all_capabilities():
+    from .extensions import METHODS
+    existing={i["method"] for i in CAPABILITIES}
+    return CAPABILITIES+[{"name":m.replace(".","_"),"method":m,"kind":kind} for m,kind in METHODS.items() if m not in existing]
+
 def version_payload(settings: Settings) -> dict[str, Any]:
-    return {"protocol_version": PROTOCOL_VERSION, "app_version": __version__, **discovery_metadata(settings), "capabilities": [item["name"] for item in CAPABILITIES], "next_action": "调用 system.doctor 检查工作区与数据库。"}
+    return {"protocol_version": PROTOCOL_VERSION, "app_version": __version__, **discovery_metadata(settings), "capabilities": [item["name"] for item in all_capabilities()], "next_action": "调用 system.doctor 检查工作区与数据库。"}
 
 
 def capabilities_payload(settings: Settings) -> dict[str, Any]:
-    return {"protocol_version": PROTOCOL_VERSION, "app_version": __version__, **discovery_metadata(settings), "capabilities": CAPABILITIES, "next_action": "调用 system.doctor，再按当前任务选择方法。"}
+    return {"protocol_version": PROTOCOL_VERSION, "app_version": __version__, **discovery_metadata(settings), "capabilities": all_capabilities(), "next_action": "调用 system.doctor，再按当前任务选择方法。"}
