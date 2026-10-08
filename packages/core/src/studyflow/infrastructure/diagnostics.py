@@ -18,6 +18,13 @@ def record_engine_error(log_root: Path, error: Exception) -> dict[str, str | boo
         "frames": [{"file": Path(frame.filename).name, "line": frame.lineno,
                     "function": frame.name} for frame in extract_tb(error.__traceback__)],
     }
+    original=getattr(error,"orig",error)
+    if isinstance(getattr(original,"sqlite_errorcode",None),int):
+        entry["sqlite_error_code"]=original.sqlite_errorcode
+        entry["sqlite_error_name"]=getattr(original,"sqlite_errorname",None)
+    # Only a validated list of schema identifiers; never the message or SQL parameters.
+    match=re.fullmatch(r"UNIQUE constraint failed: ([A-Za-z0-9_., ]+)",str(original))
+    if match: entry["constraint_columns"]=match.group(1).split(", ")
     if isinstance(error, ModuleNotFoundError) and error.name and re.fullmatch(r"[A-Za-z0-9_.]+", error.name):
         entry["missing_module"] = error.name
     path = log_root / "engine-errors.jsonl"
@@ -25,6 +32,7 @@ def record_engine_error(log_root: Path, error: Exception) -> dict[str, str | boo
         log_root.mkdir(parents=True, exist_ok=True)
         with path.open("a", encoding="utf-8") as stream:
             stream.write(json.dumps(entry, ensure_ascii=False) + "\n")
-    except OSError:
-        return {"diagnostic_id": diagnostic_id, "diagnostic_unavailable": True}
+    except OSError as exc:
+        return {"diagnostic_id": diagnostic_id, "diagnostic_unavailable": True,
+                "log_write_error": "disk_full" if exc.errno == 28 or getattr(exc, "winerror", None) in {39, 112} else "filesystem_error"}
     return {"diagnostic_id": diagnostic_id, "log_path": str(path)}

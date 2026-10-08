@@ -1,23 +1,34 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import type { QueueData } from '../../../shared/api/contracts'
-import { navigate } from '../../../shared/ui'
-const props = defineProps<{ data: QueueData | null }>()
-const filter = ref('all')
-const tabs = [{id:'all',label:'全部'}, {id:'WAITING_REVIEW',label:'等待批改'}, {id:'NEEDS_REVISION',label:'需要修正'}, {id:'RETEST_REQUIRED',label:'等待复测'}]
-const groups = computed(() => {
-  const map = new Map<string, { id: string; title: string; plan: string; items: NonNullable<QueueData>['items'] }>()
-  for (const item of props.data?.items || []) {
-    if (filter.value !== 'all' && item.status !== filter.value) continue
-    if (!map.has(item.course_id)) map.set(item.course_id, { id: item.course_id, title: item.course_title, plan: item.plan_line || '学习计划', items: [] })
-    map.get(item.course_id)!.items.push(item)
-  }
-  return [...map.values()]
-})
+import {computed,ref,watch} from 'vue'
+import {engineCall} from '../../../shared/api'
+import {QUEUE_PAGE_SIZE, type QueueData, type QueueItem} from '../../../shared/api/contracts'
+import {navigate,reportError} from '../../../shared/ui'
+const props=defineProps<{data:QueueData|null}>()
+const filter=ref('action'),history=ref<QueueItem[]>([]),more=ref<QueueItem[]>([]),cursor=ref<string|null>(null),busy=ref(false)
+const tabs=[{id:'action',label:'我需要处理'},{id:'waiting',label:'等待Agent'},{id:'all',label:'全部待办'},{id:'history',label:'已通过历史'}]
+async function fetchPage(reset=false){
+ if(busy.value)return;busy.value=true
+ try{
+  const result=await engineCall<{items:QueueItem[];next_cursor:string|null}>('assignment.summary',{history:filter.value==='history',limit:QUEUE_PAGE_SIZE,...(!reset&&cursor.value?{cursor:cursor.value}:{})})
+  if(filter.value==='history')history.value=reset?result.items:[...history.value,...result.items]
+  else more.value=reset?result.items:[...more.value,...result.items]
+  cursor.value=result.next_cursor
+ }catch(cause){reportError(cause)}finally{busy.value=false}
+}
+watch(filter,()=>{history.value=[];more.value=[];cursor.value=props.data?.next_cursor||null;if(filter.value==='history')void fetchPage(true)})
+watch(()=>props.data,()=>{more.value=[];cursor.value=props.data?.next_cursor||null},{immediate:true})
+const items=computed(()=>filter.value==='history'?history.value:[...(props.data?.items||[]),...more.value].filter((v,i,a)=>a.findIndex(x=>x.id===v.id)===i).filter(i=>filter.value==='all'||filter.value==='action'&&['REVISE','RETEST'].includes(i.action||'')||filter.value==='waiting'&&['REVIEW','PUBLISH_RETEST'].includes(i.action||'')))
+function open(item:QueueItem){
+ if(['REVISE','RETEST'].includes(item.action||'')){
+  const params=new URLSearchParams({lesson:item.lesson_id,exercise:item.exercise_id,tab:'exercises'});if(item.study_session_id)params.set('study',item.study_session_id)
+  navigate('/course/'+item.course_id+'?'+params)
+ }else navigate('/submission/'+item.id)
+}
 </script>
 <template>
-  <div class="page-intro"><p class="eyebrow">LEARNING FEEDBACK</p><h2>让每一次反馈，落到下一步行动。</h2><p class="muted">在这里查看作答、理解错误，并继续修正或复测。</p></div>
-  <nav class="filter-tabs" aria-label="作答状态"><button v-for="tab in tabs" :key="tab.id" :class="{selected:filter===tab.id}" @click="filter=tab.id">{{tab.label}}<span>{{data?.items.filter(item=>tab.id==='all'||item.status===tab.id).length || 0}}</span></button></nav>
-  <div class="course-feedback-list"><article v-for="group in groups" :key="group.id" class="course-feedback-card"><header><div><p class="eyebrow">{{group.plan}}</p><h3>{{group.title}}</h3><p class="muted small">{{group.items.length}} 道题有待处理状态 · 原答案、批改和修正版在课程内集中查看</p></div><button class="primary-button" @click="navigate('/course/' + group.id + '?tab=answers')">打开课程反馈 →</button></header><div class="feedback-question-list"><div v-for="item in group.items" :key="item.id"><span :class="['status-chip',item.status.toLowerCase()]">{{item.label}}</span><span>{{item.exercise_title}}</span><small>{{item.next_action}}</small></div></div></article></div>
-  <div v-if="!groups.length" class="empty-state"><span class="empty-symbol">✓</span><h3>{{filter==='all'?'目前没有待处理的作答':'这类作答暂时为空'}}</h3><p>完成课程练习后，批改和修正会出现在这里。</p><button class="secondary-button" @click="navigate('/today')">回到学习控制台 →</button></div>
+ <div class="page-intro"><h2>作答与反馈</h2><p class="muted">需要你处理的修正和复测优先；等待批改不影响继续学习。</p></div>
+ <nav class="filter-tabs" aria-label="反馈筛选"><button v-for="tab in tabs" :key="tab.id" :class="{selected:filter===tab.id}" @click="filter=tab.id">{{tab.label}}</button></nav>
+ <div class="feedback-rows"><button v-for="item in items" :key="item.id" class="feedback-row" @click="open(item)"><span :class="['status-chip',item.status.toLowerCase()]">{{item.label}}</span><div><strong>{{item.exercise_title}}</strong><small>{{item.course_title}} · {{item.lesson_title}}</small><p>{{item.next_action}}</p></div><span>→</span></button></div>
+ <button v-if="cursor" class="secondary-button" :disabled="busy" @click="fetchPage()">{{busy?'读取中…':'加载更多'}}</button>
+ <p v-if="!items.length&&!busy" class="empty-state">这里暂时没有记录。<button class="text-button" @click="navigate('/today')">继续学习 →</button></p>
 </template>

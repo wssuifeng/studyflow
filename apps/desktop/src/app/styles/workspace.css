@@ -1,0 +1,137 @@
+/* Application-level work surfaces. The course owns state; the shell owns geometry. */
+:root {font-family:'Segoe UI Variable Text','Segoe UI','Microsoft YaHei UI',sans-serif;}
+.app-shell {background:var(--sf-bg-base);}
+.sidebar,.window-titlebar,.window-brand {background:var(--sf-bg-layer-1);color:var(--sf-label-primary);}
+.brand-mark,.window-mark {background:var(--sf-brand);}
+.brand strong {color:var(--sf-label-primary);}
+.nav-item {color:var(--sf-label-secondary);}
+.nav-item.active {background:var(--sf-active);color:var(--sf-brand);box-shadow:inset 2px 0 var(--sf-brand);}
+.nav-item:hover {background:var(--sf-hover);color:var(--sf-label-primary);}
+.window-controls button:hover {background:var(--sf-hover);}
+.window-controls button.window-pin.active {background:var(--sf-active);color:var(--sf-brand);}
+button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible {outline-color:var(--sf-focus-ring);}
+/* 所有主窗口页面共享固定导航与独立内容滚动；课程页在此基础上叠加 reading shell。 */
+.app-shell.workspace-shell {height:100dvh;min-height:0;overflow:hidden;grid-template-rows:minmax(0,1fr);}
+.app-shell.workspace-shell.desktop-shell {height:calc(100dvh - 44px);}
+.app-shell.workspace-shell > .sidebar {position:fixed !important;inset:0 auto 0 0;width:var(--panel-nav-width,228px);height:auto !important;min-height:0;overflow:hidden;align-self:stretch;z-index:3;}
+.app-shell.desktop-shell.workspace-shell > .sidebar {top:44px;}
+.app-shell.workspace-shell:not(.focus-shell) > .main-content {grid-column:2;}
+.app-shell.workspace-shell > .main-content {height:100%;min-height:0;overflow:auto;max-width:none;margin:0;scrollbar-gutter:stable;}
+.app-shell.workspace-shell .page-content {min-height:0;}
+.app-shell.learning-shell {height:100dvh;min-height:0;overflow:hidden;grid-template-rows:minmax(0,1fr);}
+.app-shell.learning-shell.desktop-shell {height:calc(100dvh - 44px);}
+.app-shell.learning-shell > .sidebar {position:fixed !important;inset:0 auto 0 0;width:var(--panel-nav-width,228px);height:auto !important;min-height:0;overflow:hidden;align-self:stretch;z-index:3;}
+.app-shell.desktop-shell.learning-shell > .sidebar {top:44px;}
+.app-shell.learning-shell:not(.focus-shell) > .main-content {grid-column:2;}
+.learning-shell>.main-content {height:100%;min-height:0;overflow:auto;max-width:none;margin:0;padding:24px clamp(22px,3vw,48px) 0;scrollbar-gutter:stable;}
+.learning-shell .page-content {min-height:0;}
+.learning-shell .study-workspace {max-width:none;}
+.learning-shell .study-unit-layout {grid-template-columns:minmax(0,1fr);margin:0;gap:0;}
+.learning-shell .study-material {padding:20px 0 8px;border:0;background:transparent;}
+.learning-shell .study-material-body {padding:22px 18px 24px 0;font-size:15px;line-height:1.9;}
+.learning-shell .study-material-body>* {max-width:72ch;}
+.learning-shell .reader-heading {margin-bottom:10px;gap:16px;}
+.learning-shell .reader-heading h2 {font-size:24px;letter-spacing:-.55px;color:var(--sf-label-primary);}
+.learning-shell .reader-progress {font-size:11px;}
+.learning-shell .reader-progress span:first-child {color:var(--sf-brand);}
+.learning-shell .knowledge-pager {margin:15px 0 8px;}
+.learning-shell .study-layout-controls {margin:0;padding:0 0 12px;border-bottom:1px solid var(--sf-border-l1);}
+.learning-shell .study-unit-heading {border:0;padding-bottom:0;}
+.learning-shell .study-unit-heading h3 {font-size:20px;}
+.learning-shell .study-unit-heading .eyebrow {font-size:10px;color:var(--sf-label-secondary);}
+.tools-toggle {display:flex;align-items:center;gap:7px;padding:7px 10px;border-radius:7px;background:transparent;color:var(--sf-label-secondary);font-size:12px;}
+.tools-toggle svg {width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.3;}
+.tools-toggle:hover,.tools-toggle[aria-expanded='true'] {background:var(--sf-active);color:var(--sf-brand);}
+.learning-shell .study-action-bar {margin-top:12px;padding:13px 0;background:var(--sf-bg-base);gap:10px;backdrop-filter:none;}
+.learning-shell .study-save-status strong {color:var(--sf-label-primary);font-size:10px;}
+.learning-shell .study-actions {gap:12px;}
+.learning-shell.panel-open {grid-template-columns:var(--panel-nav-width) minmax(0,1fr) var(--panel-width);}
+.learning-shell.focus-shell {grid-template-columns:minmax(0,1fr);}
+.learning-shell.focus-shell.panel-open {grid-template-columns:minmax(0,1fr) var(--panel-width);}
+.workspace-tool-panel {min-width:0;min-height:0;height:100%;overflow:visible;position:relative;}
+.workspace-tool-panel>.course-tools {height:100%;width:100%;position:relative;inset:auto;border-radius:0;box-shadow:none;padding:0;}
+.workspace-tool-panel .dock-workspace-heading {height:72px;min-height:72px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 18px;border-bottom:1px solid var(--sf-border-l1);}
+.dock-workspace-heading>div {min-width:0;}
+.dock-workspace-heading span {display:block;color:var(--sf-label-secondary);font-size:10px;margin-bottom:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.dock-workspace-heading strong {display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.dock-workspace-heading>button {flex:none;font-size:11px;}
+.workspace-tool-panel .dock-header {height:40px;min-height:40px;}
+.workspace-tool-panel .dock-tab-label {height:40px;}
+.workspace-tool-panel .dock-tab {border-right:0;}
+.workspace-tool-panel .dock-tab.selected {box-shadow:inset 0 -2px var(--sf-brand);background:var(--sf-bg-base);}
+.workspace-tool-panel .dock-pane {padding:22px 20px;}
+.workspace-tool-panel .dock-menu {top:110px;}
+.dock-save-status {min-height:42px;display:flex;align-items:center;gap:8px;padding:10px 16px;border-top:1px solid var(--sf-border-l1);font-size:10px;color:var(--sf-label-secondary);}
+.dock-save-indicator {width:5px;height:5px;flex:none;border-radius:50%;background:var(--teal);}
+.dock-save-status.has-error {color:var(--theme-status-danger);}
+.dock-save-status.has-error .dock-save-indicator {background:var(--theme-status-danger);}
+.learning-shell.panel-open .sidebar {padding-inline:12px;}
+.learning-shell.panel-open .brand {gap:8px;padding:0;}
+.learning-shell.panel-open .brand strong {font-size:19px;}
+.learning-shell.panel-open .brand span {display:none;}
+.learning-shell.panel-expanded>.main-content {display:none;}
+.learning-shell.panel-expanded {grid-template-columns:var(--panel-nav-width) minmax(0,1fr);}
+.learning-shell.focus-shell.panel-expanded {grid-template-columns:minmax(0,1fr);}
+.focus-shell:has(.native-tool-window)>.status-banner {top:auto;bottom:18px;right:16px;max-width:calc(100vw - 32px);}
+.feedback-preferences {margin-top:20px;}
+.sound-preference {display:flex;align-items:center;gap:10px;margin:20px 0;cursor:pointer;font-size:13px;}
+.sound-preference input {accent-color:var(--sf-brand);width:17px;height:17px;}
+.feedback-preferences .secondary-button {margin-bottom:15px;}
+.state-learning {--state-bg:var(--sf-active);--state-ink:var(--sf-brand);}
+.knowledge-step {transition:background .15s,color .15s,box-shadow .15s,transform .12s;}
+.knowledge-step.current {box-shadow:inset 0 0 0 1px var(--sf-brand);}
+.knowledge-step:hover:not(:disabled) {transform:translateY(-1px);}
+.knowledge-question textarea:focus {border-color:var(--sf-focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--theme-shadow-ink) 6.27%,transparent);}
+.panel-open .workspace-tool-panel {animation:panel-arrive .18s ease-out;}
+@keyframes panel-arrive {from{opacity:0;transform:translateX(6px)}to{opacity:1;transform:none}}
+@media (min-width:900px) and (max-width:1279px) {
+ .learning-shell.panel-open .sidebar {padding:24px 10px;align-items:center;}
+ .learning-shell.panel-open .brand>div:not(.brand-mark),.learning-shell.panel-open .nav-caption,.learning-shell.panel-open .sidebar-bottom,.learning-shell.panel-open .nav-badge {display:none;}
+ .learning-shell.panel-open .sidebar nav {margin-top:28px;width:100%;}
+ .learning-shell.panel-open .nav-item {font-size:0;padding:12px;justify-content:center;gap:0;}
+ .learning-shell.panel-open .nav-icon {font-size:22px;width:auto;}
+ .learning-shell.panel-open .reader-heading {flex-direction:column;gap:2px;}
+ .learning-shell.panel-open .reader-progress {display:flex;gap:12px;flex-wrap:wrap;padding:0;}
+ .learning-shell.panel-open .study-action-bar {align-items:stretch;flex-direction:column;}
+ .learning-shell.panel-open .study-actions {justify-content:space-between;}
+}
+@media (max-width:899px) {
+ .learning-shell {grid-template-columns:72px minmax(0,1fr);}
+ .learning-shell .sidebar {padding:24px 10px;align-items:center;}
+ .learning-shell .brand>div:not(.brand-mark),.learning-shell .nav-caption,.learning-shell .sidebar-bottom,.learning-shell .nav-badge {display:none;}
+ .learning-shell .sidebar nav {margin-top:28px;width:100%;}
+ .learning-shell .nav-item {font-size:0;padding:12px;justify-content:center;gap:0;}
+ .learning-shell .nav-icon {font-size:22px;width:auto;}
+ .learning-shell>.main-content {padding:18px 20px 0;}
+ .workspace-tool-panel .dock-resizer {display:none;}
+ .workspace-tool-panel .dock-panes.has-split {grid-template-columns:minmax(0,1fr);}
+ .workspace-tool-panel .dock-panes.has-split .dock-pane:not(.is-active-pane),.workspace-tool-panel .dock-split-resizer {display:none;}
+}
+@media (prefers-reduced-motion:reduce) {
+ .panel-open .workspace-tool-panel,.knowledge-step,button {animation:none!important;transition:none!important;}
+}
+
+.dock-study-actions {padding:12px 16px;border-top:1px solid var(--sf-border-l1);}
+.dock-study-actions .study-actions {display:flex;justify-content:space-between;gap:12px;}
+.study-material {animation:reading-arrive .16s ease-out;}
+@keyframes reading-arrive {from{opacity:.65;transform:translateY(3px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.study-material{animation:none;}}
+
+.window-titlebar:has(+.learning-shell.panel-open) .window-brand {min-width:184px;}
+@media(max-width:1279px){.window-titlebar:has(+.learning-shell.panel-open) .window-brand {min-width:72px;padding-inline:25px;}.window-titlebar:has(+.learning-shell.panel-open) .window-brand>span:last-child{display:none;}}
+.window-titlebar:has(+.learning-shell.focus-shell) .window-brand {min-width:auto;background:transparent;}
+
+button.primary-button {box-shadow:0 3px 8px color-mix(in srgb,var(--theme-shadow-ink) 6.27%,transparent);}
+button.primary-button:hover:not(:disabled) {background:var(--theme-accent-primary);box-shadow:0 4px 12px color-mix(in srgb,var(--theme-shadow-ink) 10.98%,transparent);}
+button.secondary-button:hover:not(:disabled) {background:var(--sf-hover);border-color:var(--sf-border-l2);}
+.text-button:hover,.back-button:hover {color:var(--theme-text-primary);}
+.knowledge-step.current {border-color:var(--sf-brand);}
+.answer-label {color:var(--sf-label-secondary);}
+.outline-item.current {background:var(--sf-active);}
+.dock-recovery {max-height:35%;overflow:auto;flex:none;}
+.dock-recovery .recovery-note {margin:8px 12px;padding:10px;font-size:11px;flex-wrap:wrap;}
+
+/* Detached tool windows are single-column work surfaces. Keep the session wrapper
+   full-width so the exercise/note content cannot collapse to its intrinsic width. */
+.learning-shell.focus-shell > .main-content {width:100%;min-width:0;max-width:none;margin:0;padding:0;}
+.learning-shell.focus-shell .page-content:has(.native-tool-window) {width:100%;min-width:0;max-width:none;height:calc(100dvh - 44px);}

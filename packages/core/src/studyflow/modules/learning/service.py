@@ -15,9 +15,25 @@ from studyflow.infrastructure.runtime import Runtime, Service
 
 
 class LearningService(Service):
-    def open_course_study(self, course_id, idempotency_key, new_version=False):
+    def plan_notebook(self, plan_line_id):
+        from studyflow.modules.learning.notebooks import read_notebook
+        return read_notebook(self, plan_line_id)
+
+    def save_plan_notebook(self, plan_line_id, blocks, expected_version, idempotency_key, source="USER_WEB"):
+        from studyflow.modules.learning.notebooks import save_notebook
+        return save_notebook(self, plan_line_id, blocks, expected_version, idempotency_key, source)
+
+    def study_notes(self, study_session_id):
+        from .notes import read_notes
+        return read_notes(self, study_session_id)
+
+    def save_study_note(self, study_session_id, lesson_id, text, expected_version, idempotency_key, source="USER_WEB"):
+        from .notes import save_note
+        return save_note(self, study_session_id, lesson_id, text, expected_version, idempotency_key, source)
+
+    def open_course_study(self, course_id, idempotency_key, new_version=False, review_round=False):
         from .study_sessions import open_study
-        return open_study(self, course_id, idempotency_key, new_version)
+        return open_study(self, course_id, idempotency_key, new_version, review_round)
 
     def course_study_detail(self, study_session_id):
         from .study_sessions import detail
@@ -48,37 +64,26 @@ class LearningService(Service):
 
     def get_submission(self, submission_id: str) -> Submission | None:
         with self.session() as db:
-            return db.scalar(select(Submission).options(
+            result = db.scalar(select(Submission).options(
                 joinedload(Submission.exercise).joinedload(Exercise.lesson).joinedload(Lesson.course),
                 selectinload(Submission.study_session),
                 selectinload(Submission.reviews),
                 selectinload(Submission.parent_submission).selectinload(Submission.study_session),
                 selectinload(Submission.child_submissions),
             ).where(Submission.id == submission_id))
+            if result:
+                from .study_sessions import current_study
+                current=current_study(db,result.exercise.lesson.course_id)
+                result.is_current_study=not current or not result.study_session_id and current.revision==1 or result.study_session_id==current.id
+            if result and result.retest_task_id:
+                from studyflow.modules.reviews.models import RetestTask
+                from studyflow.modules.reviews.retests import public_task
+                task=db.get(RetestTask,result.retest_task_id)
+                result.public_retest=public_task(task) if task else None
+            return result
 
     def submit_answer(self, exercise_id: str, answer_text: str, task_id: str | None = None, idempotency_key: str | None = None, source: str = "USER_WEB") -> Submission:
-        if not answer_text.strip():
-            raise DomainError("INVALID_ARGUMENT", "答案不能为空")
-        with self.session() as db:
-            if idempotency_key:
-                existing = db.scalar(select(Submission).where(Submission.idempotency_key == idempotency_key))
-                if existing:
-                    return existing
-            exercise = db.get(Exercise, exercise_id)
-            if not exercise:
-                raise DomainError("OBJECT_NOT_FOUND", "练习不存在")
-            submission = Submission(id=new_id(), exercise_id=exercise_id, task_id=task_id, answer_text=answer_text.strip(), status="WAITING_REVIEW", source=source, idempotency_key=idempotency_key, attempt_number=1, attempt_kind="FIRST", next_action="等待外部 Agent 批改")
-            from .study_sessions import bind_submission
-            bind_submission(db,submission,is_new=True)
-            db.add(submission)
-            if task_id:
-                task = db.get(Task, task_id)
-                if task and task.status == "TODO":
-                    validate_task_transition(task.status, "IN_PROGRESS")
-                    task.status = "IN_PROGRESS"
-            db.flush()
-            self._event(db, source, "submission", submission.id, "SUBMIT", "用户提交答案，等待外部 Agent 批改")
-            return submission
+        return self.submit_submission(exercise_id=exercise_id, answer_text=answer_text, task_id=task_id, idempotency_key=idempotency_key, source=source)
 
     def _create_followup_submission(self, parent_submission_id: str, answer_text: str, kind: str, idempotency_key: str | None, source: str) -> Submission:
         if not isinstance(answer_text, str) or not answer_text.strip():
@@ -100,16 +105,24 @@ class LearningService(Service):
             if parent.status not in FOLLOWUP_ALLOWED_STATUSES:
                 label = "修正版" if kind == "REVISION" else "复测版"
                 raise DomainError("INVALID_ATTEMPT_SOURCE", f"当前状态 {parent.status} 不能创建{label}。", "请先完成批改；等待批改中的作答不能直接进入修正或复测。")
+            retest_task=None
+            if kind=="RETEST":
+                from studyflow.modules.reviews.models import RetestTask
+                retest_task=db.scalar(select(RetestTask).where(RetestTask.parent_submission_id==parent.id))
+                if not retest_task:raise DomainError("RETEST_TASK_REQUIRED","先发布独立冻结复测题，再提交复测答案。","读取assignment.summary中的PUBLISH_RETEST任务。")
             submission = Submission(
-                id=new_id(), exercise_id=parent.exercise_id, task_id=parent.task_id,
+                id=new_id(), retest_task_id=retest_task.id if retest_task else parent.retest_task_id, exercise_id=parent.exercise_id, task_id=parent.task_id,
                 parent_submission_id=parent.id, study_session_id=parent.study_session_id, answer_text=answer_text, status="WAITING_REVIEW",
                 source=source, idempotency_key=idempotency_key, attempt_number=parent.attempt_number + 1,
                 attempt_kind=kind, next_action="等待外部 Agent 批改",
             )
+            from .write_contract import claim_parent
+            claim_parent(db, parent, submission.id, source)
             from .study_sessions import bind_submission
             bind_submission(db,submission,is_new=True)
             db.add(submission)
             db.flush()
+            if retest_task:retest_task.status="WAITING_REVIEW"
             label = "修正版" if kind == "REVISION" else "复测版"
             self._event(db, source, "submission", submission.id, "SUBMIT", f"创建{label}，父作答 {parent.id}")
             return submission
@@ -120,33 +133,17 @@ class LearningService(Service):
     def retest_submission(self, parent_submission_id: str, answer_text: str, idempotency_key: str | None = None, source: str = "USER_WEB") -> Submission:
         return self._create_followup_submission(parent_submission_id, answer_text, "RETEST", idempotency_key, source)
 
-    def _replay_submission_write(self, db: Session, key: str | None, operation: str, exercise_id: str | None = None, submission_id: str | None = None) -> Submission | None:
-        if not key:
-            return None
-        if not isinstance(key, str) or len(key) > 160 or not key.strip():
-            raise DomainError("INVALID_ARGUMENT", "幂等键必须是 1—160 字符的非空文本。", "为本次操作生成稳定幂等键。")
-        receipt = db.scalar(select(SubmissionWriteReceipt).where(SubmissionWriteReceipt.idempotency_key == key))
-        if receipt:
-            row = db.get(Submission, receipt.submission_id)
-            if receipt.operation != operation or (exercise_id and row.exercise_id != exercise_id) or (submission_id and row.id != submission_id):
-                raise DomainError("IDEMPOTENCY_KEY_CONFLICT", "幂等键已用于其他操作或作答。", "仅对同一操作重试使用原幂等键。")
-            return row
-        return None
-
-    def _record_submission_write(self, db: Session, key: str | None, operation: str, row: Submission) -> None:
-        if key:
-            db.add(SubmissionWriteReceipt(id=new_id(), idempotency_key=key, operation=operation, submission_id=row.id))
-            db.flush()
-
     def save_submission_draft(self, exercise_id: str, answer_text: str = "", submission_id: str | None = None,
                               task_id: str | None = None, idempotency_key: str | None = None,
                               source: str = "USER_WEB", expected_version: int | None = None) -> Submission:
         if not isinstance(answer_text, str):
             raise DomainError("INVALID_ARGUMENT", "答案草稿必须是文本。", "传入 answer_text 字符串。")
+        payload = {"operation": "DRAFT_SAVE", "exercise_id": exercise_id, "submission_id": submission_id, "answer_text": answer_text, "task_id": task_id, "expected_version": expected_version, "source": source}
+        from .write_contract import replay, record
         with self.session() as db:
-            replay = self._replay_submission_write(db, idempotency_key, "DRAFT_SAVE", exercise_id, submission_id)
-            if replay:
-                return replay
+            replayed = replay(db, idempotency_key, "DRAFT_SAVE", payload)
+            if replayed:
+                return replayed
             if not db.get(Exercise, exercise_id):
                 raise DomainError("OBJECT_NOT_FOUND", "练习不存在。", "先读取课程详情确认 exercise_id。")
             require_task(db, task_id)
@@ -174,7 +171,7 @@ class LearningService(Service):
             from .study_sessions import bind_submission
             bind_submission(db,row,is_new=not bool(submission_id))
             db.flush()
-            self._record_submission_write(db, idempotency_key, "DRAFT_SAVE", row)
+            record(db, idempotency_key, "DRAFT_SAVE", payload, row)
             self._event(db, source, "submission", row.id, "DRAFT_SAVE", f"保存草稿 v{row.version}")
             return row
 
@@ -184,10 +181,12 @@ class LearningService(Service):
                           expected_version: int | None = None) -> Submission:
         if answer_text is not None and not isinstance(answer_text, str):
             raise DomainError("INVALID_ARGUMENT", "答案必须是文本。", "传入 answer_text 字符串。")
+        payload = {"operation": "SUBMIT", "exercise_id": exercise_id, "submission_id": submission_id, "answer_text": answer_text, "task_id": task_id, "expected_version": expected_version, "source": source}
+        from .write_contract import replay, record
         with self.session() as db:
-            replay = self._replay_submission_write(db, idempotency_key, "SUBMIT", exercise_id, submission_id)
-            if replay:
-                return replay
+            replayed = replay(db, idempotency_key, "SUBMIT", payload)
+            if replayed:
+                return replayed
             require_task(db, task_id)
             row = db.get(Submission, submission_id) if submission_id else None
             if submission_id:
@@ -225,7 +224,7 @@ class LearningService(Service):
                 validate_task_transition(task.status, "IN_PROGRESS")
                 task.status = "IN_PROGRESS"
             db.flush()
-            self._record_submission_write(db, idempotency_key, "SUBMIT", row)
+            record(db, idempotency_key, "SUBMIT", payload, row)
             self._event(db, source, "submission", row.id, "SUBMIT", "正式提交，等待外部 Agent 批改")
             return row
 

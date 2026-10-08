@@ -73,3 +73,16 @@ Thumbs.db
 
 # Legacy local environment/runtime is retained, never republished.
 studyflow_app/
+
+# Curated install resources are generated from the authoritative Skill source.
+apps/desktop/src-tauri/binaries/studyflow-agent/
+
+# Cross-process maintenance lock artifacts contain no source and remain local.
+**/.studyflow-*.lease
+
+# Root-level generated verification artifacts
+test-results/
+.tmp/
+pip-*/
+pytest-of-*/
+test-results-white-after.png

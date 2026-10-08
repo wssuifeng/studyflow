@@ -1,5 +1,7 @@
 
 
+export const QUEUE_PAGE_SIZE = 50
+
 export type QueueItem = {
   id: string
   kind: string
@@ -21,7 +23,8 @@ export type QueueItem = {
   attempt_number: number
   attempt_kind: string
   source: string
-  answer_text: string
+  action?: string
+  answer_text?: string
   review_count: number
   context: { submission_id: string; course_id: string; lesson_id: string; markdown_path: string }
   next_action: string
@@ -31,5 +34,7 @@ export type QueueData = {
   waiting_review: QueueItem[]
   needs_revision: QueueItem[]
   waiting_retest: QueueItem[]
+  counts?: Record<string,number>
+  next_cursor?: string|null
   items: QueueItem[]
 }

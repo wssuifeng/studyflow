@@ -47,7 +47,7 @@ LEGACY_TABLES = {
     "context_snapshots", "event_logs",
 }
 CONSOLE_TABLES = {"plan_course_items", "course_schedule_items"}
-CURRENT_REVISION = "0006_course_study"
+CURRENT_REVISION = "0012_plan_management"
 GENERAL_COLUMNS = {
     "tasks": {"plan_line_id", "task_kind", "course_schedule_item_id"},
     "courses": {"subject", "content_type", "difficulty", "source_type"},
@@ -118,16 +118,24 @@ def upgrade_sqlite(settings: Settings) -> dict[str, str | bool | None]:
         has_progress_table = "learning_progress" in tables
         progress_columns = _columns(connection, "learning_progress") if has_progress_table else set()
         required_progress_columns = {"id", "course_id", "lesson_id", "progress_percent", "status", "last_position", "source", "created_at", "updated_at"}
-        if has_version_table and version in {"0004_learning_progress", "0005_course_answers", CURRENT_REVISION}:
+        if has_version_table and version in {"0004_learning_progress", "0005_course_answers", "0006_course_study", "0007_learning_tools", "0008_plan_notebooks", "0009_write_contract", "0010_review_tasks", "0011_course_revisions", CURRENT_REVISION}:
             if not has_progress_table or not required_progress_columns.issubset(progress_columns) or "submission_write_receipts" not in tables:
                 raise DomainError("SCHEMA_REVISION_MISMATCH", "数据库标记为当前迁移版本，但 learning_progress 表结构不完整。", "先备份数据库并人工核对 schema，禁止自动跳过或重建用户进度数据。")
-            if version in {"0005_course_answers", CURRENT_REVISION} and "course_write_receipts" not in tables:
+            if version in {"0005_course_answers", "0006_course_study", "0007_learning_tools", "0008_plan_notebooks", "0009_write_contract", "0010_review_tasks", "0011_course_revisions", CURRENT_REVISION} and "course_write_receipts" not in tables:
                 raise DomainError("SCHEMA_REVISION_MISMATCH", "当前迁移版本的课程写入凭据表缺失。", "先备份并人工核对 schema，禁止覆盖学习数据。")
-            if version == CURRENT_REVISION:
+            if version in {"0006_course_study", "0007_learning_tools", "0008_plan_notebooks", "0009_write_contract", "0010_review_tasks", "0011_course_revisions", CURRENT_REVISION}:
                 if "course_study_sessions" not in tables or not {"study_session_id","batch_id"}.issubset(_columns(connection,"submissions")) or "study_session_id" not in _columns(connection,"course_write_receipts"):
                     raise DomainError("SCHEMA_REVISION_MISMATCH", "当前版本的学习快照或关联字段缺失。", "先备份并人工核对，不重建学习数据。")
-            if version == CURRENT_REVISION and not missing_general and not missing_console_tables:
-                return {"upgraded": False, "status": "ALREADY_CURRENT", "backup": None}
+            if version in {"0007_learning_tools", "0008_plan_notebooks", "0009_write_contract", "0010_review_tasks", "0011_course_revisions", CURRENT_REVISION} and not missing_general and not missing_console_tables:
+                if not {"study_notes", "study_note_receipts"}.issubset(tables):
+                    raise DomainError("SCHEMA_REVISION_MISMATCH", "当前版本缺少私人草稿表。", "保留备份并核对迁移；不要重建学习数据。")
+                if version == CURRENT_REVISION:
+                    if not {"plan_notebooks", "plan_notebook_receipts"}.issubset(tables):
+                        raise DomainError("SCHEMA_REVISION_MISMATCH", "当前版本缺少计划笔记表。", "保留备份并核对迁移；不要重建学习数据。")
+                    required_new={"submission_chain_links","retest_tasks","course_revisions","plan_write_receipts"}
+                    if not required_new.issubset(tables) or not {"payload_hash","result_json"}.issubset(_columns(connection,"submission_write_receipts")) or "version" not in _columns(connection,"plan_lines") or "retest_task_id" not in _columns(connection,"submissions"):
+                        raise DomainError("SCHEMA_REVISION_MISMATCH","当前版本新增契约表或字段缺失。","保留原库并检查迁移，禁止重新初始化。")
+                    return {"upgraded": False, "status": "ALREADY_CURRENT", "backup": None}
 
         connection.close()
         backup = backup_sqlite(settings)

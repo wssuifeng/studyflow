@@ -7,10 +7,14 @@ from ..registry import review_app, assignment_app
 
 
 @assignment_app.command("queue")
-def assignment_queue(plan_line_id: str | None = typer.Option(None, "--plan-line"), format: str = typer.Option("text", "--format")) -> None:
+def assignment_queue(plan_line_id: str | None = typer.Option(None, "--plan-line"), format: str = typer.Option("text", "--format"), full:bool=typer.Option(False,"--full"), role:str=typer.Option("agent","--role"), limit:int=typer.Option(50,"--limit")) -> None:
     """列出等待批改、修正或复测的统一 Agent 队列。"""
     try:
-        output({"ok": True, **runtime.service().agent_queue(plan_line_id)}, format)
+        service=runtime.service()
+        if full:output({"ok": True, **service.agent_queue(plan_line_id)},format)
+        else:
+            from studyflow.modules.reviews.queue_queries import summary
+            output({"ok":True,**summary(service.reviews,role=role,plan_line_id=plan_line_id,limit=limit)},format)
     except Exception as exc:
         fail(exc)
 

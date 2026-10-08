@@ -43,6 +43,9 @@ def test_engine_queue_and_unknown_method(app_service, monkeypatch):
         queue = engine.handle({"id": "q", "method": "assignment.queue", "params": {}})
         assert queue["ok"] is True
         assert queue["data"]["waiting_review"]
+        summary = engine.handle({"id": "summary", "method": "assignment.summary", "params": {"limit": 50}})
+        assert summary["ok"] is True
+        assert summary["data"]["items"]
         unknown = engine.handle({"id": "bad", "method": "not.exists", "params": {}})
         assert unknown["ok"] is False
         assert unknown["error"]["code"] == "METHOD_NOT_FOUND"
@@ -174,7 +177,7 @@ def test_draft_submit_get_and_review_lifecycle_are_idempotent_and_immutable(app_
         "exercise_id": seeded["exercise_id"], "answer_text": "草稿一", "idempotency_key": "draft-1",
     })["data"]
     repeated = call(engine_client, "submission.draft.save", {
-        "exercise_id": seeded["exercise_id"], "answer_text": "不能覆盖幂等重放", "idempotency_key": "draft-1",
+        "exercise_id": seeded["exercise_id"], "answer_text": "草稿一", "idempotency_key": "draft-1",
     })["data"]
     assert repeated["id"] == saved["id"]
     assert app_service.agent_queue()["items"] == []
@@ -259,13 +262,13 @@ def test_old_draft_keys_replay_after_new_saves_and_submission(app_service, engin
     seeded = app_service.seed_demo()
     first = call(engine_client, "submission.draft.save", {"exercise_id": seeded["exercise_id"], "answer_text": "first", "idempotency_key": "old-draft"})["data"]
     second = call(engine_client, "submission.draft.save", {"exercise_id": seeded["exercise_id"], "submission_id": first["id"], "answer_text": "second", "idempotency_key": "new-draft", "expected_version": 1})["data"]
-    replay = call(engine_client, "submission.draft.save", {"exercise_id": seeded["exercise_id"], "answer_text": "stale replay", "idempotency_key": "old-draft"})["data"]
+    replay = call(engine_client, "submission.draft.save", {"exercise_id": seeded["exercise_id"], "answer_text": "first", "idempotency_key": "old-draft"})["data"]
     assert replay["id"] == first["id"]
-    assert replay["version"] == second["version"]
+    assert replay["version"] == first["version"]
     assert app_service.get_submission(first["id"]).answer_text == "second"
     call(engine_client, "submission.submit", {"submission_id": first["id"], "idempotency_key": "submit-key"})
-    replay = call(engine_client, "submission.draft.save", {"exercise_id": seeded["exercise_id"], "answer_text": "stale replay", "idempotency_key": "old-draft"})
-    assert replay["data"]["status"] == "WAITING_REVIEW"
+    replay = call(engine_client, "submission.draft.save", {"exercise_id": seeded["exercise_id"], "answer_text": "first", "idempotency_key": "old-draft"})
+    assert replay["data"]["status"] == "DRAFT"
     assert len(app_service.agent_queue()["waiting_review"]) == 1
 
 

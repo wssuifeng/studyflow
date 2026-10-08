@@ -1,0 +1,76 @@
+{
+  "schema_version": "studyflow.theme/1",
+  "id": "sequence-light",
+  "name": "序光",
+  "description": "雾蓝白底、清晰的章节层次与安静的阅读面。",
+  "appearance": "light",
+  "tokens": {
+    "surface.canvas": "#f8faff",
+    "surface.panel": "#f4f7fc",
+    "surface.raised": "#ffffff",
+    "surface.input": "#ffffff",
+    "surface.hover": "#edf2fc",
+    "surface.active": "#e3ebfa",
+    "border.subtle": "#d9e1ee",
+    "border.strong": "#b6c5dc",
+    "text.primary": "#243a5f",
+    "text.secondary": "#3c5171",
+    "text.muted": "#52637e",
+    "text.inverse": "#ffffff",
+    "accent.primary": "#315fc4",
+    "accent.strong": "#264da4",
+    "accent.soft": "#eaf0fd",
+    "status.success": "#246b5c",
+    "status.success-soft": "#eaf6f1",
+    "status.info": "#315fc4",
+    "status.info-soft": "#edf2fc",
+    "status.warning": "#855a1b",
+    "status.warning-soft": "#fcf4e7",
+    "status.danger": "#a33e54",
+    "status.danger-soft": "#fbedf1",
+    "focus.ring": "#6260b8",
+    "code.background": "#edf0f9",
+    "code.text": "#47436c",
+    "shadow.ink": "#243a5f",
+    "overlay.ink": "#243a5f"
+  },
+  "presentation": {
+    "density": "comfortable",
+    "heading": "modern",
+    "teaching": "clean"
+  },
+  "motion_profile": "gentle",
+  "sound_profile": "soft-tap",
+  "display": {
+    "layout": "rail",
+    "navigation_width": 240,
+    "reading_width": 850,
+    "tools_width": 340,
+    "reading_shell": "sheet",
+    "teaching_style": "clean",
+    "note_style": "inline",
+    "type_scale": 1,
+    "heading_family": "modern",
+    "body_family": "ui",
+    "surface_treatment": "matte",
+    "radius": 12,
+    "elevation": "subtle",
+    "outline": "hairline",
+    "assets": [
+      {
+        "key": "sidebar-landscape",
+        "role": "texture",
+        "aspect_ratio": "2:3",
+        "safe_area": 0.35,
+        "fallback": "#eef2fb"
+      },
+      {
+        "key": "sidebar-origami",
+        "role": "texture",
+        "aspect_ratio": "1:1",
+        "safe_area": 0.1,
+        "fallback": "#eef2fb"
+      }
+    ]
+  }
+}

@@ -1,20 +1,20 @@
 .reader-heading{display:flex;align-items:flex-start;gap:28px;justify-content:space-between;margin-bottom:25px}
 .reader-heading h2{font-size:23px;max-width:690px;margin:6px 0 9px}
 .reader-heading .muted{font-size:12px}
-.reader-progress{flex-shrink:0;display:grid;gap:8px;text-align:right;font-size:10px;color:#8a91a6;padding-top:27px}
-.reader-progress span:first-child{color:#8472c8}
+.reader-progress{flex-shrink:0;display:grid;gap:8px;text-align:right;font-size:10px;color:var(--theme-text-muted);padding-top:27px}
+.reader-progress span:first-child{color:var(--theme-accent-primary)}
 .knowledge-pager{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:16px 0 21px}
 .knowledge-pager>.secondary-button{padding:10px 14px;font-size:11px;background:transparent}
 .pager-center{text-align:center;min-width:70px}
 .pager-dots{display:flex;justify-content:center;flex-wrap:wrap;gap:7px;margin-top:9px;max-width:300px}
-.pager-dots button{width:7px;height:7px;border-radius:5px;padding:0;background:#d3d7e1}
-.pager-dots button.selected{width:22px;background:#8b7bdf}
-.pager-dots button.completed{background:#83b7a4}
-.pager-dots button.selected.completed{background:#5ba38b}
-.reader-card{background:#fff;border:1px solid var(--line);border-radius:18px;padding:28px 34px;box-shadow:var(--shadow)}
-.lesson-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:22px;border-bottom:1px solid #eef0f5;margin-bottom:21px}
+.pager-dots button{width:7px;height:7px;border-radius:5px;padding:0;background:var(--theme-status-info-soft)}
+.pager-dots button.selected{width:22px;background:var(--theme-accent-soft)}
+.pager-dots button.completed{background:var(--theme-status-success-soft)}
+.pager-dots button.selected.completed{background:var(--theme-status-success-soft)}
+.reader-card{background:var(--theme-surface-panel);border:1px solid var(--line);border-radius:18px;padding:28px 34px;box-shadow:var(--shadow)}
+.lesson-heading{display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:22px;border-bottom:1px solid var(--theme-border-subtle);margin-bottom:21px}
 .lesson-heading h3{font-size:20px;margin-top:5px}
-.segment-control{display:flex;align-items:center;padding:4px;border-radius:10px;background:#f1f2f7;flex-shrink:0}
-.segment-control button{padding:8px 14px;background:transparent;color:#8a93a5;border-radius:7px;font-size:11px;white-space:nowrap}
-.segment-control button.selected{background:#fff;color:var(--accent);box-shadow:0 2px 5px #2736530b}
+.segment-control{display:flex;align-items:center;padding:4px;border-radius:10px;background:var(--theme-status-info-soft);flex-shrink:0}
+.segment-control button{padding:8px 14px;background:transparent;color:var(--theme-text-muted);border-radius:7px;font-size:11px;white-space:nowrap}
+.segment-control button.selected{background:var(--theme-accent-soft);color:var(--accent);box-shadow:0 2px 5px color-mix(in srgb,var(--theme-shadow-ink) 4.31%,transparent)}
 .segment-control span{font-size:9px;margin-left:3px}

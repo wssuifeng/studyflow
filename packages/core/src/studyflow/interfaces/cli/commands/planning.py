@@ -59,3 +59,26 @@ def plan_detail(plan_id: str = typer.Option(..., "--id"), format: str = typer.Op
         output({"ok": True, **runtime.service().plan_detail(plan_id)}, format)
     except Exception as exc:
         fail(exc)
+
+
+@plan_app.command("notebook-get")
+def notebook_get(plan_id: str = typer.Option(...,"--id"), format: str = typer.Option("text","--format")):
+    try: output({"ok":True, **runtime.service().plan_notebook(plan_id)}, format)
+    except Exception as exc: fail(exc)
+
+
+@plan_app.command("notebook-save")
+def notebook_save(plan_id: str = typer.Option(...,"--id"), file: str = typer.Option(...,"--file"), expected_version: int = typer.Option(...,"--expected-version"), idempotency_key: str = typer.Option(...,"--idempotency-key"), format: str = typer.Option("text","--format")):
+    try:
+        import json
+        from studyflow.infrastructure.markdown import safe_resolve
+        from studyflow.shared.domain import DomainError
+        service=runtime.service(); path=safe_resolve(service.settings.workspace_root,file)
+        if path.suffix.lower()!=".json": raise DomainError("UNSUPPORTED_DOCUMENT_TYPE","笔记CLI输入需要JSON文件。")
+        if not path.is_file(): raise DomainError("DOCUMENT_NOT_FOUND","笔记输入文件不存在。")
+        if path.stat().st_size>5_000_000: raise DomainError("INVALID_ARGUMENT","笔记输入文件过大。")
+        try: payload=json.loads(path.read_text(encoding="utf-8-sig"))
+        except (UnicodeError, ValueError) as exc: raise DomainError("INVALID_ARGUMENT","笔记输入不是有效UTF-8 JSON。") from exc
+        blocks=payload.get("blocks") if isinstance(payload,dict) else payload
+        output({"ok":True, **service.save_plan_notebook(plan_id,blocks,expected_version,idempotency_key,source="AGENT_CLI")},format)
+    except Exception as exc: fail(exc)

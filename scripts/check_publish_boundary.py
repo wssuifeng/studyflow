@@ -22,7 +22,7 @@ DESKTOP_FILES = {"package.json", "package-lock.json", "index.html", "tsconfig.js
 TAURI_TREES = {"src", "capabilities", "icons"}
 TAURI_FILES = {"Cargo.toml", "Cargo.lock", "build.rs", "tauri.conf.json"}
 DEMO = "packages/core/src/studyflow/resources/content/lessons/java-reference.md"
-BINARY_ASSETS = {"apps/desktop/src-tauri/icons/icon.png", "apps/desktop/src-tauri/icons/icon.ico"}
+BINARY_ASSETS = {"apps/desktop/src-tauri/icons/icon.png", "apps/desktop/src-tauri/icons/icon.ico", "apps/desktop/src/shared/themes/assets/white-violet-book.png", "apps/desktop/src/shared/themes/assets/sequence-light-landscape.png", "apps/desktop/src/shared/themes/assets/sequence-light-origami.png"}
 TEXT_SUFFIXES = {".md", ".py", ".ps1", ".vue", ".ts", ".css", ".html", ".svg", ".rs", ".json", ".toml", ".lock", ".ini", ".yaml", ".yml", ".example", ".mako"}
 GENERATED_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", "node_modules", "target", "dist", "build", "out", "test-results", "runtime", ".studyflow", "gen"}
 PRIVATE_PARTS = {"就业计划", "英语四级计划", "软考_软件设计师计划", "项目理解与掌握计划", "归档", "示例PDF与PDF生成参考提示词", "design-explorations"}
@@ -80,7 +80,7 @@ def path_problem(relative: str) -> str | None:
                 return "unapproved-binary-asset"
     if relative in BINARY_ASSETS:
         return None
-    if path.suffix not in TEXT_SUFFIXES and relative not in {".github/CODEOWNERS", "apps/desktop/scripts/test-course-answers.cjs"}:
+    if path.suffix not in TEXT_SUFFIXES and relative not in {".github/CODEOWNERS", "apps/desktop/scripts/test-course-answers.cjs", "apps/desktop/scripts/test-study-tools.cjs", "apps/desktop/scripts/test-dock.cjs", "apps/desktop/scripts/test-plan-notebook.cjs", "apps/desktop/scripts/test-white-violet.cjs", "apps/desktop/scripts/test-sequence-light.cjs", "apps/desktop/scripts/test-workspace-panel.cjs", "apps/desktop/scripts/test-workspace-shell.cjs", "apps/desktop/scripts/test-themes.cjs", "apps/desktop/scripts/check-theme.cjs"}:
         return "unapproved-file-type"
     return None
 

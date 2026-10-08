@@ -24,7 +24,7 @@ SUPPORTED_SCHEMA_REVISIONS = {
     "0003_learning_console_lifecycle",
     "0004_learning_progress",
     "0005_course_answers",
-    "0006_course_study",
+    "0006_course_study", "0007_learning_tools", "0008_plan_notebooks", "0009_write_contract", "0010_review_tasks", "0011_course_revisions", "0012_plan_management",
 }
 REQUIRED_DATABASE_TABLES = {
     "plan_lines",
@@ -194,8 +194,18 @@ def export_workspace(settings: Settings, archive_path: str | Path) -> dict[str, 
         temporary_archive.unlink(missing_ok=True)
 
 
+def _rename_staging(staging,target):
+    import time
+    deadline=time.monotonic()+2
+    while True:
+        try:return staging.rename(target)
+        except PermissionError:
+            if os.name!="nt" or time.monotonic()>=deadline:raise
+            time.sleep(.05)
+
 def _read_manifest(archive_file: zipfile.ZipFile) -> dict[str, Any]:
     try:
+        if archive_file.getinfo("manifest.json").file_size>2*1024*1024:raise DomainError("BACKUP_MANIFEST_INVALID","备份清单超过2MiB。")
         manifest = json.loads(archive_file.read("manifest.json").decode("utf-8"))
     except (KeyError, UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise DomainError("BACKUP_MANIFEST_INVALID", "备份缺少可解析的 manifest.json。", "使用 StudyFlow 导出的完整备份文件。") from exc
@@ -235,7 +245,7 @@ def _extract_member(archive_file: zipfile.ZipFile, member: str, destination: Pat
         shutil.copyfileobj(source, target)
 
 
-def restore_workspace(archive_path: str | Path, target_root: str | Path) -> dict[str, Any]:
+def _restore_workspace(archive_path: str | Path, target_root: str | Path) -> dict[str, Any]:
     """Restore into staging, validate, then atomically switch the workspace root."""
     archive = Path(archive_path).expanduser().resolve()
     if not archive.is_file():
@@ -279,7 +289,7 @@ def restore_workspace(archive_path: str | Path, target_root: str | Path) -> dict
         if target.exists():
             previous = target.with_name(f".{target.name}.before-restore-{uuid4().hex}")
             target.rename(previous)
-        staging.rename(target)
+        _rename_staging(staging,target)
         return {
             "workspace_root": str(target),
             "schema_revision": manifest["schema_revision"],
@@ -294,3 +304,33 @@ def restore_workspace(archive_path: str | Path, target_root: str | Path) -> dict
         if previous is not None and previous.exists() and not target.exists():
             previous.rename(target)
         raise
+
+
+def validate_backup(archive_path):
+    archive=Path(archive_path).expanduser().resolve()
+    with zipfile.ZipFile(archive,"r") as backup:
+        manifest=_read_manifest(backup)
+        names=[item.filename for item in backup.infolist()]
+        if len(names)!=len(set(names)):raise DomainError("BACKUP_ARCHIVE_UNEXPECTED_FILE","备份包含重复文件路径。")
+        allowed={"manifest.json",DATABASE_ARCHIVE_PATH}|{item["archive_path"] for item in manifest["files"]}
+        for item in backup.infolist():
+            if item.is_dir():continue
+            if _safe_archive_member(item.filename) not in allowed:raise DomainError("BACKUP_ARCHIVE_UNEXPECTED_FILE","存在未声明的备份文件。")
+        files=[manifest["database"],*manifest["files"]]
+        for item in files:
+            try:info=backup.getinfo(item["archive_path"])
+            except KeyError as exc:raise DomainError("BACKUP_FILE_MISSING","备份文件缺失。") from exc
+            if info.file_size!=item["size"]:raise DomainError("BACKUP_HASH_MISMATCH","备份文件大小不符。")
+            digest=hashlib.sha256()
+            with backup.open(info) as stream:
+                for chunk in iter(lambda:stream.read(1024*1024),b""):digest.update(chunk)
+            if digest.hexdigest()!=item["sha256"]:raise DomainError("BACKUP_HASH_MISMATCH","备份文件校验失败。")
+        return {"ok":True,"valid":True,"schema_revision":manifest["schema_revision"],"file_count":len(manifest["files"]),"required_bytes":sum(item["size"] for item in files)}
+
+def restore_workspace(archive_path,target_root):
+    from studyflow.infrastructure.leases import workspace_lease
+    checked=validate_backup(archive_path)
+    target=Path(target_root).expanduser().resolve()
+    target.parent.mkdir(parents=True,exist_ok=True)
+    if shutil.disk_usage(target.parent).free<checked["required_bytes"]*2+10*1024*1024:raise DomainError("WORKSPACE_DISK_FULL","恢复空间不足，未替换目标。")
+    with workspace_lease(target,exclusive=True):return {"ok":True,**_restore_workspace(archive_path,target)}

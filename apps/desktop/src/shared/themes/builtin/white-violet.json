@@ -1,0 +1,76 @@
+{
+  "schema_version": "studyflow.theme/1",
+  "id": "white-violet",
+  "name": "白紫轻学",
+  "description": "白底紫韵、清晰的知识点导航和分层教学组件，配以可关闭的轻学术插画。",
+  "appearance": "light",
+  "tokens": {
+    "surface.canvas": "#faf9fc",
+    "surface.panel": "#ffffff",
+    "surface.raised": "#f3eff8",
+    "surface.input": "#ffffff",
+    "surface.hover": "#efeaf6",
+    "surface.active": "#eae3f5",
+    "border.subtle": "#e6e1ed",
+    "border.strong": "#cac1da",
+    "text.primary": "#302d3c",
+    "text.secondary": "#514b60",
+    "text.muted": "#625b70",
+    "text.inverse": "#ffffff",
+    "accent.primary": "#7350a4",
+    "accent.strong": "#5d3b8d",
+    "accent.soft": "#efe8f8",
+    "status.success": "#286b52",
+    "status.success-soft": "#edf7f1",
+    "status.info": "#3f5c96",
+    "status.info-soft": "#edf2fb",
+    "status.warning": "#8a5a17",
+    "status.warning-soft": "#fbf4e6",
+    "status.danger": "#a54455",
+    "status.danger-soft": "#fbeff2",
+    "focus.ring": "#826bb4",
+    "code.background": "#f1edf7",
+    "code.text": "#493a65",
+    "shadow.ink": "#302d3c",
+    "overlay.ink": "#302d3c"
+  },
+  "presentation": {
+    "density": "comfortable",
+    "heading": "modern",
+    "teaching": "clean"
+  },
+  "motion_profile": "gentle",
+  "sound_profile": "soft-tap",
+  "display": {
+    "layout": "rail",
+    "navigation_width": 184,
+    "reading_width": 1000,
+    "tools_width": 420,
+    "reading_shell": "workbench",
+    "teaching_style": "paired",
+    "note_style": "inline",
+    "type_scale": 1.05,
+    "heading_family": "modern",
+    "body_family": "ui",
+    "surface_treatment": "matte",
+    "radius": 12,
+    "elevation": "subtle",
+    "outline": "hairline",
+    "assets": [
+      {
+        "key": "reading-book",
+        "role": "illustration",
+        "aspect_ratio": "3:2",
+        "safe_area": 0.12,
+        "fallback": "#efe8f8"
+      },
+      {
+        "key": "quiet-edge",
+        "role": "background",
+        "aspect_ratio": "16:9",
+        "safe_area": 0.1,
+        "fallback": "#efe8f8"
+      }
+    ]
+  }
+}

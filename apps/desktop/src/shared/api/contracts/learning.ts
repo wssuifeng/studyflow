@@ -16,6 +16,7 @@ export type ExerciseSubmission = {
 
 export type SubmissionDetailData = ExerciseSubmission & {
   protocol_version: string
+  is_current_study?:boolean
   answer_text: string
   source: string
   parent: { id: string; status: string; attempt_number: number } | null
@@ -23,7 +24,7 @@ export type SubmissionDetailData = ExerciseSubmission & {
   exercise: { id: string; title: string; prompt: string; requirements: string } | null
   lesson: { id: string; title: string; position: number; markdown_path: string } | null
   course: { id: string; title: string; plan_line_id: string | null } | null
-  reviews: { id: string; summary: string; detail_markdown: string; rendered_html: string; issue_count: number; decision: string; next_action: string; created_at: string | null }[]
+  reviews: { id: string; summary: string; detail_markdown: string; rendered_html: string; issue_count: number; decision: string; next_action: string; created_at: string | null; issues?: {quote:string;location:string;reason:string;guidance:string;next_action:string}[] }[]
 }
 
 export type LearningProgressData = {
@@ -56,11 +57,13 @@ export type CourseAnswerEntry = {
   expected_version?: number
   parent_submission_id?: string
   task_id?: string
+  retest_task_id?: string
 }
 
 export type CourseAnswerState = {
   exercise_id: string
-  action: 'FIRST' | 'REVISION' | 'RETEST' | 'LOCKED'
+  action: 'FIRST' | 'REVISION' | 'RETEST' | 'LOCKED' | 'WAITING_RETEST_TASK'
+  retest_task?: {id:string;title:string;prompt:string;requirements:string;objective:string;status:string}|null
   draft: SubmissionDetailData | null
   submission: SubmissionDetailData | null
 }

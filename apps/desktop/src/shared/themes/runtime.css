@@ -1,0 +1,232 @@
+/* One presentation system for main window, tools and every feature. No theme-owned UI. */
+:root {
+  --paper:var(--theme-surface-panel); --ink:var(--theme-text-primary); --muted:var(--theme-text-muted);
+  --line:var(--theme-border-subtle); --accent:var(--theme-accent-primary);
+  --accent-dark:var(--theme-accent-strong); --accent-soft:var(--theme-accent-soft); --teal:var(--theme-status-success);
+  --shadow:0 12px 38px color-mix(in srgb,var(--theme-shadow-ink) 7%,transparent);
+  --sf-bg-base:var(--theme-surface-panel); --sf-bg-layer-1:var(--theme-surface-canvas); --sf-bg-layer-2:var(--theme-surface-raised);
+  --sf-border-l1:var(--theme-border-subtle); --sf-border-l2:var(--theme-border-strong);
+  --sf-label-primary:var(--theme-text-primary); --sf-label-secondary:var(--theme-text-secondary); --sf-label-tertiary:var(--theme-text-muted);
+  --sf-hover:var(--theme-surface-hover); --sf-active:var(--theme-surface-active); --sf-brand:var(--theme-accent-primary);
+  --sf-caution-bg:var(--theme-status-warning-soft); --sf-caution-ink:var(--theme-status-warning); --sf-focus-ring:var(--theme-focus-ring);
+  --scrollbar-thumb:color-mix(in srgb,var(--theme-text-muted) 24%,transparent);
+  --scrollbar-thumb-hover:color-mix(in srgb,var(--theme-text-muted) 44%,transparent);
+  --scrollbar-thumb-active:color-mix(in srgb,var(--theme-text-muted) 60%,transparent);
+  /* 展示包默认值：即使主题 JSON 还没有 display 字段，页面也必须可用。 */
+  --theme-nav-width:184px; --theme-reading-width:820px; --theme-tools-width:420px; --theme-radius:12px;
+  --theme-type-scale:1; --theme-line-height:1.85;
+  --theme-heading-font:'Segoe UI Variable Text','Segoe UI','Microsoft YaHei UI',sans-serif;
+  --theme-body-font:'Segoe UI Variable Text','Segoe UI','Microsoft YaHei UI',sans-serif;
+  --theme-body-size:15px; --theme-reading-max:820px;
+  background:var(--theme-surface-canvas); color:var(--theme-text-primary);
+}
+/* 展示派生变量：正文尺寸与阅读上限由主题标度 × 用户阅读偏好算出，用户显式值优先。 */
+:root{--reading-max:var(--theme-reading-max);--reading-font-size:var(--theme-body-size)}
+body,.app-shell,.main-content {background:var(--theme-surface-canvas);color:var(--theme-text-primary)}
+.sidebar,.desktop-titlebar,.workspace-tool-panel,.detached-tool-shell {background:var(--theme-surface-panel);color:var(--theme-text-primary)}
+input,textarea,select {color:var(--theme-text-primary);accent-color:var(--theme-accent-primary)}
+input::placeholder,textarea::placeholder {color:var(--theme-text-muted);opacity:1}
+button.primary-button,.primary-button {color:var(--theme-text-inverse);background:var(--theme-accent-primary)}
+button.primary-button:hover:not(:disabled) {background:var(--theme-accent-strong)}
+.brand strong,.sidebar .brand strong {color:var(--theme-text-primary)}
+.nav-item.active,.sidebar .nav-item.active {color:var(--theme-accent-primary);background:var(--theme-surface-active)}
+.markdown-body,.teaching-richtext,.study-material-body {color:var(--theme-text-secondary)}
+.markdown-body pre,.study-material-body pre,.teaching-richtext pre,.source-code {background:var(--theme-code-background);color:var(--theme-code-text)}
+.markdown-body code:not(pre code) {background:var(--theme-accent-soft);color:var(--theme-accent-primary)}
+.markdown-body blockquote,.study-material-body blockquote {background:var(--theme-surface-raised);color:var(--theme-text-secondary);border-left-color:var(--theme-accent-primary)}
+.teaching-table-scroll thead th {background:var(--theme-surface-raised);color:var(--theme-text-secondary)}
+.teaching-table-scroll tbody th {background:var(--theme-surface-panel);color:var(--theme-accent-primary)}
+.teaching-example,.teaching-callout {background:var(--theme-surface-raised);border-color:var(--theme-border-subtle)}
+.teaching-callout {border-left-color:var(--theme-accent-primary)}
+.teaching-callout.tone-warning {background:var(--theme-status-warning-soft);border-left-color:var(--theme-status-warning)}
+.teaching-callout.tone-warning .teaching-kind {color:var(--theme-status-warning)}
+.knowledge-status-icon .status-check {stroke:var(--theme-surface-panel)}
+.state-learning {--state-bg:var(--theme-accent-soft);--state-ink:var(--theme-accent-primary)}
+.state-read,.state-passed {--state-bg:var(--theme-status-success-soft);--state-ink:var(--theme-status-success)}
+.state-draft,.state-review {--state-bg:var(--theme-status-info-soft);--state-ink:var(--theme-status-info)}
+.state-revision {--state-bg:var(--theme-status-warning-soft);--state-ink:var(--theme-status-warning)}
+.state-retest {--state-bg:var(--theme-status-danger-soft);--state-ink:var(--theme-status-danger)}
+.reader-navigation .knowledge-step.state-learning,.reader-navigation .knowledge-step.state-read,.reader-navigation .knowledge-step.state-passed,
+.reader-navigation .knowledge-step.state-draft,.reader-navigation .knowledge-step.state-review,.reader-navigation .knowledge-step.state-revision,.reader-navigation .knowledge-step.state-retest {background:var(--state-bg);color:var(--state-ink)}
+:focus-visible {outline:2px solid var(--theme-focus-ring);outline-offset:3px}
+::selection {background:var(--theme-surface-active);color:var(--theme-text-primary)}
+/* Whitelisted presentation presets do not change component keys or reading preferences. */
+:root[data-theme-heading='editorial'] {--theme-heading-font:'Noto Serif CJK SC','Source Han Serif SC','SimSun',serif}
+:root[data-theme-heading='technical'] {--theme-heading-font:'Segoe UI Variable Display','Segoe UI','Microsoft YaHei UI',sans-serif}
+.study-unit-heading h3,.teaching-block-heading h4 {font-family:var(--theme-heading-font)}
+:root[data-theme-teaching='clean'] .teaching-example {border:0;border-left:2px solid var(--theme-accent-primary);border-radius:0}
+:root[data-theme-teaching='outlined'] .teaching-example {background:transparent;border:1px solid var(--theme-border-strong)}
+:root[data-theme-teaching='paper'] .teaching-example {box-shadow:inset 0 1px 0 color-mix(in srgb,var(--theme-surface-input) 65%,transparent)}
+:root[data-theme-density='compact'] .theme-options {gap:10px}
+:root[data-theme-density='compact'] .workspace-panel {padding:22px 24px}
+:root[data-theme-density='compact'] .plan-course-item {padding-block:16px}
+:root[data-theme-motion='minimal'] button,:root[data-theme-motion='minimal'] .knowledge-step {transition:background .08s,color .08s,box-shadow .08s}
+:root[data-theme-motion='none'] *, :root[data-theme-motion='none'] *::before, :root[data-theme-motion='none'] *::after {animation:none!important;transition:none!important;scroll-behavior:auto!important}
+:root[data-theme-motion='none'] button:hover,:root[data-theme-motion='none'] .knowledge-step:hover,:root[data-theme-motion='none'] .teaching-practice-links button:hover {transform:none}
+/* ------------------------------------------------------------------
+   展示包接线：布局组合、容器几何、排版标度与素材强度。
+   这些规则只描述容器与排版，不改变 DOM 语义、顺序或交互；
+   runtime.css 在样式组合中最后加载，因此可以覆盖早期硬编码的栏宽。
+   ------------------------------------------------------------------ */
+:root{--theme-nav-width:184px}
+.app-shell {grid-template-columns:var(--theme-nav-width,184px) minmax(0,1fr)}
+.app-shell.learning-shell:not(.panel-open) {grid-template-columns:var(--theme-nav-width,184px) minmax(0,1fr)}
+/* 面板展开时 shell 使用三栏几何，这里不能覆盖它。 */
+.app-shell:not(.panel-open) {grid-template-columns:var(--theme-nav-width,184px) minmax(0,1fr)}
+.sidebar {width:var(--theme-nav-width,184px)}
+/* 主题背景素材：只做装饰层，pointer-events:none 且不接收点击；缺图时是纯色回退。 */
+.app-shell.has-theme-background {position:relative}
+.app-shell.has-theme-background::before {content:"";position:absolute;inset:0;z-index:0;pointer-events:none;background-color:var(--theme-bg-fallback,transparent);background-image:var(--theme-bg-image,none);background-size:cover;background-position:center top;opacity:.22}
+:root[data-theme-image='subtle'] .app-shell.has-theme-background::before {opacity:.12}
+.app-shell.has-theme-background>.sidebar,.app-shell.has-theme-background>.main-content {position:relative;z-index:1}
+.workspace-tool-panel {min-width:0}
+/* 阅读面：主题阅读宽度与用户阅读宽度取较小值，避免主题把正文挤成窄栏。 */
+.learning-shell .study-material-body>*,
+.source-reader {max-width:var(--reading-max,var(--theme-reading-width,820px))}
+.study-material-body {font-family:var(--theme-body-font,inherit)}
+.study-material-body,.teaching-richtext,.teaching-richtext p,.legacy-teaching-content {font-size:var(--reading-font-size,15px);line-height:var(--theme-line-height,1.85)}
+.study-unit-heading h3,.teaching-block-heading h4 {font-family:var(--theme-heading-font,inherit)}
+/* 学习面的工具列宽跟随主题的工具区宽度；面板开合与三栏几何仍由 shell 决定。 */
+.learning-shell {--dock-width:var(--theme-tools-width,420px)}
+/* 表面处理：实体哑光为主；elevation/outline 只调阴影与描边强度。 */
+:root[data-theme-elevation='none'] .workspace-panel,
+:root[data-theme-elevation='none'] .plan-card,
+:root[data-theme-elevation='none'] .today-plan-card {box-shadow:none}
+:root[data-theme-outline='strong'] .workspace-panel,
+:root[data-theme-outline='strong'] .plan-card,
+:root[data-theme-outline='strong'] .teaching-example,
+:root[data-theme-outline='strong'] .teaching-callout {border-color:var(--theme-border-strong)}
+:root[data-theme-outline='hairline'] .workspace-panel {border-width:1px}
+/* 布局组合：导航的组织方式不同，不只是栏宽数值。 */
+:root[data-theme-layout='docked']{--theme-nav-width:76px}
+:root[data-theme-layout='docked'] .sidebar {padding-inline:10px;align-items:center}
+:root[data-theme-layout='docked'] .sidebar .brand>div:not(.brand-mark),
+:root[data-theme-layout='docked'] .sidebar .nav-caption,
+:root[data-theme-layout='docked'] .sidebar .sidebar-bottom {display:none}
+:root[data-theme-layout='docked'] .sidebar .nav-item {justify-content:center;font-size:0;gap:0;padding:12px 0}
+:root[data-theme-layout='docked'] .sidebar .nav-icon {font-size:22px;width:auto}
+:root[data-theme-layout='page']{--theme-nav-width:152px}
+:root[data-theme-layout='page'] .sidebar {padding:38px 20px}
+:root[data-theme-layout='tabs'] .app-shell,
+:root[data-theme-layout='tabs'] .app-shell.learning-shell {grid-template-columns:minmax(0,1fr);grid-template-rows:auto minmax(0,1fr)}
+:root[data-theme-layout='tabs'] .sidebar {position:relative;top:auto;height:auto;width:auto;flex-direction:row;align-items:center;gap:18px;padding:10px 18px;border-bottom:1px solid var(--theme-border-subtle)}
+:root[data-theme-layout='tabs'] .sidebar .brand>div:not(.brand-mark),
+:root[data-theme-layout='tabs'] .sidebar .nav-caption,
+:root[data-theme-layout='tabs'] .sidebar .sidebar-bottom {display:none}
+:root[data-theme-layout='tabs'] .sidebar nav {display:flex;flex-direction:row;gap:6px;margin:0}
+:root[data-theme-layout='tabs'] .sidebar .nav-item {padding:9px 13px}
+:root[data-theme-layout='tabs'] .main-content {grid-column:1/-1}
+:root[data-theme-layout='tabs'] .study-unit-layout {grid-template-columns:minmax(0,1fr) var(--theme-tools-width,420px)}
+@media(max-width:820px){
+  /* 窄窗先退化为紧凑结构，不靠缩小中文字号挤空间。 */
+  :root[data-theme-layout='tabs'] .sidebar {gap:10px;padding:8px 12px}
+  :root[data-theme-layout='tabs'] .sidebar .nav-item {font-size:0;gap:0;padding:11px}
+  :root[data-theme-layout='tabs'] .sidebar .nav-icon {font-size:20px;width:auto}
+  :root[data-theme-layout='rail'],
+  :root[data-theme-layout='page']{--theme-nav-width:76px}
+  .app-shell:not(.panel-open) {grid-template-columns:var(--theme-nav-width,76px) minmax(0,1fr)}
+}
+/* Accessibility is the only global important override: never keep loading/hover motion alive. */
+@media(prefers-reduced-motion:reduce) {
+  *,*::before,*::after {animation:none!important;transition:none!important;scroll-behavior:auto!important}
+  button:hover,.knowledge-step:hover,.teaching-practice-links button:hover {transform:none!important}
+}
+
+
+/* UI 标准化契约 v2：布局主题不再改写学习工作区的区域职责。旧 display.layout 仍可解析，
+   但在运行时只作为密度/装饰提示；课程大纲、正文和可选工具保持固定桌面壳。 */
+:root[data-theme-shell-contract='v2'] .learning-shell:not(.focus-shell):not(.panel-open){
+  grid-template-columns:var(--theme-nav-width,184px) minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell.panel-open:not(.focus-shell){
+  grid-template-columns:var(--panel-nav-width,184px) minmax(0,1fr) var(--panel-width,420px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell.focus-shell.panel-open{
+  grid-template-columns:minmax(0,1fr) var(--panel-width,420px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell.focus-shell:not(.panel-open){
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell:not(.focus-shell)>.sidebar{
+  position:fixed!important;
+  inset:0 auto 0 0!important;
+  width:var(--panel-nav-width,var(--theme-nav-width,184px))!important;
+  min-width:var(--panel-nav-width,var(--theme-nav-width,184px))!important;
+  height:auto!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+}
+:root[data-theme-shell-contract='v2'] .desktop-shell.learning-shell:not(.focus-shell)>.sidebar{
+  top:44px!important;
+  bottom:0!important;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell:not(.focus-shell)>.main-content{
+  min-width:0;
+  grid-column:2!important;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell .workspace-tool-panel{
+  min-width:0;
+  min-height:0;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell .study-unit-layout{
+  min-width:0;
+}
+/* 普通页面也必须遵守同一套主窗口壳层：主题只能改变视觉，不得把导航恢复为随文档滚动。 */
+:root[data-theme-shell-contract='v2'] .workspace-shell:not(.focus-shell):not(.panel-open){
+  grid-template-columns:var(--theme-nav-width,184px) minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+:root[data-theme-shell-contract='v2'] .workspace-shell:not(.focus-shell)>.sidebar{
+  position:fixed!important;
+  inset:0 auto 0 0!important;
+  width:var(--panel-nav-width,var(--theme-nav-width,184px))!important;
+  min-width:var(--panel-nav-width,var(--theme-nav-width,184px))!important;
+  height:auto!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+}
+:root[data-theme-shell-contract='v2'] .desktop-shell.workspace-shell:not(.focus-shell)>.sidebar{
+  top:44px!important;
+  bottom:0!important;
+}
+:root[data-theme-shell-contract='v2'] .workspace-shell:not(.focus-shell)>.main-content{
+  min-width:0;
+  grid-column:2!important;
+}
+/* 普通页面没有课程工具栏，导航宽度必须与其网格列完全一致；课程页继续使用 panel-nav-width。 */
+:root[data-theme-shell-contract='v2'] .workspace-shell:not(.learning-shell):not(.focus-shell)>.sidebar{
+  width:var(--theme-nav-width,184px)!important;
+  min-width:var(--theme-nav-width,184px)!important;
+}
+/* 主题圆角只作为受控组件的默认值；页面不再各自发明一套壳层半径。 */
+:root[data-theme-shell-contract='v2'] .workspace-panel,
+:root[data-theme-shell-contract='v2'] .plan-card,
+:root[data-theme-shell-contract='v2'] .today-plan-card,
+:root[data-theme-shell-contract='v2'] .study-material,
+:root[data-theme-shell-contract='v2'] .course-tools{
+  border-radius:var(--theme-radius,12px);
+}
+
+/* Focus tool windows have no navigation rail. This guard is intentionally theme-agnostic:
+   a detached window must never inherit the normal two-column shell and leave a blank rail. */
+.app-shell.learning-shell.focus-shell:not(.panel-open){
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+.app-shell.learning-shell.focus-shell.panel-open{
+  grid-template-columns:minmax(0,1fr) var(--panel-width,420px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+
+.app-shell.focus-shell:not(.panel-open){
+  grid-template-columns:minmax(0,1fr)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
+.app-shell.focus-shell.panel-open{
+  grid-template-columns:minmax(0,1fr) var(--panel-width,420px)!important;
+  grid-template-rows:minmax(0,1fr)!important;
+}
