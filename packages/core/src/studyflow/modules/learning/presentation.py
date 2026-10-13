@@ -29,7 +29,7 @@ def submission_detail(row):
         "exercise": context["exercise"] if context else {"id": exercise.id, "title": exercise.title, "prompt": exercise.prompt, "requirements": exercise.requirements},
         "lesson": context["lesson"] if context else {"id": lesson.id, "title": lesson.title, "position": lesson.position, "markdown_path": lesson.markdown_path},
         "course": context["course"] if context else {"id": course.id, "title": course.title, "plan_line_id": course.plan_line_id},
-        "reviews": [{"id": review.id, "summary": review.summary, "detail_markdown": review.detail_markdown,
+        "reviews": [{"id": review.id, "reference_hash":review.reference_hash, "reference_revision":review.reference_revision, "reference_reason":review.reference_reason, "summary": review.summary, "detail_markdown": review.detail_markdown,
                      "rendered_html": render_markdown(review.detail_markdown), "issues": json.loads(review.issues_json or "[]"), "issue_count": review.issue_count,
                      "decision": review.decision, "next_action": review.next_action, "created_at": review.created_at}
                     for review in sorted(row.reviews, key=lambda x: (x.created_at, x.id))],

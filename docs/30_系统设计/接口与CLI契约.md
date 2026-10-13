@@ -85,3 +85,35 @@ CLI与Skill适用任意外部Agent，Skill1.9.0；Engine传输协议仍为1.2。
 旧Engine `assignment.queue`保持完整响应；命名CLI `assignment queue`默认轻量，可显式`--full`兼容。新增 `course.study.open.review_round=true` 是已通过后主动复习同一内容的明示轮次，保留旧证据，不自动开始或继承通过。
 
 写入`ENGINE_TIMEOUT/ENGINE_UNCONFIRMED`保留原载荷/键，回读或稳定重放；`ENGINE_BUSY`表示尚未派发。旧无hash回执返回`IDEMPOTENCY_UNVERIFIABLE`，同键变载荷返回`IDEMPOTENCY_KEY_CONFLICT`。课程包/整课统一最多500题。详细字段由源码Schema及[Skill闭环契约](../../skills/studyflow-agent/references/closed-loop-contract.md)保持一致。
+
+## 2026-10-11 学习体验增量（仓库 Skill 2.2.0）
+
+课程包 `/3` 与字段限额由 capabilities / system.schema 的 `course_package_schemas`、`schema_block_types`、`details` 显式发现。`/1`、`/2` 仍拒绝 details；`/3` 复用 general/english。详见[课程包契约](../../skills/studyflow-agent/references/course-packages.md)。源码仍为 app/Core1.7.0、协议1.2，不依据这些版本号猜测旧二进制支持新方法。
+
+| 方法 | 请求字段 | 可靠性与边界 |
+|---|---|---|
+| course.study.restart.preview | study_session_id | 真正只读；不取得写租约；返回无作答证据、轮次版本及目标内容，不结束轮次 |
+| course.study.restart | study_session_id、expected_version、expected_content_hash、idempotency_key | 人类明确确认；事务内 CAS 关闭旧轮次并冻结最新内容新轮次；原键重放；有任何草稿/提交/答案写回执或英语检查即拒绝 |
+| system.installation | 无 | 返回运行时确认的 workspace、cli_path/cli_argv、source_cli、skill_path/skill_kind 与存在/就绪标识；不读凭据、不改 PATH |
+
+重开保留历史阅读与笔记，不复制答案或继承完成状态；旧轮次为 ABANDONED，迟到进度/作答写入拒绝，已确认原回执可重放。未作答的新轮次可经再次明确确认重开，生命周期回执本身不算作答。未知提交结果必须保留原载荷与键，不因重试多建轮次。
+
+安装态仅发现运行 Engine 同目录的 CLI/Skill；源码态提供实际 Python 解释器完整 argv 与仓库 Skill，不能伪造 exe 或默认落到公共 Skill。复制文本仅在路径就绪且 installation/doctor 工作区一致时可用。合成与源码验证通过，真实安装发现仍待验证；见[验证记录](../40_开发实施/2026-10-11-学习体验收口与文档模板验证记录.md)。
+
+## 2026-10-11 英语补充课程增量（仓库 Skill2.3.0）
+
+/4 通过capabilities发现受控english.progression与阶段，旧/1—3不扩白名单。补充课程用正常英语冻结/作答链，单独SUPPLEMENT挂载；来源是不可变证据引用，不把补充整课伪造成原作答的子提交。
+
+| 方法 | 请求字段 | 边界 |
+|---|---|---|
+| course.remediation.preview | plan_line_id、工作区内path、1—5目标objective_ids、rationale、sources[{aggregate_id,expected_version,evidence_ids}] | 真正只读，无写租约；计划/英语有效证据/版本/递进结构校验，返回绑定内容和来源的preview_hash |
+| course.remediation.publish | 上述字段、preview_hash、稳定idempotency_key | 重核来源/预览，课程/挂载/来源/回执同事务；原键重放，冲突/故障不登记孤立课程 |
+| course.remediation.list | plan_line_id，可选source_course_id/aggregate_id，limit=1—100、offset=0—100000 | 有界分页，next_offset；来源课程筛选不是目标补充课ID |
+| course.remediation.get | course_id | 来源引用/有效性、学习状态、当前轮次transfer_status，原错题不自动消除；不另复制答案 |
+
+sources限制1—30聚合、每聚合1—10去重且合法错误证据。Agent从mistakes.context获取真实版本/ID，不能合成学习者错误或把已接受表达当来源。普通course import-package产生MAIN，不替代补充发布。完整教学/操作规则见[补充学习Skill](../../skills/studyflow-agent/references/english-remediation.md)。程序首版不做自动语法诊断或递归制课，迁移辅助通过不记无提示通过。
+
+
+## 2026-10-12 笔记v2已实施接口
+
+`plan.notebook.read/apply`与`plan notebook-read/apply`已实现；有界分页/范围/记录ID读取及insert/replace/remove/move原子CAS命令，精确规格见[仓库笔记契约](../../skills/studyflow-agent/references/plan-notebooks.md)。旧save不能覆盖v2，命令不能把筛选投影当完整笔记覆盖。适用源码增量，安装能力仍须发现确认。

@@ -124,11 +124,17 @@ pub(super) fn set_tool_context(
     app: AppHandle,
     window: WebviewWindow,
     context: ToolContext,
+    tool: Option<String>,
 ) -> Result<(), String> {
     main_only(&window)?;
+    if let Some(ref selected) = tool {
+        if selected != "notes" && selected != "exercises" { return Err("未知工具".into()); }
+    }
     let state = app.state::<ToolWindows>();
     let mut contexts = state.contexts.lock().map_err(|_| "工具上下文锁异常")?;
-    for (tool, old) in contexts.iter_mut() {
+    for (name, old) in contexts.iter_mut() {
+        if let Some(ref selected) = tool { if selected != name { continue; } }
+        let tool = name;
         validate(tool, &context)?;
         *old = context.clone();
         app.emit_to(

@@ -1,0 +1,53 @@
+{
+  "schema": "studyflow.course-package/2",
+  "package_id": "synthetic-english-likes",
+  "plan_line": "Synthetic English",
+  "course": {
+    "title": "Expressing likes",
+    "summary": "Practice I like with familiar nouns; synthetic contract sample, not a learner-specific course.",
+    "learning_mode": "english"
+  },
+  "lessons": [
+    {
+      "id": "likes",
+      "title": "Expressing likes",
+      "blocks": [
+        {
+          "id": "like-concept",
+          "type": "concept",
+          "title": "I like + noun",
+          "body": "I like introduces a preference. Use a familiar noun after like. With I, use like, not likes."
+        }
+      ],
+      "exercises": [
+        {
+          "id": "tea",
+          "title": "Liking tea",
+          "prompt": "我喜欢茶。",
+          "english": {
+            "target": "I like tea.",
+            "accepted_answers": [],
+            "evaluation_mode": "local_exact",
+            "case_sensitive": false,
+            "gloss": "我喜欢茶。",
+            "explanation": "I is the subject; like is the verb; tea is the object.",
+            "objective_ids": [
+              "express-likes"
+            ]
+          }
+        },
+        {
+          "id": "coffee",
+          "title": "Liking coffee",
+          "prompt": "我喜欢咖啡。",
+          "english": {
+            "target": "I like coffee.",
+            "objective_ids": [
+              "express-likes"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

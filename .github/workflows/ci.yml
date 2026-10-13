@@ -41,6 +41,8 @@ jobs:
         working-directory: apps/desktop
       - run: npm run test:learning
         working-directory: apps/desktop
+      - run: npm run test:themes && npm run test:english
+        working-directory: apps/desktop
       - run: npm run build
         working-directory: apps/desktop
 
@@ -63,6 +65,8 @@ jobs:
       - run: npm ci && npm run build
         working-directory: apps/desktop
       - run: python apps/desktop/scripts/smoke-iteration.py
+      - run: python apps/desktop/scripts/smoke-english-cli.py
+      - run: python apps/desktop/scripts/smoke-english.py
   windows-engine-regression:
     name: windows-engine-regression
     if: github.event_name == 'workflow_dispatch'

@@ -2,19 +2,19 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const root=path.join(__dirname,'../src')
 function load(file,deps={}){const m={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(root,file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:m,exports:m.exports,require:n=>Object.hasOwn(deps,n)?deps[n]:require(n),JSON,Math,Object,Array,Number,Set,Map,Error,String});return m.exports}
 const block=(id,type='concept')=>Object.freeze({id,type,title:id})
-test('teaching pairs adjacent concepts without losing order, ids or mutating source',()=>{
+test('teaching keeps adjacent concepts linear without losing order, ids or mutating source',()=>{
  const {teachingGroups}=load('features/courses/teachingPresentation.ts')
  const source=Object.freeze([block('a'),block('b'),block('table','comparison'),block('c'),block('case','example')])
  const groups=teachingGroups(source)
- assert.deepEqual(JSON.parse(JSON.stringify(groups.map(g=>g.blocks.map(b=>b.id)))),[['a','b'],['table'],['c'],['case']])
- assert.equal(groups[0].paired,true);assert.equal(groups[2].paired,false)
+ assert.deepEqual(JSON.parse(JSON.stringify(groups.map(g=>g.blocks.map(b=>b.id)))),[['a'],['b'],['table'],['c'],['case']])
+ assert.equal(groups[0].paired,false);assert.equal(groups[2].paired,false)
  assert.equal(groups[0].blocks[0],source[0]);assert.equal(source.length,5)
 })
-test('three concepts produce pair then singleton, and semantic boundaries stay intact',()=>{
+test('three concepts remain individual sections, and semantic boundaries stay intact',()=>{
  const {teachingGroups}=load('features/courses/teachingPresentation.ts')
  assert.deepEqual(JSON.parse(JSON.stringify(teachingGroups([]))),[])
  const groups=teachingGroups([block('a'),block('b'),block('c'),block('note','callout'),block('d')])
- assert.deepEqual(JSON.parse(JSON.stringify(groups.map(g=>g.blocks.length))),[2,1,1,1])
+ assert.deepEqual(JSON.parse(JSON.stringify(groups.map(g=>g.blocks.length))),[1,1,1,1,1])
  assert.equal(new Set(groups.map(g=>g.key)).size,groups.length)
 })
 test('white-violet uses validated theme/display data alongside sequence-light only',()=>{

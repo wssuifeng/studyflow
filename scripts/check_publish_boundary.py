@@ -80,7 +80,7 @@ def path_problem(relative: str) -> str | None:
                 return "unapproved-binary-asset"
     if relative in BINARY_ASSETS:
         return None
-    if path.suffix not in TEXT_SUFFIXES and relative not in {".github/CODEOWNERS", "apps/desktop/scripts/test-course-answers.cjs", "apps/desktop/scripts/test-study-tools.cjs", "apps/desktop/scripts/test-dock.cjs", "apps/desktop/scripts/test-plan-notebook.cjs", "apps/desktop/scripts/test-white-violet.cjs", "apps/desktop/scripts/test-sequence-light.cjs", "apps/desktop/scripts/test-workspace-panel.cjs", "apps/desktop/scripts/test-workspace-shell.cjs", "apps/desktop/scripts/test-themes.cjs", "apps/desktop/scripts/check-theme.cjs"}:
+    if path.suffix not in TEXT_SUFFIXES and relative not in {".github/CODEOWNERS", "apps/desktop/scripts/test-course-answers.cjs", "apps/desktop/scripts/test-study-tools.cjs", "apps/desktop/scripts/test-dock.cjs", "apps/desktop/scripts/test-plan-notebook.cjs", "apps/desktop/scripts/test-white-violet.cjs", "apps/desktop/scripts/test-sequence-light.cjs", "apps/desktop/scripts/test-workspace-panel.cjs", "apps/desktop/scripts/test-workspace-shell.cjs", "apps/desktop/scripts/test-themes.cjs", "apps/desktop/scripts/check-theme.cjs", "apps/desktop/scripts/test-english.cjs", "apps/desktop/scripts/test-learning-experience.cjs", "apps/desktop/scripts/test-notebook-v2.cjs", "apps/desktop/scripts/test-q234.cjs"}:
         return "unapproved-file-type"
     return None
 

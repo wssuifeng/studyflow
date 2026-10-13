@@ -14,7 +14,7 @@ def test_package_assets_are_complete():
         assert (root / name).is_file(), name
     assert sorted(path.name for path in (root / "migrations/versions").glob("[0-9]*.py")) == [
         "0001_mvp_baseline.py", "0002_generic_metadata.py", "0003_learning_console_lifecycle.py",
-        "0004_learning_progress.py", "0005_course_answers.py", "0006_course_study.py", "0007_learning_tools.py", "0008_plan_notebooks.py", "0009_write_contract.py", "0010_review_tasks.py", "0011_course_revisions.py", "0012_plan_management.py",
+        "0004_learning_progress.py", "0005_course_answers.py", "0006_course_study.py", "0007_learning_tools.py", "0008_plan_notebooks.py", "0009_write_contract.py", "0010_review_tasks.py", "0011_course_revisions.py", "0012_plan_management.py", "0013_english_specialty.py", "0014_study_restart.py", "0015_english_remediation.py", "0016_notebook_document.py", "0017_course_experience.py",
     ]
 
 

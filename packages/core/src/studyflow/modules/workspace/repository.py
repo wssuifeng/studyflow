@@ -25,6 +25,7 @@ SUPPORTED_SCHEMA_REVISIONS = {
     "0004_learning_progress",
     "0005_course_answers",
     "0006_course_study", "0007_learning_tools", "0008_plan_notebooks", "0009_write_contract", "0010_review_tasks", "0011_course_revisions", "0012_plan_management",
+    "0013_english_specialty", "0014_study_restart", "0015_english_remediation", "0016_notebook_document",
 }
 REQUIRED_DATABASE_TABLES = {
     "plan_lines",

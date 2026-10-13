@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [switch]$InstallMissing,
     [string]$PythonExecutable,
@@ -92,6 +92,7 @@ $skillSource = Join-Path $repoRoot "skills\studyflow-agent"
 $skillTarget = Join-Path $binaryRoot "studyflow-agent"
 New-Item -ItemType Directory -Path $skillTarget -Force | Out-Null
 foreach ($file in Get-ChildItem -LiteralPath $skillSource -File -Recurse) {
+    if ($file.Extension -in @(".pyc", ".pyo") -or $file.FullName -match "[\\/](__pycache__|\.pytest_cache)[\\/]") { continue }
     if ($file.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Linked Skill resource is not allowed" }
     $relative = $file.FullName.Substring($skillSource.Length).TrimStart('\','/')
     $destination = Join-Path $skillTarget $relative

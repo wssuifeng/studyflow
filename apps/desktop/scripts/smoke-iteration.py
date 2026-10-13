@@ -1,5 +1,5 @@
 """SF-12 real Vue/Engine closed loop in an isolated synthetic workspace."""
-import json,time
+import json,time,sys
 from pathlib import Path
 from smoke_workbench_support import ROOT,WORKSPACE,service,engine,server,database,plan,courses,url
 from playwright.sync_api import sync_playwright,expect
@@ -14,7 +14,7 @@ def main():
     errors=[]
     try:
         with sync_playwright() as playwright:
-            browser=playwright.chromium.launch(headless=True)
+            browser=playwright.chromium.launch(headless=True,**({"channel":"msedge"} if sys.platform=="win32" else {}))
             page=browser.new_page(viewport={"width":1440,"height":950})
             page.set_default_timeout(12000)
             page.on("pageerror",lambda error:errors.append(str(error)))
@@ -62,14 +62,16 @@ def main():
             page.goto(url+"/#/plan/"+plan.id);page.wait_for_load_state("networkidle")
             expect(page.get_by_role("button",name="计划学习笔记",exact=True)).to_be_visible()
             page.get_by_role("button",name="计划学习笔记",exact=True).click()
-            page.get_by_role("button",name="＋ 写一段",exact=True).click()
-            page.get_by_role("textbox",name="笔记：计划",exact=True).fill("中文检索与连续计划笔记。")
+            page.get_by_role("textbox",name="连续笔记编辑器",exact=True).click()
+            page.keyboard.insert_text("中文检索与连续计划笔记。")
+            page.keyboard.press("Control+s")
             page.wait_for_timeout(1600)
-            page.get_by_role("textbox",name="搜索笔记与摘录").fill("中文检索")
-            page.get_by_role("button",name="阅读",exact=True).click()
+            page.get_by_role("button",name="搜索笔记",exact=True).click()
+            page.get_by_role("searchbox",name="搜索笔记与摘录").fill("中文检索")
+            page.get_by_role("button",name="只读阅读",exact=True).click()
             expect(page.locator(".notebook-reading")).to_contain_text("中文检索")
-            with page.expect_download() as download:page.get_by_role("button",name="导出",exact=True).click()
-            download.value.save_as(str(RESULT/"synthetic-notes.md"))
+            with page.expect_download() as download:page.get_by_role("button",name="导出笔记",exact=True).click()
+            download.value.save_as(str(RESULT/"synthetic-notes.json"))
             screenshots=[]
             for route,name in [("/today","console-v17"),("/queue","queue-v17"),("/plan/"+plan.id,"plan-v17"),("/settings","workspace-v17")]:
                 page.goto(url+"/#"+route);page.wait_for_load_state("networkidle");page.wait_for_timeout(300)

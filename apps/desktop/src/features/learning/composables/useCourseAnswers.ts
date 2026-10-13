@@ -5,7 +5,7 @@ import type { CourseAnswerState, CourseAnswerWriteParams, CourseStudyDetailData 
 import { makeRequestKey, notify, reportError, windowStorageKey } from '../../../shared/ui'
 
 export type AnswerRow = CourseAnswerState & {
-  lessonId: string; lessonTitle: string; title: string; prompt: string; requirements: string
+  studyId?:string; lessonId: string; lessonTitle: string; title: string; prompt: string; requirements: string
   answer: string; savedAnswer: string
 }
 type PendingWrite = {operation: 'save' | 'submit'; params: CourseAnswerWriteParams}
@@ -55,7 +55,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
         const state = sheet.answers.find(row => row.exercise_id === ex.id)
         if (!state) throw new Error('本轮题目状态不完整，请重新读取课程。')
         const answer = state.draft?.answer_text || (state.action === 'LOCKED' ? state.submission?.answer_text || '' : '')
-        return {...state, lessonId: lesson.id, lessonTitle: lesson.title, title: state.retest_task?.title || ex.title, prompt: state.retest_task?.prompt || ex.prompt,
+        return {...state, studyId:course.value?.study.id, lessonId: lesson.id, lessonTitle: lesson.title, title: state.retest_task?.title || ex.title, prompt: state.retest_task?.prompt || ex.prompt,
           requirements: state.retest_task?.requirements || ex.requirements, answer, savedAnswer: answer}
       }))
       recovery.value = null; pending.value = null; pendingFromStorage = false

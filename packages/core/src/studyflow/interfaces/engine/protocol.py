@@ -51,6 +51,9 @@ CAPABILITIES: list[dict[str, str]] = [
 ]
 
 
+from .english import METHODS as ENGLISH_METHODS
+CAPABILITIES.extend({"name":method.replace(".","_").replace("-","_"),"method":method,"kind":kind} for method,kind in ENGLISH_METHODS.items())
+
 _CREDENTIAL_URL = re.compile(r"(\b[a-z][a-z0-9+.-]*://[^:/\s]+:)([^@/\s]+)(@)", re.IGNORECASE)
 _SENSITIVE_QUERY = re.compile(r"(?i)([?&](?:password|passwd|pwd|secret|token)=)[^&\s]+")
 
@@ -102,5 +105,14 @@ def version_payload(settings: Settings) -> dict[str, Any]:
     return {"protocol_version": PROTOCOL_VERSION, "app_version": __version__, **discovery_metadata(settings), "capabilities": [item["name"] for item in all_capabilities()], "next_action": "调用 system.doctor 检查工作区与数据库。"}
 
 
+def content_capabilities():
+    from studyflow.modules.courses.content import SCHEMA, ENGLISH_SCHEMA, DETAILS_SCHEMA, PROGRESSION_SCHEMA, STRUCTURED_SCHEMA, BLOCK_TYPES
+    return {"notebook": {"formats":[1,2], "write_method":"plan.notebook.apply", "read_method":"plan.notebook.read", "read_limit":100, "max_entries":1000, "immutable_sources":True, "legacy_write_v2":False}, "course_package_schemas": [SCHEMA, ENGLISH_SCHEMA, DETAILS_SCHEMA, PROGRESSION_SCHEMA, STRUCTURED_SCHEMA], "learning_modes": ["general", "english"], "structured_sections":{"schema":STRUCTURED_SCHEMA,"max_depth":2,"max_sections":40,"max_body_chars":20000,"roles":["main","supplement"]},"review_reference":{"schema":STRUCTURED_SCHEMA,"fields":["answer","explanation","criteria","accepted_variants","source"],"read_method":"exercise.reference.read","view_method":"exercise.reference.view","default_folded":True,"account_permissions":False},"plan_course_groups":{"groups":["PENDING","COMPLETED","OTHER"],"edit_operation":"COURSE_POSITION","scope":"plan_course_item"},"learning_evidence":{"method":"learning.evidence","max_limit":100,"infers_mastery":False},
+            "teaching_block_types": sorted(BLOCK_TYPES), "details": {"schema":DETAILS_SCHEMA,"required_fields":["id","type","title","summary","body"],"max_chars":{"title":200,"summary":3000,"body":20000},"nested_blocks":False,"default_expanded":False},
+            "schema_block_types":{SCHEMA:sorted(BLOCK_TYPES-{"details"}),ENGLISH_SCHEMA:sorted(BLOCK_TYPES-{"details"}),DETAILS_SCHEMA:sorted(BLOCK_TYPES),PROGRESSION_SCHEMA:sorted(BLOCK_TYPES),STRUCTURED_SCHEMA:sorted(BLOCK_TYPES)}, "progression":{"schema":PROGRESSION_SCHEMA,"fields":["chain_id","stage"],"stages":["vocabulary","chunk","pattern","variation","transfer"],"supplement_requires":["vocabulary","pattern","transfer"],"original_errors_auto_resolved":False}, "english": {"evaluation_modes": ["local_exact", "agent"],
+            "max_items_per_course": 500, "max_tokens_per_item": 80, "audio_default": "dictionary",
+            "tts_generation": False, "english_detached_editor": False}}
+
+
 def capabilities_payload(settings: Settings) -> dict[str, Any]:
-    return {"protocol_version": PROTOCOL_VERSION, "app_version": __version__, **discovery_metadata(settings), "capabilities": all_capabilities(), "next_action": "调用 system.doctor，再按当前任务选择方法。"}
+    return {"protocol_version": PROTOCOL_VERSION, "app_version": __version__, **discovery_metadata(settings), "capabilities": all_capabilities(), "content": content_capabilities(), "next_action": "调用 system.doctor，再按当前任务选择方法。"}

@@ -1,56 +1,68 @@
 <script setup lang="ts">
-import {computed,ref,nextTick,watch} from 'vue'
-import {navigate,reportError,notify} from '../../../shared/ui'
-import type {NotebookBlock} from '../../../shared/api/contracts'
+import {computed,ref,watch,onMounted,onBeforeUnmount,nextTick} from 'vue'
+import {studyApi} from '../../../shared/api'
+import {navigate,notify,reportError} from '../../../shared/ui'
 import type {PlanNotebookController} from '../composables/usePlanNotebook'
+import {applyProjection,classifyText,clone,isBlank,visibleEntries,type Scope,type Entry,type Course,textOf} from '../editor/model'
+import {removeOccurrence,restoreOccurrence,textFromOccurrence} from '../editor/extensions'
+import NotebookEditor from './NotebookEditor.vue'
+import NotebookScopePicker from './NotebookScopePicker.vue'
+import NotebookSourcePopover from './NotebookSourcePopover.vue'
+import NotebookIcon from './NotebookIcon.vue'
+import {loadViewState,saveViewState,type NoteSelection,type NotebookViewState} from '../editor/viewState'
 const props=defineProps<{notebook:PlanNotebookController;planTitle?:string;courseId?:string;lessonId?:string;blocked?:boolean}>()
-const query=ref(''),readMode=ref(false)
-const filter=ref<'PLAN'|'COURSE'|'LESSON'>('PLAN'),documentElement=ref<HTMLElement|null>(null)
-const shown=computed(()=>props.notebook.blocks.value.filter(b=>(filter.value==='PLAN'||filter.value==='COURSE'&&b.course_id===props.courseId||filter.value==='LESSON'&&b.lesson_id===props.lessonId)&&(!query.value||(b.text+' '+(b.quote||'')).toLocaleLowerCase().includes(query.value.toLocaleLowerCase()))))
-const noteCount=computed(()=>props.notebook.blocks.value.length)
-const scopeLabel=computed(()=>filter.value==='PLAN'?'全计划':filter.value==='COURSE'?'本课程':'本知识点')
-const saveLabel=computed(()=>props.notebook.busy.value?'正在保存…':props.notebook.saveFailed.value?'保存未确认':props.notebook.dirty.value?'已修改 · 等待保存':props.notebook.savedAt.value?props.notebook.savedAt.value+' 已保存':'保存在本地')
-function source(block:NotebookBlock){if(!block.source_study_id||!block.lesson_id)return;const q=new URLSearchParams({lesson:block.lesson_id});if(block.source_block_id)q.set('block',block.source_block_id);navigate('/source/'+block.source_study_id+'?'+q)}
-function exportNotes(){try{const lines=['# '+(props.planTitle||'学习笔记'),''];for(const block of props.notebook.blocks.value){lines.push('## '+(block.lesson_title||block.course_title||'计划笔记'),'');if(block.quote)lines.push('> '+block.quote.replaceAll('\n','\n> '),'');lines.push(block.text,'');if(block.source_study_id)lines.push('来源轮次：'+block.source_study_id+' · 版本：'+block.content_hash,'')}const url=URL.createObjectURL(new Blob([lines.join('\n')],{type:'text/markdown;charset=utf-8'})),a=document.createElement('a');a.href=url;a.download='StudyFlow-学习笔记.md';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);notify('已导出当前笔记，包含尚未保存的输入。')}catch(cause){reportError(cause)}}
-const readonly=computed(()=>!props.notebook.available.value||!!props.blocked||props.notebook.loading.value||props.notebook.failed.value||!!props.notebook.recovery.value||props.notebook.cacheUnreadable.value||!!props.notebook.pending.value&&!props.notebook.busy.value)
-function size(element:HTMLTextAreaElement){element.style.height='auto';element.style.height=Math.max(76,Math.min(1200,element.scrollHeight))+'px'}
-function fit(event:Event){size(event.target as HTMLTextAreaElement)}
-async function add(){if(props.notebook.add(filter.value==='LESSON'?{course_id:props.courseId,lesson_id:props.lessonId}:filter.value==='COURSE'?{course_id:props.courseId}:{})){await nextTick();const editors=documentElement.value?.querySelectorAll('textarea');editors?.[editors.length-1]?.focus()}}
-function remove(id:string){props.notebook.removeBlock(id)}
-function associate(block:NotebookBlock,scope:'PLAN'|'COURSE'|'LESSON') {block.course_id=scope==='PLAN'?null:props.courseId;block.lesson_id=scope==='LESSON'?props.lessonId:null;block.course_title=null;block.lesson_title=null}
-watch(()=>[filter.value,props.notebook.blocks.value.length,props.notebook.loading.value],async()=>{await nextTick();documentElement.value?.querySelectorAll('textarea').forEach(size)},{immediate:true})
-watch(()=>props.notebook.blocks.value,async()=>{await nextTick();documentElement.value?.querySelectorAll('textarea').forEach(size)})
-watch(()=>props.courseId,()=>{if(!props.courseId)filter.value='PLAN'})
+const editorView=ref<InstanceType<typeof NotebookEditor>>(),scope=ref<Scope>({mode:'PLAN'}),following=ref(true),collapsed=ref(new Set<string>()),search=ref(''),searchOpen=ref(false),readMode=ref(false),composing=ref(false)
+const current=computed<Scope>(()=>props.lessonId&&props.courseId?{mode:'LESSON',courseId:props.courseId,lessonId:props.lessonId}:props.courseId?{mode:'COURSE',courseId:props.courseId}:{mode:'PLAN'})
+let pendingViewRestore=false;let deferred:(()=>void)|null=null,alive=true,metadataGeneration=0;const scroll=ref<HTMLElement>();let viewSelection:NoteSelection|undefined,restoredPid='',savedView:NotebookViewState|null=null
+const source=ref<{sourceId:string;occurrenceId:string;x:number;y:number}|null>(null),pinned=ref(false),menu=ref<{id:string;x:number;y:number}|null>(null),moving=ref<{id:string;courseId:string;lessonId:string}|null>(null)
+const all=computed(()=>props.notebook.entries.value),sources=computed(()=>props.notebook.sources.value),courses=computed(()=>props.notebook.courses.value)
+const shown=computed(()=>visibleEntries(all.value,scope.value).filter(e=>!search.value||textOf(e.content).toLocaleLowerCase().includes(search.value.toLocaleLowerCase())))
+const readonly=computed(()=>!props.notebook.editable.value||!!props.blocked||props.notebook.loading.value||props.notebook.failed.value||!!props.notebook.recovery.value||props.notebook.cacheUnreadable.value||!!props.notebook.pending.value&&!props.notebook.busy.value)
+const selectedSource=computed(()=>source.value?sources.value[source.value.sourceId]:null)
+const sourceState=computed(()=>{const revision=all.value;void revision;const e=editorView.value?.editor,s=source.value;if(!e||!s||!selectedSource.value)return 'EDITED';return classifyText(textFromOccurrence(e,s.sourceId,s.occurrenceId),selectedSource.value.original)})
+const saveLabel=computed(()=>props.notebook.busy.value?'正在保存…':props.notebook.saveFailed.value?'保存未确认':props.notebook.dirty.value?'已修改 · 等待保存':props.notebook.savedAt.value?props.notebook.savedAt.value+' 已保存':'工作区笔记')
+function defer(fn:()=>void){if(composing.value)deferred=fn;else fn()}
+function composition(active:boolean){composing.value=active;props.notebook.composition(active);if(!active&&deferred){const fn=deferred;deferred=null;fn()}}
+function choose(next:Scope){defer(()=>{scope.value=clone(next);following.value=JSON.stringify(next)===JSON.stringify(current.value);source.value=null})}
+watch(current,next=>{if(following.value)defer(()=>scope.value=clone(next));if(next.courseId)void loadLessons(next.courseId)},{immediate:true})
+async function loadLessons(id:string){const token=metadataGeneration;try{const data=await studyApi.courseDetail(id);if(!alive||token!==metadataGeneration)return;const course=courses.value.find(c=>c.id===id);if(course)course.lessons=data.lessons.map(l=>({id:l.id,title:l.title}))}catch(cause){reportError(cause)}}
+watch(()=>props.notebook.loading.value,async loading=>{if(loading||!props.notebook.available.value)return;restoreView();const token=++metadataGeneration;try{const grouped=new Map<string,Course>();for(const e of all.value){if(e.courseId){if(!grouped.has(e.courseId))grouped.set(e.courseId,{id:e.courseId,title:e.courseTitle||'历史课程',lessons:[]});if(e.lessonId&&!grouped.get(e.courseId)!.lessons.some(l=>l.id===e.lessonId))grouped.get(e.courseId)!.lessons.push({id:e.lessonId,title:e.lessonTitle||'历史知识点'})}}
+ if(props.courseId&&!grouped.has(props.courseId))grouped.set(props.courseId,{id:props.courseId,title:props.planTitle||'当前课程',lessons:[]})
+ const planId=props.notebook.planId.value;if(planId){const data=await studyApi.planDetail(planId);if(!alive||token!==metadataGeneration)return;for(const c of data.courses){const old=grouped.get(c.id);grouped.set(c.id,{id:c.id,title:c.title,lessons:old?.lessons||[]})}}
+ props.notebook.courses.value=[...grouped.values()];if(props.courseId)await loadLessons(props.courseId)
+ }catch(cause){reportError(cause)}finally{await restoreEditorView()}},{immediate:true})
+function rememberView(selection?:NoteSelection){if(selection)viewSelection=selection;if(pendingViewRestore||!props.notebook.planId.value||props.blocked||!props.notebook.editable.value||props.notebook.loading.value)return;saveViewState(props.notebook.planId.value,{scope:clone(scope.value),following:following.value,collapsed:[...collapsed.value],scrollTop:scroll.value?.scrollTop||0,selection:viewSelection})}
+function restoreView(){const pid=props.notebook.planId.value;if(!pid||restoredPid===pid)return;restoredPid=pid;savedView=loadViewState(pid);pendingViewRestore=!!savedView;if(savedView){following.value=savedView.following;scope.value=savedView.following?clone(current.value):savedView.scope;collapsed.value=new Set(savedView.collapsed);viewSelection=savedView.selection}}
+async function restoreEditorView(){if(!pendingViewRestore||props.notebook.loading.value)return;await nextTick();if(props.notebook.loading.value)return;editorView.value?.restoreSelection(savedView?.selection);if(scroll.value&&savedView)scroll.value.scrollTop=savedView.scrollTop;pendingViewRestore=false}
+watch(()=>props.notebook.editable.value,(owner,previous)=>{if(owner&&!previous){restoredPid='';restoreView();if(!props.notebook.loading.value)void restoreEditorView()}},{flush:'sync'})
+watch([scope,collapsed],()=>rememberView(),{deep:true});watch(editorView,async value=>{if(!value)return;await nextTick();value.restoreSelection(savedView?.selection);if(scroll.value&&savedView)scroll.value.scrollTop=savedView.scrollTop})
+function changed(next:Entry[],beforeIds:string[],typingGroup?:string){if(readonly.value||readMode.value||search.value)return;try{props.notebook.commit(applyProjection(all.value,beforeIds,next),typingGroup)}catch(cause){reportError(cause)}}
+function fold(key:string){defer(()=>{const next=new Set(collapsed.value);next.has(key)?next.delete(key):next.add(key);collapsed.value=next})}
+function showSource(sourceId:string,occurrenceId:string,rect:{x:number;y:number}){if(!sources.value[sourceId])return;source.value={sourceId,occurrenceId,x:Math.max(8,Math.min(window.innerWidth-330,rect.x)),y:Math.max(8,Math.min(window.innerHeight-300,rect.y+8))};pinned.value=false}
+function sourceAction(kind:'remove'|'restore'){const s=source.value,e=editorView.value?.editor;if(!s||!e||readonly.value||!selectedSource.value)return;if(kind==='remove')removeOccurrence(e,s.sourceId,s.occurrenceId);else restoreOccurrence(e,s.sourceId,s.occurrenceId,selectedSource.value.original);source.value=null;notify(kind==='remove'?'文字已保留，来源标记已去除。':'已恢复这一处引用的原文。')}
+function viewSource(){const s=selectedSource.value;if(!s?.studyId||!s.lessonId)return;const q=new URLSearchParams({lesson:s.lessonId});if(s.blockId)q.set('block',s.blockId);if(s.sectionId)q.set('section',s.sectionId);navigate('/source/'+s.studyId+'?'+q)}
+function openMenu(id:string,x:number,y:number){menu.value={id,x:Math.max(8,Math.min(window.innerWidth-240,x)),y:Math.max(8,Math.min(window.innerHeight-190,y))}}
+function move(){if(!menu.value)return;const e=all.value.find(e=>e.id===menu.value!.id);if(e)moving.value={id:e.id,courseId:e.courseId||'__plan',lessonId:e.lessonId||'__course'};menu.value=null}
+function confirmMove(){if(!moving.value)return;const m=moving.value;const target=m.courseId==='__plan'?{scope:'PLAN' as const,courseId:null,lessonId:null}:m.lessonId==='__course'?{scope:'COURSE' as const,courseId:m.courseId,lessonId:null}:{scope:'LESSON' as const,courseId:m.courseId,lessonId:m.lessonId};props.notebook.commit(all.value.map(e=>e.id===m.id?{...e,...target}:e));moving.value=null;notify('已移动记录，出处不变；可以撤销。')}
+function remove(){if(menu.value)props.notebook.removeBlock(menu.value.id);menu.value=null}
+function keydown(e:KeyboardEvent){if(e.key==='Escape'){source.value=null;menu.value=null;moving.value=null;editorView.value?.editor?.commands.focus()}}
+function outside(e:MouseEvent){const t=e.target as HTMLElement;if(!pinned.value&&!t.closest('.source-popover')&&!t.closest('[data-note-source]'))source.value=null;if(!t.closest('.entry-menu')&&!t.closest('[data-entry-menu]'))menu.value=null}
+onMounted(()=>{window.addEventListener('keydown',keydown);window.addEventListener('click',outside)})
+onBeforeUnmount(()=>{rememberView(editorView.value?.captureSelection()||undefined);alive=false;window.removeEventListener('keydown',keydown);window.removeEventListener('click',outside)})
 </script>
-<template>
- <section class="plan-notebook" aria-label="计划学习笔记">
-  <p v-if="!notebook.available.value" class="notebook-alert">这门课程尚未归属学习计划。请通过 Agent 归入计划后使用连续笔记；旧随手草稿仍保留在工作区中。</p>
-  <header class="notebook-heading"><div><span class="notebook-kicker">连续学习笔记 · {{noteCount}} 段</span><h3>{{planTitle||'学习计划'}}</h3><p class="notebook-subtitle">把每个知识点的理解串成一份可回看的长期文档。</p></div><button type="button" class="notebook-action" :disabled="readonly" @click="add">＋ 写一段</button></header>
-  <div class="notebook-toolbar">
-   <div class="notebook-scope-tabs" role="tablist" aria-label="笔记范围">
-    <button v-for="item in [{id:'PLAN',label:'全计划'},{id:'COURSE',label:'本课程'},{id:'LESSON',label:'本知识点'}]" v-show="item.id==='PLAN'||item.id==='COURSE'&&courseId||item.id==='LESSON'&&lessonId" :key="item.id" type="button" :class="{selected:filter===item.id}" :aria-selected="filter===item.id" role="tab" @click="filter=item.id as 'PLAN'|'COURSE'|'LESSON'">{{item.label}}</button>
-   </div>
-   <div class="notebook-actions"><label class="notebook-search"><span aria-hidden="true">⌕</span><input v-model="query" placeholder="查找笔记" aria-label="搜索笔记与摘录"/></label><button type="button" class="text-button" @click="readMode=!readMode">{{readMode?'编辑':'阅读'}}</button><button type="button" class="text-button" @click="exportNotes">导出</button></div>
-  </div>
-  <div class="notebook-status-line"><span>{{scopeLabel}} · {{shown.length}} 段可见</span><span class="notebook-save-state" :class="{error:notebook.saveFailed.value,dirty:notebook.dirty.value}">{{saveLabel}}</span></div>
-  <div v-if="notebook.canUndo.value" class="notebook-undo" role="status"><span>已移除笔记段落</span><button type="button" class="text-button" :disabled="readonly" @click="notebook.undoDelete">撤销删除</button><small>离开此编辑器前可撤销</small></div>
-  <div v-if="notebook.cacheUnreadable.value" class="notebook-alert"><p>本机恢复副本无法解析，原始内容仍保留。请先导出，或明确选择使用工作区版本。</p><button type="button" class="text-button" @click="notebook.exportRecovery">导出本机副本</button><button type="button" class="text-button" @click="notebook.discardCache">使用工作区版本</button></div>
-  <div v-if="notebook.recovery.value" class="notebook-alert"><p>本机与工作区内容不同。合并会保留双方段落，不静默覆盖。</p><button type="button" class="text-button" :disabled="blocked" @click="notebook.restoreCache">合并本机笔记</button><button type="button" class="text-button" @click="notebook.exportRecovery">导出</button><button type="button" class="text-button" :disabled="blocked" @click="notebook.discardCache">使用工作区版本</button></div>
-  <div v-if="notebook.failed.value" class="notebook-alert">笔记暂时无法读取，没有覆盖原内容。<button type="button" class="text-button" @click="notebook.load()">重试读取</button></div>
-  <div v-else-if="notebook.loading.value" class="loading-state" role="status">正在恢复计划笔记…</div>
-  <template v-else>
-   <div v-if="!shown.length" class="notebook-empty"><span>{{query?'没有匹配的笔记':'从这里开始建立你的长期理解'}}</span><p>{{query?'换一个关键词，或切换查看范围。':'这里不是一次性草稿，而是贯穿整个学习计划的可回看记录。'}}</p><button type="button" class="text-button" :disabled="readonly" @click="add">＋ {{query?'写一段新笔记':'记录第一段理解'}}</button></div>
-   <div ref="documentElement" class="notebook-document">
-    <section v-for="(block,index) in shown" :key="block.id" :data-note-id="block.id" class="notebook-block">
-     <header><span class="notebook-block-index">{{String(index+1).padStart(2,'0')}}</span><span class="notebook-block-source">{{block.lesson_title||block.course_title||(block.lesson_id?'知识点笔记':block.course_id?'课程笔记':'计划笔记')}}</span><button type="button" :disabled="readonly" aria-label="移除这段笔记" title="移除这段笔记（保存后生效）" @click="remove(block.id)">×</button></header>
-     <button v-if="block.source_study_id" type="button" class="notebook-source-link" @click="source(block)">查看冻结来源 ↗</button><blockquote v-if="block.quote" class="notebook-quote">{{block.quote}}<footer>摘自 {{block.course_title}} / {{block.lesson_title}} · 冻结学习轮次</footer></blockquote>
-     <pre v-if="readMode" class="notebook-reading">{{block.text||'（空白段落）'}}</pre><textarea v-else v-model="block.text" :disabled="readonly" class="notebook-editor" :aria-label="'笔记：'+(block.lesson_title||block.course_title||'计划')" placeholder="写下你的理解、联系与疑问…" spellcheck="false" maxlength="200000" @input="fit"/>
-     <details v-if="!block.quote" class="notebook-link"><summary>关联范围：{{block.lesson_id?'知识点':block.course_id?'课程':'整个计划'}}</summary><button type="button" :disabled="readonly" @click="associate(block,'PLAN')">归入计划</button><button v-if="courseId" type="button" :disabled="readonly" @click="associate(block,'COURSE')">关联本课程</button><button v-if="lessonId" type="button" :disabled="readonly" @click="associate(block,'LESSON')">关联本知识点</button></details>
-    </section>
-   </div>
-   <button v-if="shown.length" type="button" class="notebook-add-line" :disabled="readonly" @click="add">＋ 继续写笔记</button>
-   <details v-if="notebook.legacy.value.length" class="notebook-legacy"><summary>旧版随手草稿（{{notebook.legacy.value.length}}，原文保留）</summary><section v-for="old in notebook.legacy.value" :key="old.id"><small>{{old.course_title}}</small><pre>{{old.text}}</pre><button type="button" class="text-button" :disabled="readonly" @click="notebook.add({text:old.text,course_id:old.course_id,lesson_id:old.lesson_id})">复制到学习笔记</button></section></details>
-  </template>
-  <footer v-if="notebook.saveFailed.value||notebook.pending.value" class="notebook-alert"><span>保存尚未确认，笔记未丢弃。</span><button type="button" class="text-button" :disabled="notebook.busy.value||blocked" @click="notebook.retry">重试／读取冲突版本</button><button type="button" class="text-button" @click="notebook.exportRecovery">导出笔记</button></footer>
- </section>
-</template>
+<template><section class="plan-notebook plan-notebook-v2" aria-label="计划学习笔记">
+ <header class="tool-header"><span class="tool-tab">编辑</span><div class="tool-actions"><button class="icon-btn" aria-label="搜索笔记" :aria-pressed="searchOpen" @click="searchOpen=!searchOpen;if(!searchOpen)search=''"><NotebookIcon name="search"/></button><button class="icon-btn" :aria-label="readMode?'编辑笔记':'只读阅读'" :aria-pressed="readMode" @click="readMode=!readMode"><NotebookIcon name="read"/></button><button class="icon-btn" aria-label="撤销" :disabled="readonly||!notebook.canUndo.value" @click="notebook.undo"><NotebookIcon name="undo"/></button><button class="icon-btn" aria-label="重做" :disabled="readonly||!notebook.canRedo.value" @click="notebook.redo"><NotebookIcon name="redo"/></button><button class="icon-btn" aria-label="导出笔记" @click="notebook.exportRecovery"><NotebookIcon name="expand"/></button><button class="icon-btn" aria-label="保存笔记" :disabled="readonly||notebook.busy.value" @click="notebook.save"><NotebookIcon name="check"/></button></div></header>
+ <p v-if="notebook.available.value&&!notebook.editable.value" class="notebook-alert">笔记正在另一窗口编辑，本页只读；放回侧栏后可继续。</p>
+ <p v-if="!notebook.available.value" class="notebook-alert">此课程尚未归属学习计划，请先由 Agent 配置计划。</p>
+ <NotebookScopePicker :courses="courses" :scope="scope" :current="current" @change="choose" @select-course="loadLessons"><span class="scope-status" role="status">{{blocked?'其他窗口编辑中':saveLabel}}</span></NotebookScopePicker>
+ <div v-if="searchOpen" class="notebook-search"><input v-model="search" type="search" aria-label="搜索笔记与摘录" placeholder="在当前范围中搜索…"><small v-if="search">搜索结果只读，清空搜索后继续编辑。</small></div>
+ <div v-if="notebook.failed.value" class="notebook-alert">笔记读取失败，原内容未覆盖。<button @click="notebook.load()">重试</button></div><div v-else-if="notebook.loading.value" class="loading-state">正在读取笔记…</div>
+ <div v-if="notebook.cacheUnreadable.value" class="notebook-alert">本机恢复格式需要确认，请先导出保留，不会自动覆盖工作区。<button @click="notebook.exportRecovery">导出恢复件</button><button @click="notebook.discardCache">舍弃本机恢复件</button></div>
+ <div v-else-if="notebook.recovery.value" class="notebook-alert">检测到未确认的本机内容。<button :disabled="!!notebook.pending.value" @click="notebook.restoreCache">按记录比较并恢复</button><button :disabled="!!notebook.pending.value" @click="notebook.discardCache">保留工作区版本</button><button @click="notebook.exportRecovery">导出</button></div>
+ <div v-for="c in notebook.conflicts.value" :key="c.id" class="notebook-conflict"><h4>同一记录发生冲突</h4><div><pre>{{c.local?textOf(c.local.content):'本机已删除'}}</pre><pre>{{c.remote?textOf(c.remote.content):'工作区已删除'}}</pre></div><button @click="notebook.resolveConflict(c.id,'local')">采用这一条本机内容</button><button @click="notebook.resolveConflict(c.id,'remote')">采用这一条工作区内容</button></div>
+ <main v-if="!notebook.loading.value&&!notebook.failed.value" ref="scroll" class="notebook-scroll" @scroll.passive="rememberView()"><NotebookEditor ref="editorView" :entries="shown" :plan-id="notebook.planId.value||''" :source-ids="Object.keys(sources)" :courses="courses" :scope="scope" :collapsed="collapsed" :readonly="readonly||readMode||!!search" :class="{'notebook-reading':readMode||!!search}" @change="changed" @undo="props.notebook.undo" @redo="props.notebook.redo" @notice="notify" @source="showSource" @fold="fold" @entry-menu="openMenu" @composition="composition" @save="props.notebook.save" @view="rememberView"/><p class="quiet-hint">Enter 换段 · Ctrl+Enter 另起记录 · Ctrl+S 保存</p></main>
+ <footer v-if="notebook.saveFailed.value||notebook.pending.value" class="notebook-alert"><span>{{notebook.rejected.value?'工作区明确拒绝了本次内容，尚未写入。请修正后重新保存。':'保存尚未确认，未丢弃当前内容。'}}</span><button @click="notebook.retry" :disabled="notebook.busy.value">{{notebook.rejected.value?'修正后重新保存':'原键重试／读取冲突'}}</button><button @click="notebook.exportRecovery">导出本机内容</button></footer><p v-if="notebook.cacheFailed.value" class="notebook-alert">本机恢复缓存不可写；请导出。已成功保存到数据库的内容不受影响。</p>
+ <NotebookSourcePopover v-if="source&&selectedSource" :key="source.occurrenceId" :source="selectedSource" :state="sourceState" :readonly="readonly||readMode||!!search" :x="source.x" :y="source.y" @pin="pinned=$event" @close="source=null" @remove="sourceAction('remove')" @restore="sourceAction('restore')" @navigate="viewSource"/>
+ <div v-if="menu" class="entry-menu picker-panel" :style="{left:menu.x+'px',top:menu.y+'px'}"><button :disabled="readonly" @click="move">移动到课程／知识点</button><button :disabled="readonly" @click="remove">删除记录（可撤销）</button></div>
+ <div v-if="moving" class="dialog-backdrop"><section class="move-dialog" role="dialog" aria-modal="true" aria-label="移动记录"><h3>移动这张记录</h3><p>改变主要归属，保留引用出处。</p><label>课程<select v-model="moving.courseId" @change="moving.lessonId='__course';loadLessons(moving.courseId)"><option value="__plan">计划随记</option><option v-for="c in courses" :key="c.id" :value="c.id">{{c.title}}</option></select></label><label v-if="moving.courseId!=='__plan'">知识点<select v-model="moving.lessonId"><option value="__course">课程随记</option><option v-for="l in courses.find(c=>c.id===moving!.courseId)?.lessons" :key="l.id" :value="l.id">{{l.title}}</option></select></label><footer><button @click="moving=null">取消</button><button class="primary" @click="confirmMove">移动</button></footer></section></div>
+ </section></template>

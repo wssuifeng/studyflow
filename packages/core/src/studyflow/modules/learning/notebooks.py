@@ -34,8 +34,11 @@ def _plan(db, pid):
 
 
 def _wire(row, pid):
+    if row and row.format_version not in {1, 2}:
+        raise DomainError("NOTEBOOK_FORMAT_UNSUPPORTED","笔记格式高于当前版本支持范围；未导出空文档或覆盖。")
     return {"plan_line_id":pid, "version":row.version if row else 0,
-            "blocks":json.loads(row.blocks_json) if row else [],
+            "format_version":row.format_version if row else 1,
+            "blocks":json.loads(row.blocks_json) if row and row.format_version == 1 else [],
             "updated_at":row.updated_at.isoformat() if row and row.updated_at else None}
 
 
@@ -107,8 +110,10 @@ def save_notebook(service,pid,blocks,expected_version,key,source="USER_WEB"):
         if receipt:
             if receipt.payload_hash!=digest: raise DomainError("IDEMPOTENCY_KEY_CONFLICT","笔记请求键已用于不同内容。")
             return json.loads(receipt.result_json)
-        normalized=_blocks(db,pid,blocks)
         row=db.scalar(select(PlanNotebook).where(PlanNotebook.plan_line_id==pid))
+        if row and row.format_version != 1:
+            raise DomainError("NOTEBOOK_FORMAT_UPGRADE_REQUIRED","此笔记已升级为结构化格式；旧全文保存已禁用。","使用plan.notebook.read/apply按记录ID操作。")
+        normalized=_blocks(db,pid,blocks)
         content=json.dumps(normalized,ensure_ascii=False)
         if row:
             changed=db.execute(update(PlanNotebook).where(PlanNotebook.id==row.id,PlanNotebook.version==expected_version)

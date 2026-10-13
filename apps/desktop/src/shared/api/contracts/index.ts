@@ -7,3 +7,5 @@ export type * from './learning'
 export type * from './documents'
 export type * from './workspace'
 export type * from './notebooks'
+
+export type * from './english'

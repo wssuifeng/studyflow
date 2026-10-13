@@ -103,7 +103,7 @@ class StudyFlowEngine:
             return {"protocol_version": PROTOCOL_VERSION, **self.service.course_detail(self._required_string(params, "course_id"))}
         if method == "course.study.open":
             return {"protocol_version": PROTOCOL_VERSION, **self.service.open_course_study(
-                self._required_string(params, "course_id"), self._required_string(params, "idempotency_key"), params.get("new_version", False), params.get("review_round",False))}
+                self._required_string(params, "course_id"), self._required_string(params, "idempotency_key"), params.get("new_version", False), params.get("review_round",False),params.get("plan_line_id"))}
         if method == "course.study.get":
             return {"protocol_version": PROTOCOL_VERSION, **self.service.course_study_detail(self._required_string(params, "study_session_id"))}
         if method == "course.study.progress.save":
@@ -174,6 +174,7 @@ class StudyFlowEngine:
                 source=str(params.get("source", "AGENT_CLI")),
                 decision=params.get("decision"), issues=params.get("issues"),
                 next_action=str(params.get("next_action", "")),
+                reference_hash=params.get("reference_hash"),reference_revision=params.get("reference_revision"),reference_reason=params.get("reference_reason",""),
             )
             return {"protocol_version": PROTOCOL_VERSION, "review_id": feedback.id, "submission_id": feedback.submission_id, "decision": feedback.decision, "next_action": feedback.next_action, "needs_revision": feedback.needs_revision}
         if method in {"submission.revise", "submission.retest"}:

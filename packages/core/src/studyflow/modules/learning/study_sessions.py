@@ -8,6 +8,7 @@ from studyflow.modules.learning.models import CourseStudySession, CourseWriteRec
 from studyflow.shared.constants import PASSED_STATES
 from studyflow.shared.domain import DomainError
 from studyflow.shared.ids import new_id
+from studyflow.infrastructure.installation import workspace_key
 
 
 def current_study(db, course_id):
@@ -21,7 +22,7 @@ def require_study(db, identifier, course_id=None, active=False):
     row = db.get(CourseStudySession, identifier)
     if not row or (course_id and row.course_id != course_id):
         raise DomainError("OBJECT_NOT_FOUND", "学习会话不存在或不属于本课。", "重新打开课程，保留本机未保存内容。")
-    if active and current_study(db, row.course_id).id != row.id:
+    if active and (row.abandoned_at is not None or current_study(db, row.course_id).id != row.id):
         raise DomainError("VERSION_CONFLICT", "该轮学习已经收口，当前课程正在使用另一个版本。", "保留草稿并重新打开当前学习轮次。")
     return row
 
@@ -57,16 +58,24 @@ def outcome(db, study):
     elif "NOT_SUBMITTED" in states: status = "IN_PROGRESS"
     elif waiting == len(ids): status = "WAITING_REVIEW"
     else: status = "PARTIAL_FEEDBACK"
+    if study.abandoned_at is not None:status="ABANDONED"
     batches = [row.batch_id for row in latest.values() if row.batch_id]
     return {"study_status": status, "exercise_total": len(ids), "exercise_completed": passed,
             "waiting_count": waiting, "feedback_count": feedback, "batch_id": batches[-1] if batches else None,
             "learning_submitted": bool(ids) and "NOT_SUBMITTED" not in states or not ids and study.reading_completed}
 
 
-def capture(service, course_id):
+def capture(service, course_id, plan_line_id=None):
     from studyflow.modules.courses.service import CoursesService
     data = CoursesService(service.runtime).course_detail(course_id)
-    course = {key: data["course"].get(key) for key in ("id", "title", "summary", "subject", "content_type", "difficulty", "source_type", "plan_line", "plan_line_id", "status")}
+    course = {key: data["course"].get(key) for key in ("id", "title", "summary", "subject", "content_type", "learning_mode", "content_revision", "difficulty", "source_type", "plan_line", "plan_line_id", "status")}
+    if plan_line_id is not None:
+        from studyflow.modules.planning.models import PlanCourseItem, PlanLine
+        with service.session(read_only=True) as db:
+            membership=db.scalar(select(PlanCourseItem.id).where(PlanCourseItem.plan_line_id==plan_line_id,PlanCourseItem.course_id==course_id))
+            plan=db.get(PlanLine,plan_line_id)
+            if not plan or not membership:raise DomainError("SCOPE_MISMATCH","课程不属于所选计划。")
+            course["plan_line_id"]=plan.id;course["plan_line"]=plan.name
     lessons = []
     if not data["lessons"]:
         raise DomainError("EMPTY_COURSE", "本课尚未准备知识点。", "请外部Agent导入学习材料后再开始。")
@@ -87,6 +96,16 @@ def capture(service, course_id):
         blocks = render_blocks(markdown, [ex["id"] for ex in source["exercises"]]) if markdown.startswith(("---\n", "---\r\n")) else []
         if blocks: lesson["content_blocks"] = blocks
         lesson["exercises"] = [{key: ex[key] for key in ("id", "title", "prompt", "requirements", "type", "position")} for ex in source["exercises"]]
+        metadata=parse_front_matter(markdown)[0] if markdown.startswith(("---\n","---\r\n")) else {}
+        specs=metadata.get("structured_lesson",{}).get("exercises",[])
+        for ex,spec in zip(lesson["exercises"],specs):
+            if "review_reference" in spec:ex["review_reference"]=spec["review_reference"]
+        if course.get("learning_mode")=="english":
+            metadata=parse_front_matter(markdown)[0]
+            specs=metadata.get("structured_lesson",{}).get("exercises",[])
+            if len(specs)!=len(lesson["exercises"]):raise DomainError("INVALID_COURSE_PACKAGE","英语材料与登记题目不一致。")
+            from studyflow.modules.learning.english.checker import CHECKER_VERSION
+            for ex,spec in zip(lesson["exercises"],specs):ex["english"]={**spec["english"],"checker_version":CHECKER_VERSION}
         lessons.append(lesson)
     content = {"course": course, "lessons": lessons}
     text = json.dumps(content, ensure_ascii=False, sort_keys=True)
@@ -103,7 +122,12 @@ def detail(service, study_id):
         for lesson in content["lessons"]:
             lesson["progress"] = progress.get(lesson["id"], {"progress_percent": 0, "status": "NOT_STARTED", "last_position": ""})
             for ex in lesson["exercises"]:
+                ex.pop("review_reference",None)
                 from studyflow.modules.learning.presentation import submission_summary
+                if "english" in ex:
+                    from studyflow.modules.learning.english.checker import tokenize
+                    spec=ex["english"]
+                    ex["english"]={"token_count":len(tokenize(spec["target"])),"evaluation_mode":spec.get("evaluation_mode","local_exact")}
                 ex["latest_submission"] = submission_summary(latest[ex["id"]]) if ex["id"] in latest else None
                 draft = all_rows.get(ex["id"])
                 ex["draft"] = submission_summary(draft) if draft and draft.status == "DRAFT" else None
@@ -114,23 +138,30 @@ def detail(service, study_id):
         course["reading_percent"] = round(sum(l["progress"]["progress_percent"] for l in content["lessons"]) / len(content["lessons"]))
         course["progress_percent"] = round(course["exercise_completed"] / course["exercise_total"] * 100) if course["exercise_total"] else course["reading_percent"]
         from studyflow.modules.planning.models import PlanCourseItem
-        membership = db.scalar(select(PlanCourseItem).where(PlanCourseItem.course_id == study.course_id).order_by(PlanCourseItem.sequence_number))
+        membership = db.scalar(select(PlanCourseItem).where(PlanCourseItem.course_id == study.course_id, PlanCourseItem.plan_line_id == course.get("plan_line_id")).order_by(PlanCourseItem.sequence_number))
         course["sequence"] = membership.sequence_number if membership else None
-        course["total"] = db.scalar(select(func.count(PlanCourseItem.id)).where(PlanCourseItem.plan_line_id == membership.plan_line_id)) if membership else 0
-        version = {"id":study.id,"revision":study.revision,"content_hash":study.content_hash,"progress_version":study.version,
-                   "source_changed":False,"source_available":True,"is_current":current_study(db,study.course_id).id == study.id}
-        try: version["source_changed"] = capture(service, study.course_id)[1] != study.content_hash
+        course["track"] = membership.track if membership else course.get("track","MAIN")
+        course["total"] = db.scalar(select(func.count(PlanCourseItem.id)).where(PlanCourseItem.plan_line_id == membership.plan_line_id, PlanCourseItem.track == membership.track)) if membership else 0
+        version = {"workspace_key":workspace_key(service.settings.workspace_root),"id":study.id,"revision":study.revision,"content_hash":study.content_hash,"progress_version":study.version,
+                   "source_changed":False,"source_available":True,"is_current":study.abandoned_at is None and current_study(db,study.course_id).id == study.id, "abandoned_at":study.abandoned_at.isoformat() if study.abandoned_at else None}
+        try: version["source_changed"] = capture(service, study.course_id,content["course"].get("plan_line_id"))[1] != study.content_hash
         except DomainError: version.update(source_available=False, source_changed=True)
         return {"course": course, "lessons": content["lessons"], "study": version,
                 "resume_lesson_id": study.resume_lesson_id, "next_action":"在当前知识点学习和作答，整课完成后统一提交。"}
 
 
-def open_study(service, course_id, key, new_version=False, review_round=False):
+def open_study(service, course_id, key, new_version=False, review_round=False, plan_line_id=None):
     if not isinstance(key,str) or not key.strip() or len(key)>160 or not isinstance(new_version,bool) or not isinstance(review_round,bool):
         raise DomainError("INVALID_ARGUMENT", "学习开始需要有效幂等键和布尔new_version。", "同一请求使用原幂等键。")
     with service.session() as db:
         request_payload={"course_id":course_id,"new_version":new_version}
         if review_round: request_payload["review_round"]=True
+        if plan_line_id is not None:
+            if not isinstance(plan_line_id,str) or not plan_line_id:raise DomainError("INVALID_ARGUMENT","计划ID必须是非空文本。")
+            from studyflow.modules.planning.models import PlanCourseItem
+            membership = db.scalar(select(PlanCourseItem.id).where(PlanCourseItem.course_id == course_id, PlanCourseItem.plan_line_id == plan_line_id))
+            if not membership: raise DomainError("SCOPE_MISMATCH", "课程不属于指定计划，未创建或迁移学习轮次。")
+            request_payload["plan_line_id"]=plan_line_id
         digest_request=hashlib.sha256(json.dumps(request_payload,sort_keys=True).encode()).hexdigest()
         receipt = db.scalar(select(CourseWriteReceipt).where(CourseWriteReceipt.idempotency_key==key))
         replay = db.scalar(select(CourseStudySession).where(CourseStudySession.idempotency_key == key))
@@ -149,7 +180,7 @@ def open_study(service, course_id, key, new_version=False, review_round=False):
             else:
                 if current and outcome(db,current)["study_status"] not in {"PASSED","READ_COMPLETED"}:
                     raise DomainError("COURSE_STUDY_IN_PROGRESS", "当前学习尚未收口，不能切换材料版本。", "完成当前作答与反馈后，再开始新版学习。")
-                text, digest = capture(service, course_id)
+                text, digest = capture(service, course_id,plan_line_id)
                 if current and digest == current.content_hash and not review_round:
                     raise DomainError("COURSE_VERSION_UNCHANGED", "学习材料没有更新，无需开始新版。", "继续回看当前课程即可。")
                 progress = {}
@@ -165,7 +196,10 @@ def open_study(service, course_id, key, new_version=False, review_round=False):
             db.add(CourseWriteReceipt(id=new_id(),idempotency_key=key,course_id=course_id,study_session_id=identifier,
                 operation="STUDY_OPEN",payload_hash=digest_request,result_json=json.dumps({"study_session_id":identifier})))
             db.flush()
-    return detail(service,identifier)
+    result=detail(service,identifier)
+    if plan_line_id is not None and result["course"].get("plan_line_id")!=plan_line_id:
+        result["scope_notice"]="此课程的活跃轮次仍属于开始学习时的计划；未切换旧答案和错误的归属。"
+    return result
 
 
 def save_progress(service, study_id, lesson_id, percent, position, expected_version=None):
@@ -220,6 +254,8 @@ def bind_submission(db, row, is_new=False):
     exercise=db.get(Exercise,row.exercise_id)
     study=current_study(db,exercise.lesson.course_id) if exercise else None
     if not study: return
+    if json.loads(study.snapshot_json)["course"].get("learning_mode")=="english":
+        raise DomainError("ENGLISH_ENDPOINT_REQUIRED","英语作答应使用course.english接口保存、检查、提交或申请审核。")
     if row.exercise_id not in exercise_ids(study):
         raise DomainError("VERSION_CONFLICT","本题不属于当前固定学习版本。","在新版开始后再处理新增题目。")
     if row.study_session_id and row.study_session_id != study.id or not row.study_session_id and not is_new and study.revision>1:

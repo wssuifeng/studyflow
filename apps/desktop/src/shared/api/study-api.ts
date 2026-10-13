@@ -1,13 +1,19 @@
 import { engineCall } from './engine'
-import type { PlanNotebookData, NotebookSaveParams, CourseAnswerSheetData, CourseAnswerWriteData, CourseAnswerWriteParams, CourseDetailData, CourseStudyDetailData, StudyNotesData, StudyNoteWriteData, StudyNoteWriteParams, DocumentReadData, ExerciseSubmission, FollowupSubmission, LearningProgressData, PlanDetailData, SubmissionDetailData } from './contracts'
+import type { StudyRestartPreview, NotebookReadResult, NotebookApplyParams, NotebookApplyResult, PlanNotebookData, NotebookSaveParams, CourseAnswerSheetData, CourseAnswerWriteData, CourseAnswerWriteParams, CourseDetailData, CourseStudyDetailData, StudyNotesData, StudyNoteWriteData, StudyNoteWriteParams, DocumentReadData, ExerciseSubmission, FollowupSubmission, LearningProgressData, PlanDetailData, SubmissionDetailData } from './contracts'
 
+export type ExerciseReference={available:boolean;reason?:string;content_revision?:number;reference_hash?:string;question_hash?:string;hint_used?:boolean;reference?:{answer:string;explanation:string;criteria:string[];accepted_variants?:string[];source?:string};rendered?:{answer:string;explanation:string}}
 export const studyApi = {
+  viewReference:(params:{study_session_id?:string;exercise_id?:string;submission_id?:string})=>engineCall<ExerciseReference>('exercise.reference.view',params),
+  previewStudyRestart:(studyId:string)=>engineCall<StudyRestartPreview>('course.study.restart.preview',{study_session_id:studyId}),
+  restartStudy:(params:{study_session_id:string;expected_version:number;expected_content_hash:string;idempotency_key:string})=>engineCall<CourseStudyDetailData>('course.study.restart',params),
+  readPlanNotebook: (planId:string,filters:{offset?:number;limit?:number;expected_version?:number;course_id?:string;lesson_id?:string;entry_ids?:string[]}={}) => engineCall<NotebookReadResult>('plan.notebook.read',{plan_line_id:planId,...filters}),
+  applyPlanNotebook: (params:NotebookApplyParams) => engineCall<NotebookApplyResult>('plan.notebook.apply',{...params}),
   planNotebook: (planId:string) => engineCall<PlanNotebookData>('plan.notebook.get', {plan_line_id:planId}),
   savePlanNotebook: (params:NotebookSaveParams) => engineCall<PlanNotebookData>('plan.notebook.save',{...params}),
   studyNotes: (studyId: string) => engineCall<StudyNotesData>('course.notes.get', {study_session_id: studyId}),
   saveStudyNote: (params: StudyNoteWriteParams) => engineCall<StudyNoteWriteData>('course.notes.save', params),
   courseAnswers: (courseId: string, studyId?: string) => engineCall<CourseAnswerSheetData>('course.answers.get', { course_id: courseId, ...(studyId ? { study_session_id: studyId } : {}) }),
-  openCourseStudy: (courseId: string, key: string, newVersion = false, reviewRound=false) => engineCall<CourseStudyDetailData>('course.study.open', { course_id: courseId, idempotency_key: key, new_version: newVersion, review_round:reviewRound }),
+  openCourseStudy: (courseId: string, key: string, newVersion = false, reviewRound=false, planLineId?:string) => engineCall<CourseStudyDetailData>('course.study.open', { course_id: courseId, idempotency_key: key, new_version: newVersion, review_round:reviewRound, ...(planLineId?{plan_line_id:planLineId}:{}) }),
   courseStudy: (studyId: string) => engineCall<CourseStudyDetailData>('course.study.get', { study_session_id: studyId }),
   saveStudyProgress: (params: {study_session_id: string; lesson_id: string; progress_percent: number; last_position: string; expected_version: number}) => engineCall<LearningProgressData & {version: number}>('course.study.progress.save', params),
   completeCourseReading: (studyId: string) => engineCall<CourseStudyDetailData>('course.study.reading.complete', { study_session_id: studyId }),

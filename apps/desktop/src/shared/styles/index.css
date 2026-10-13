@@ -37,3 +37,8 @@
 @import "../../features/courses/styles/white-violet.css";
 
 @import "../../features/courses/styles/sequence-light.css";
+
+/* Shared document structure wins over theme presentation without !important. */
+@import "../../features/courses/styles/document-template.css";
+
+@import "../../features/notes/styles/notebook-v2.css";

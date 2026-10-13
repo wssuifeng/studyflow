@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {computed} from 'vue'
+import AnswerReference from './AnswerReference.vue'
 import {isTauri} from '../../../shared/api'
 import {getCurrentWindow} from '@tauri-apps/api/window'
 import {emitTo} from '@tauri-apps/api/event'
@@ -60,6 +61,7 @@ async function openHistory(id:string) {
         <textarea :id="'answer-'+row.exercise_id" v-model="row.answer" :disabled="blocked" rows="7" placeholder="写下你的理解、推导或代码。下一步会自动保存。" spellcheck="false"/>
         <footer class="question-footer"><span class="answer-save-hint">{{row.answer.trim()?'草稿已进入自动保存队列':'暂未填写，可先跳过'}}</span><span>{{row.answer.length}} / 建议完整表达</span></footer>
       </template>
+      <AnswerReference v-if="!row.retest_task" :study-id="row.studyId" :exercise-id="row.exercise_id" :submission-id="row.submission?.id"/>
     </article>
     <p v-if="!rows.length" class="muted">这个知识点没有练习，确认读完后继续即可。</p>
   </section>

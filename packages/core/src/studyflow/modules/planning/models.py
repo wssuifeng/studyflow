@@ -65,7 +65,10 @@ class TimeBlock(TimestampMixin, Base):
 
 
 class PlanCourseItem(TimestampMixin, Base):
+    management_position: Mapped[str] = mapped_column(String(20), default="NORMAL", server_default="NORMAL")
+    management_reason: Mapped[str] = mapped_column(Text, default="", server_default="")
     __tablename__ = "plan_course_items"
+    track: Mapped[str] = mapped_column(String(20), default="MAIN", server_default="MAIN")
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     plan_line_id: Mapped[str] = mapped_column(ForeignKey("plan_lines.id"), index=True)
     course_id: Mapped[str] = mapped_column(ForeignKey("courses.id"), index=True)

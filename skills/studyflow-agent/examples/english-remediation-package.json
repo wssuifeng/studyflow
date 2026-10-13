@@ -1,0 +1,146 @@
+{
+  "schema": "studyflow.course-package/4",
+  "package_id": "synthetic-agreement-supplement",
+  "plan_line": "Example English Plan",
+  "course": {
+    "title": "从词语到主语与动词搭配",
+    "summary": "合成产品示例；不是任何学习者的真实课程或错误诊断。",
+    "learning_mode": "english"
+  },
+  "lessons": [
+    {
+      "id": "agreement",
+      "title": "一般现在时的主语与动词",
+      "blocks": [
+        {
+          "id": "prerequisites",
+          "type": "concept",
+          "title": "本组词汇与必要规则",
+          "body": "I 是“我”，he 是“他”，she 是“她”；a book 表示“一本书”，every day 表示“每天”。一般现在时中，第三人称单数主语使用相应动词形式；本组 read 对应 reads。先理解，再组合表达。"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "read",
+          "title": "阅读",
+          "prompt": "阅读",
+          "english": {
+            "target": "read",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "vocabulary"
+            }
+          }
+        },
+        {
+          "id": "every",
+          "title": "每一个",
+          "prompt": "每一个",
+          "english": {
+            "target": "every",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "vocabulary"
+            }
+          }
+        },
+        {
+          "id": "day",
+          "title": "一天",
+          "prompt": "一天",
+          "english": {
+            "target": "day",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "vocabulary"
+            }
+          }
+        },
+        {
+          "id": "book",
+          "title": "一本书",
+          "prompt": "一本书",
+          "english": {
+            "target": "a book",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "chunk"
+            }
+          }
+        },
+        {
+          "id": "daily",
+          "title": "每天",
+          "prompt": "每天",
+          "english": {
+            "target": "every day",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "chunk"
+            }
+          }
+        },
+        {
+          "id": "base",
+          "title": "我读一本书。",
+          "prompt": "我读一本书。",
+          "english": {
+            "target": "I read a book.",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "pattern"
+            }
+          }
+        },
+        {
+          "id": "he",
+          "title": "他读一本书。",
+          "prompt": "他读一本书。",
+          "english": {
+            "target": "He reads a book.",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "variation"
+            }
+          }
+        },
+        {
+          "id": "she",
+          "title": "她每天阅读。",
+          "prompt": "她每天阅读。",
+          "english": {
+            "target": "She reads every day.",
+            "objective_ids": [
+              "present-agreement"
+            ],
+            "progression": {
+              "chain_id": "agreement",
+              "stage": "transfer"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

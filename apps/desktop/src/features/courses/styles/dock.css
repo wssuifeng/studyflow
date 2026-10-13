@@ -144,3 +144,15 @@
 .native-tool-session {display:flex;flex:1;flex-direction:column;min-width:0;min-height:0;width:100%;overflow:hidden;}
 .native-tool-session > * {min-width:0;max-width:none;width:100%;}
 .native-tool-session .native-tool-content {width:100%;min-width:0;}
+
+/* Notebook v2 consumes the full shared tab surface. Theme chrome cannot
+   reintroduce the prototype's surrounding frame or a second scroll owner. */
+:root .unified-tools-panel .sequence-tool-scroll[data-tool="notes"] {display:flex;flex-direction:column;padding:0;overflow:hidden;background:var(--theme-surface-panel);}
+:root .unified-tools-panel .sequence-tool-scroll[data-tool="notes"]>.plan-notebook-v2 {min-height:0;}
+:root .unified-tools-panel[data-active-tool="notes"] .sequence-tool-heading {height:44px;min-height:44px;padding:8px 14px;background:var(--theme-surface-panel);}
+:root .unified-tools-panel[data-active-tool="notes"] .sequence-tool-heading-copy>span {display:none;}
+:root .unified-tools-panel[data-active-tool="notes"] .sequence-tool-heading-copy>strong {font-size:12px;}
+:root .unified-tools-panel[data-active-tool="notes"] .sequence-tool-tabs {background:var(--theme-surface-panel);}
+:root .unified-tools-panel[data-active-tool="notes"] .sequence-tool-menu {top:90px;}
+.native-tool-content[data-tool="notes"] {display:flex;flex-direction:column;padding:0;overflow:hidden;}
+.native-tool-content[data-tool="notes"]>.plan-notebook-v2 {min-height:0;}

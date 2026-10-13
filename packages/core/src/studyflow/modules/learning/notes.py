@@ -40,6 +40,8 @@ def save_note(service, study_id: str, lesson_id: str, text: str, expected_versio
                 raise DomainError("IDEMPOTENCY_KEY_CONFLICT", "草稿请求键已用于不同内容。", "原请求重试使用原内容与原键。")
             return json.loads(receipt.result_json)
         study = require_study(db, study_id)
+        if study.abandoned_at is not None:
+            raise DomainError("STUDY_CLOSED","该轮次已明确结束，历史笔记只读。","计划笔记仍可继续编辑；本轮原笔记已保留。")
         if lesson_id not in {row["id"] for row in json.loads(study.snapshot_json)["lessons"]}:
             raise DomainError("INVALID_ARGUMENT", "草稿知识点不属于本轮课程。")
         row = db.scalar(select(StudyNote).where(StudyNote.study_session_id == study_id, StudyNote.lesson_id == lesson_id))

@@ -31,6 +31,6 @@
 .theme-remove-confirm {display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-top:14px;padding:12px;background:var(--theme-status-warning-soft);color:var(--theme-status-warning);font-size:12px}
 .theme-action-message {margin-top:14px;color:var(--theme-accent-primary)}.theme-action-message.error {color:var(--theme-status-danger)}.theme-storage-notice {padding:10px 12px;margin-top:12px;background:var(--theme-status-warning-soft);color:var(--theme-status-warning)}
 .theme-config-hint {margin-top:14px;line-height:1.8;max-width:85ch}
-.visually-hidden {position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+.visually-hidden {position:absolute;top:0;left:0;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(max-width:700px) {.theme-settings-heading {flex-wrap:wrap}.theme-options {grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}}
 @media(prefers-reduced-motion:reduce) {.theme-option:active {transform:none}.theme-option {transition:none}}

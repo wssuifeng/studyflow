@@ -7,7 +7,7 @@ function fixture(existingStore){const store=existingStore||new Map(),cleanup=[],
   if(receipts.has(p.idempotency_key))return clone(receipts.get(p.idempotency_key));const old=state.get(p.plan_line_id)
   if((old?.version||0)!==p.expected_version)throw new EngineError('VERSION_CONFLICT')
   const result={plan_line_id:p.plan_line_id,version:p.expected_version+1,blocks:clone(p.blocks),legacy_notes:[]};state.set(p.plan_line_id,result);receipts.set(p.idempotency_key,result);return clone(result)}}
- const mod={exports:{}},source=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/features/notes/composables/usePlanNotebook.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ const mod={exports:{}},source=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/features/notes/composables/useLegacyPlanNotebook.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
  vm.runInNewContext(source,{exports:mod.exports,module:mod,setTimeout,clearTimeout,console,
  window:{addEventListener(){},removeEventListener(){}},localStorage:{getItem:k=>store.get(k)||null,setItem(k,v){if(storageFailed)throw Error('storage full');store.set(k,v)},removeItem(k){if(storageFailed)throw Error('storage unavailable');store.delete(k)}},
  require:n=>n==='vue'?{...vue,onBeforeUnmount:fn=>cleanup.push(fn)}:n.includes('shared/api')?{EngineError,studyApi:api,isTauri:()=>false}:n.includes('shared/ui')?{makeRequestKey:op=>op+':'+Math.random(),reportError:c=>errors.push(c),windowStorageKey:k=>'test:'+k}:n==='@tauri-apps/api/event'?{emit:async()=>{}}:require(n)})

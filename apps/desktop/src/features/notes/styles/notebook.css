@@ -25,10 +25,6 @@
 .notebook-link summary {cursor:pointer;}
 .notebook-link button {padding:5px 7px;margin-top:7px;margin-right:5px;background:var(--sf-bg-layer-1);color:var(--sf-label-secondary);border-radius:4px;font-size:10px;}
 .notebook-add-line {width:100%;padding:12px 0;background:transparent;color:var(--sf-brand);text-align:left;font-size:11px;}
-.notebook-legacy {padding:18px 0;border-top:1px solid var(--sf-border-l1);font-size:11px;color:var(--sf-label-secondary);}
-.notebook-legacy summary {cursor:pointer;}
-.notebook-legacy section {padding:14px 0;border-bottom:1px solid var(--sf-border-l1);}
-.notebook-legacy pre {font:inherit;line-height:1.8;}
 .plan-view-tabs {display:flex;gap:4px;border-bottom:1px solid var(--sf-border-l1);margin:26px 0 24px;}
 .plan-view-tabs button {padding:9px 15px;border-radius:5px 5px 0 0;background:transparent;color:var(--sf-label-secondary);font-size:13px;}
 .plan-view-tabs button.selected {background:var(--sf-active);color:var(--sf-label-primary);}

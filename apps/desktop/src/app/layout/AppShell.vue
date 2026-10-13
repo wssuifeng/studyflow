@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,onBeforeUnmount,onMounted,provide,reactive,ref} from 'vue'
 import { isTauri } from '../../shared/api'
-import {panelGeometry,workspacePanelKey,type PanelPresentation} from '../../shared/layout/workspacePanel'
+import {panelGeometry,navigationRailWidth,workspacePanelKey,type PanelPresentation} from '../../shared/layout/workspacePanel'
 import DisplaySlot from '../../shared/components/DisplaySlot.vue'
 import WindowTitlebar from './WindowTitlebar.vue'
 import SidebarNav from './SidebarNav.vue'
@@ -12,7 +12,8 @@ const emit=defineEmits<{navigate:[path:string];refresh:[]}>()
 const panel=reactive<PanelPresentation>({visible:false,width:420,full:false})
 const viewport=ref(window.innerWidth)
 const sequenceNavigation=computed(()=>displayThemeId.value==='sequence-light'?Math.round(viewport.value<900?64:Math.min(280,Math.max(216,viewport.value*.14))):undefined)
-const geometry=computed(()=>panelGeometry(viewport.value,panel.width,panel.full,!!props.focus,sequenceNavigation.value))
+const navigationWidth=computed(()=>sequenceNavigation.value ?? navigationRailWidth(viewport.value,activeDisplay.value.navigation_width))
+const geometry=computed(()=>panelGeometry(viewport.value,panel.width,panel.full,!!props.focus,navigationWidth.value))
 let owner:symbol|undefined
 provide(workspacePanelKey,{geometry,navigationVisible:computed(()=>!props.focus),publish:(id,state)=>{owner=id;Object.assign(panel,state)},release:id=>{if(owner===id){panel.visible=false;panel.full=false;owner=undefined}}})
 const resize=()=>{viewport.value=window.innerWidth}
@@ -30,7 +31,7 @@ const shellProps=computed(()=>({
   style:{
     '--panel-width':geometry.value.width+'px',
     '--panel-nav-width':geometry.value.navigation+'px',
-    '--theme-nav-width':(sequenceNavigation.value ?? activeDisplay.value.navigation_width)+'px',
+    '--theme-nav-width':navigationWidth.value+'px',
     '--theme-tools-width':activeDisplay.value.tools_width+'px',
     '--theme-radius':activeDisplay.value.radius+'px',
     '--theme-bg-image':background.value?`url("${background.value.url}")`:'none',

@@ -1,7 +1,7 @@
 import { windowStorageKey } from './workspace'
 
 export function statusLabel(status: string) {
-  const labels: Record<string, string> = { DRAFT: '草稿', WAITING_REVIEW: '等待批改', NEEDS_REVISION: '需要修正', REVISION_REQUIRED: '需要修正', RETEST_REQUIRED: '需要复测', PASSED: '已通过', REVIEWED: '已批阅', RECHECKED: '已复核', ACTIVE: '进行中', NOT_STARTED: '未开始', IN_PROGRESS: '学习中', COMPLETED: '已读完', ARCHIVED: '已归档', PAUSED: '已暂停', PARTIAL_FEEDBACK: '部分反馈已返回', READ_COMPLETED: '本次阅读已完成' }
+  const labels: Record<string, string> = { ABANDONED: '已保留历史并结束', DRAFT: '草稿', WAITING_REVIEW: '等待批改', NEEDS_REVISION: '需要修正', REVISION_REQUIRED: '需要修正', RETEST_REQUIRED: '需要复测', PASSED: '已通过', REVIEWED: '已批阅', RECHECKED: '已复核', ACTIVE: '进行中', NOT_STARTED: '未开始', IN_PROGRESS: '学习中', COMPLETED: '已读完', ARCHIVED: '已归档', PAUSED: '已暂停', PARTIAL_FEEDBACK: '部分反馈已返回', READ_COMPLETED: '本次阅读已完成' }
   return labels[status] || status
 }
 let navigationGuard: ((path: string) => Promise<boolean>) | null = null

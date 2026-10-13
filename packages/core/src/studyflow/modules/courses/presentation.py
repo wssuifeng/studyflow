@@ -4,8 +4,8 @@ from studyflow.modules.learning.presentation import submission_summary
 
 def course_summary(row):
     schedule = getattr(row, "schedule_item", None)
-    return {"id": row.id, "content_revision":row.version, "title": row.title, "summary": row.summary,
-            "subject": row.subject, "content_type": row.content_type,
+    return {"plan_course_item_id":getattr(row,"plan_course_item_id",None),"management_position":getattr(row,"management_position","NORMAL"),"management_reason":getattr(row,"management_reason",""),"learning_group":getattr(row,"learning_group","PENDING"),"id": row.id, "content_revision":row.version, "title": row.title, "summary": row.summary,
+            "subject": row.subject, "content_type": row.content_type,"learning_mode":row.learning_mode,
             "difficulty": row.difficulty, "source_type": row.source_type,
             "study_status":getattr(row,"study_status","NOT_STARTED"),
             "learning_submitted":getattr(row,"learning_submitted",False),
@@ -13,7 +13,7 @@ def course_summary(row):
             "waiting_count":getattr(row,"waiting_count",0),"feedback_count":getattr(row,"feedback_count",0),
             "plan_line": row.plan_line.name if row.plan_line else None,
             "plan_line_id": row.plan_line_id, "status": row.status,
-            "sequence": getattr(row, "plan_sequence", None), "total": getattr(row, "plan_total", 0),
+            "track": getattr(row, "plan_track", "MAIN"), "sequence": getattr(row, "plan_sequence", None), "total": getattr(row, "plan_total", 0),
             "knowledge_total": getattr(row, "knowledge_total", len(row.lessons)),
             "knowledge_completed": getattr(row, "knowledge_completed", 0),
             "exercise_total": getattr(row, "exercise_total", 0),

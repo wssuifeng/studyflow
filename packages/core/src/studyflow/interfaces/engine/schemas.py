@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Literal
+from typing import Literal, Annotated
 from studyflow.shared.domain import DomainError
 
 class QueueRequest(BaseModel):
@@ -36,7 +36,7 @@ class PlanEditRequest(Request):
     plan_line_id:str=Field(min_length=1)
     expected_version:int=Field(ge=1)
     idempotency_key:str=Field(min_length=1,max_length=160)
-    operation:Literal["UPDATE","REORDER","SCHEDULE","RESCHEDULE","CANCEL_SCHEDULE"]
+    operation:Literal["UPDATE","REORDER","SCHEDULE","RESCHEDULE","CANCEL_SCHEDULE","COURSE_POSITION"]
     values:dict
 class PlanRequest(Request):
     plan_line_id:str=Field(min_length=1)
@@ -48,6 +48,7 @@ class SourceRequest(Request):
     study_session_id:str=Field(min_length=1)
     lesson_id:str=Field(min_length=1)
     block_id:str|None=None
+    section_id:str|None=None
 class BackupRequest(Request):
     path:str=Field(min_length=1)
 class RestoreRequest(BackupRequest):
@@ -73,16 +74,93 @@ class ReviewRequest(Request):
     decision:str|None=None
     next_action:str=""
     issues:list[Issue]|None=None
-SCHEMAS={"assignment.summary":QueueRequest,"assignment.context":ContextRequest,"review.retest.publish":RetestRequest,"review.write":ReviewRequest,"course.update.preview":UpdatePreviewRequest,"course.update.apply":UpdateApplyRequest,"plan.edit":PlanEditRequest,"plan.schedule.list":PlanRequest,"plan.notebook.search":NotebookSearchRequest,"plan.notebook.export":PlanRequest,"course.source.read":SourceRequest,"workspace.export":BackupRequest,"workspace.validate":BackupRequest,"workspace.restore":RestoreRequest,"submission.resolve-branch":BranchRequest}
+    reference_hash:str|None=Field(default=None,pattern="^[a-f0-9]{64}$")
+    reference_revision:int|None=Field(default=None,ge=1)
+    reference_reason:str=Field(default="",max_length=3000)
+class RestartPreviewRequest(Request):
+    study_session_id:str=Field(min_length=1)
+class RestartRequest(RestartPreviewRequest):
+    expected_version:int=Field(ge=1)
+    expected_content_hash:str=Field(pattern="^[a-f0-9]{64}$")
+    idempotency_key:str=Field(min_length=1,max_length=160)
+class NotebookReadRequest(Request):
+    plan_line_id:str=Field(min_length=1)
+    course_id:str|None=None
+    lesson_id:str|None=None
+    entry_ids:list[str]|None=Field(default=None,min_length=1,max_length=100)
+    query:str=Field(default="",max_length=200)
+    offset:int=Field(default=0,ge=0)
+    limit:int=Field(default=100,ge=1,le=100)
+    expected_version:int|None=Field(default=None,ge=0)
+class NotebookEntryValue(Request):
+    id:str=Field(min_length=1,max_length=64)
+    scope:Literal["PLAN","COURSE","LESSON"]
+    course_id:str|None=None
+    lesson_id:str|None=None
+    content:list[dict]=Field(min_length=1,max_length=50000)
+class NotebookInsert(Request):
+    type:Literal["insert_entry"]
+    entry:NotebookEntryValue
+    after_id:str|None=None
+class NotebookReplace(Request):
+    type:Literal["replace_entry"]
+    entry_id:str=Field(min_length=1,max_length=64)
+    content:list[dict]=Field(min_length=1,max_length=50000)
+class NotebookRemove(Request):
+    type:Literal["remove_entry"]
+    entry_id:str=Field(min_length=1,max_length=64)
+class NotebookMove(Request):
+    type:Literal["move_entry"]
+    entry_id:str=Field(min_length=1,max_length=64)
+    scope:Literal["PLAN","COURSE","LESSON"]
+    course_id:str|None=None
+    lesson_id:str|None=None
+    after_id:str|None=None
+class NotebookSourceRegistration(Request):
+    id:str=Field(min_length=1,max_length=64)
+    original:str=Field(min_length=1,max_length=20000)
+    course_id:str
+    lesson_id:str
+    source_study_id:str
+    source_block_id:str|None=None
+    source_section_id:str|None=None
+class NotebookApplyRequest(Request):
+    plan_line_id:str=Field(min_length=1)
+    expected_version:int=Field(ge=0)
+    idempotency_key:str=Field(min_length=1,max_length=160)
+    operations:list[Annotated[NotebookInsert|NotebookReplace|NotebookRemove|NotebookMove,Field(discriminator="type")]]=Field(max_length=2000)
+    new_sources:list[NotebookSourceRegistration]=Field(default_factory=list,max_length=100)
+
+class ReferenceRequest(Request):
+    study_session_id:str|None=None
+    exercise_id:str|None=None
+    submission_id:str|None=None
+    reference_revision:int|None=Field(default=None,ge=1)
+class EvidenceRequest(PlanRequest):
+    course_id:str|None=None
+    learning_mode:Literal["general","english"]|None=None
+    limit:int=Field(default=20,ge=1,le=100)
+    cursor:str|None=None
+
+SCHEMAS={"exercise.reference.read":ReferenceRequest,"exercise.reference.view":ReferenceRequest,"learning.evidence":EvidenceRequest,"plan.notebook.read":NotebookReadRequest,"plan.notebook.apply":NotebookApplyRequest,"course.study.restart.preview":RestartPreviewRequest,"course.study.restart":RestartRequest,"assignment.summary":QueueRequest,"assignment.context":ContextRequest,"review.retest.publish":RetestRequest,"review.write":ReviewRequest,"course.update.preview":UpdatePreviewRequest,"course.update.apply":UpdateApplyRequest,"plan.edit":PlanEditRequest,"plan.schedule.list":PlanRequest,"plan.notebook.search":NotebookSearchRequest,"plan.notebook.export":PlanRequest,"course.source.read":SourceRequest,"workspace.export":BackupRequest,"workspace.validate":BackupRequest,"workspace.restore":RestoreRequest,"submission.resolve-branch":BranchRequest}
 
 def validate(method,params):
     from pydantic import ValidationError
+    from .english import SCHEMAS as ENGLISH_SCHEMAS
+    SCHEMAS.update(ENGLISH_SCHEMAS)
+    from .remediation import SCHEMAS as REMEDIATION_SCHEMAS
+    SCHEMAS.update(REMEDIATION_SCHEMAS)
     if method not in SCHEMAS:return params
-    try:return SCHEMAS[method].model_validate(params).model_dump()
+    try:return SCHEMAS[method].model_validate(params).model_dump(exclude_unset=method=="plan.notebook.apply")
     except ValidationError as exc:
         errors=[{"path":".".join(map(str,e["loc"])),"message":e["msg"]} for e in exc.errors()]
         raise DomainError("INVALID_ARGUMENT",str(errors),"先读取system.schema，按错误路径修正字段。") from exc
 
 def schemas(method=None):
+    from .english import SCHEMAS as ENGLISH_SCHEMAS
+    SCHEMAS.update(ENGLISH_SCHEMAS)
+    from .remediation import SCHEMAS as REMEDIATION_SCHEMAS
+    SCHEMAS.update(REMEDIATION_SCHEMAS)
     if method and method not in SCHEMAS:raise DomainError("METHOD_NOT_FOUND","没有此方法的结构化schema。")
-    return {"schema_version":"studyflow.agent-contract/2","methods":{k:v.model_json_schema() for k,v in SCHEMAS.items() if not method or k==method}}
+    from .protocol import content_capabilities
+    return {"schema_version":"studyflow.agent-contract/2","content":content_capabilities(),"methods":{k:v.model_json_schema() for k,v in SCHEMAS.items() if not method or k==method}}

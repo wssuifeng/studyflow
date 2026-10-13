@@ -49,7 +49,8 @@ def init_db(engine: Engine) -> None:
     _configure_sqlite_engine(engine)
     from studyflow.infrastructure.persistence import registry as models  # noqa: F401
 
-    # Recognized file-backed SQLite upgrades take a consistent backup before 0006 adds evidence links.
+    # Recognized file-backed SQLite upgrades are backed up before applying the checked-in chain.
+    revision = None
     inspector = inspect(engine)
     tables = set(inspector.get_table_names())
     if "alembic_version" in tables:
@@ -67,11 +68,15 @@ def init_db(engine: Engine) -> None:
         event_signature = {"source", "object_type", "object_id", "action", "summary"}
         bad_event_constraint = "event_logs" in tables and any(set(row["column_names"]) == event_signature for row in inspector.get_unique_constraints("event_logs"))
         needs_tools = not {"study_notes", "study_note_receipts"}.issubset(tables)
+        needs_english = "english_items" not in tables
+        needs_restart = "course_study_sessions" in tables and "abandoned_at" not in {c["name"] for c in inspector.get_columns("course_study_sessions")}
+        needs_remediation = not {"english_remediation_courses", "english_remediation_sources"}.issubset(tables) or "plan_course_items" not in tables or "track" not in {c["name"] for c in inspector.get_columns("plan_course_items")}
+        needs_notebooks = not {"plan_notebooks", "plan_notebook_receipts", "plan_notebook_sources"}.issubset(tables) or "plan_notebooks" not in tables or "document_json" not in {c["name"] for c in inspector.get_columns("plan_notebooks")}
         needs_plans = "plan_write_receipts" not in tables
         needs_revisions = "course_revisions" not in tables
         needs_reviews = "retest_tasks" not in tables or "retest_task_id" not in {c["name"] for c in inspector.get_columns("submissions")}
         needs_contract = "submission_chain_links" not in tables or "payload_hash" not in {c["name"] for c in inspector.get_columns("submission_write_receipts")} if "submission_write_receipts" in tables else True
-        if (needs_plans or needs_revisions or needs_reviews or needs_contract or needs_study or bad_event_constraint or needs_tools) and LEGACY_TABLES.issubset(tables):
+        if (revision is not None or needs_restart or needs_remediation or needs_notebooks or needs_english or needs_plans or needs_revisions or needs_reviews or needs_contract or needs_study or bad_event_constraint or needs_tools) and LEGACY_TABLES.issubset(tables):
             database_path = Path(engine.url.database).resolve()
             upgrade_sqlite(Settings(workspace_root=database_path.parent, database_url=f"sqlite:///{database_path.as_posix()}"))
     Base.metadata.create_all(engine)
@@ -87,13 +92,17 @@ def ensure_compatible_schema(engine: Engine) -> None:
     statements: list[str] = []
     table_columns = {table: {column["name"] for column in inspector.get_columns(table)} for table in tables}
     additions = {
+        "plan_notebooks": {"format_version": "INTEGER NOT NULL DEFAULT 1", "document_json": "TEXT NOT NULL DEFAULT '{\"entries\":[]}'"},
         "plan_lines": {"version": "INTEGER NOT NULL DEFAULT 1", "focus_course_id": "VARCHAR(36)"},
+        "plan_course_items": {"track": "VARCHAR(20) NOT NULL DEFAULT 'MAIN'"},
+        "course_study_sessions": {"abandoned_at": "DATETIME"},
         "tasks": {
             "plan_line_id": "VARCHAR(36)",
             "task_kind": "VARCHAR(40) NOT NULL DEFAULT 'OTHER'",
             "course_schedule_item_id": "VARCHAR(36)",
         },
         "courses": {
+            "learning_mode": "VARCHAR(20) NOT NULL DEFAULT 'general'",
             "subject": "VARCHAR(120) NOT NULL DEFAULT ''",
             "content_type": "VARCHAR(40) NOT NULL DEFAULT 'LESSON'",
             "difficulty": "VARCHAR(32) NOT NULL DEFAULT ''",
@@ -112,6 +121,7 @@ def ensure_compatible_schema(engine: Engine) -> None:
         },
         "submission_write_receipts": {"payload_hash": "VARCHAR(64)", "result_json": "TEXT"},
         "course_write_receipts": {"study_session_id": "VARCHAR(36)"},
+        "retest_tasks": {"task_mode": "VARCHAR(20) NOT NULL DEFAULT 'general'", "payload_json": "TEXT NOT NULL DEFAULT '{}'"},
         "review_feedback": {
             "issues_json": "TEXT NOT NULL DEFAULT '[]'",
             "decision": "VARCHAR(32) NOT NULL DEFAULT 'PASSED'",
@@ -151,7 +161,7 @@ def _backfill_plan_course_items(connection, tables: list[str] | set[str]) -> Non
         if exists:
             continue
         if plan_line_id not in next_sequence:
-            next_sequence[plan_line_id] = int(connection.execute(text("SELECT COALESCE(MAX(sequence_number), 0) FROM plan_course_items WHERE plan_line_id = :plan_line_id"), {"plan_line_id": plan_line_id}).scalar_one())
+            next_sequence[plan_line_id] = int(connection.execute(text("SELECT COALESCE(MAX(sequence_number), 0) FROM plan_course_items WHERE plan_line_id = :plan_line_id AND track = 'MAIN'"), {"plan_line_id": plan_line_id}).scalar_one())
         next_sequence[plan_line_id] += 1
         connection.execute(
             text("INSERT INTO plan_course_items (id, plan_line_id, course_id, sequence_number, status) VALUES (:id, :plan_line_id, :course_id, :sequence_number, 'PLANNED')"),

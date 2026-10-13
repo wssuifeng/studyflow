@@ -11,7 +11,11 @@ import TodayWorkspace from '../features/console/components/TodayWorkspace.vue'
 import FrozenSource from '../features/notes/components/FrozenSource.vue'
 import PlanList from '../features/plans/components/PlanList.vue'
 import PlanDetail from '../features/plans/components/PlanDetail.vue'
-import CourseReader from '../features/courses/components/CourseReader.vue'
+import CourseReader from '../features/courses/components/CourseEntry.vue'
+import EnglishTrainingPage from '../features/english/training/EnglishTrainingPage.vue'
+import EnglishRetestPage from '../features/english/training/EnglishRetestPage.vue'
+import MistakeWorkspace from '../features/mistakes/overview/MistakeWorkspace.vue'
+import '../features/english/training/english.css'
 import QueueView from '../features/reviews/components/QueueView.vue'
 import SubmissionFeedback from '../features/reviews/components/SubmissionFeedback.vue'
 import ToolWindow from '../features/courses/components/ToolWindow.vue'
@@ -31,16 +35,16 @@ const revision = ref(0)
 const parsed = computed(()=>{
   const [path, query] = route.value.split('?')
   const pieces = path!.split('/').filter(Boolean)
-  return {name:pieces[0] || 'today', id:pieces[1] || '', lesson:new URLSearchParams(query).get('lesson') || undefined, tab:new URLSearchParams(query).get('tab') || undefined, study:new URLSearchParams(query).get('study') || undefined, exercise:new URLSearchParams(query).get('exercise') || undefined,block:new URLSearchParams(query).get('block') || undefined}
+  return {name:pieces[0] || 'today', id:pieces[1] || '', plan:new URLSearchParams(query).get('plan') || undefined, lesson:new URLSearchParams(query).get('lesson') || undefined, tab:new URLSearchParams(query).get('tab') || undefined, study:new URLSearchParams(query).get('study') || undefined, exercise:new URLSearchParams(query).get('exercise') || undefined,block:new URLSearchParams(query).get('block') || undefined,section:new URLSearchParams(query).get('section') || undefined}
 })
 // Deep-link content identity changes require a guarded remount; focus-only layout changes do not.
-const routeKey = computed(()=>[parsed.value.name, parsed.value.id, parsed.value.study || '',
+const routeKey = computed(()=>[parsed.value.name, parsed.value.id, parsed.value.plan||'', parsed.value.study || '',
   parsed.value.lesson || '', parsed.value.exercise || '', parsed.value.block || '', parsed.value.tab || '', revision.value].join(':'))
 const active = computed(()=> parsed.value.name==='plan' || parsed.value.name==='course' ? 'plans' : parsed.value.name==='submission' ? 'queue' : parsed.value.name)
-const titles: Record<string,string> = {today:'学习控制台',plans:'我的计划',plan:'学习计划',course:'课程工作区',queue:'作答与反馈',submission:'作答与反馈',settings:'工作区',tool:'学习工具'}
+const titles: Record<string,string> = {today:'学习控制台',plans:'我的计划',plan:'学习计划',course:'课程工作区',queue:'作答与反馈',submission:'作答与反馈',settings:'工作区',tool:'学习工具',english:'英语专注训练','english-retest':'英语无提示复测',mistakes:'错误与复习'}
 const title = computed(()=>titles[parsed.value.name] || 'StudyFlow')
 const detached = isTauri() && getCurrentWindow().label.startsWith('tool-')
-const focusMode = computed(() => detached || parsed.value.name==='course' && new URLSearchParams(route.value.split('?')[1]).get('focus')==='1')
+const focusMode = computed(() => detached || ['english','english-retest'].includes(parsed.value.name) || parsed.value.name==='course' && new URLSearchParams(route.value.split('?')[1]).get('focus')==='1')
 const dateLabel = computed(()=>new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'}))
 const feedbackCount = computed(()=> (today.value?.queue_counts.needs_revision || 0)+(today.value?.queue_counts.waiting_retest || 0)+(today.value?.queue_counts.waiting_review || 0))
 function resetMainScrollForRoute(next:string){
@@ -132,7 +136,7 @@ onBeforeUnmount(()=>{
 
 <template>
   <LeaveStudyDialog v-if="toolCloseDialog" :closing="true" :reason="toolCloseDialog.reason" :retrying="toolCloseDialog.retrying" @retry="retryToolClose" @discard="finishToolClose(true,true)" @cancel="finishToolClose(false)" @export="exportToolInputs"/>
-  <AppShell :focus="focusMode" :window-chrome="detached" :active="active" :count="feedbackCount" :connected="!!doctor?.healthy && !failed" :title="title" :date="dateLabel" :refreshing="refreshing" @navigate="navigate" @refresh="load(true)">
+  <AppShell :focus="focusMode" :window-chrome="detached || parsed.name==='english' || parsed.name==='english-retest'" :active="active" :count="feedbackCount" :connected="!!doctor?.healthy && !failed" :title="title" :date="dateLabel" :refreshing="refreshing" @navigate="navigate" @refresh="load(true)">
     <div v-if="loading" class="loading-state initial-loading" role="status"><span class="loading-orbit"/><h2>正在打开本地学习空间</h2><p>恢复计划、课程与反馈…</p></div>
     <div v-else-if="failed" class="error-state initial-loading"><h2>工作区暂时无法连接</h2><p>你的记录仍保存在本地。连接恢复后可以继续。</p><button class="primary-button" @click="() => load()">重新连接 ↻</button></div>
     <p v-if="newFeedback&&!loading" class="recovery-note" role="status">工作区有新反馈或状态更新；当前输入未被覆盖。请在课程内保存后同步反馈。<button class="text-button" @click="newFeedback=false">知道了</button></p>
@@ -142,8 +146,11 @@ onBeforeUnmount(()=>{
         <TodayWorkspace v-else-if="parsed.name==='today' && today" :data="today" />
         <PlanList v-else-if="parsed.name==='plans'" :plans="plans" />
         <PlanDetail v-else-if="parsed.name==='plan' && parsed.id" :id="parsed.id" />
-        <FrozenSource v-else-if="parsed.name==='source' && parsed.id && parsed.lesson" :study-id="parsed.id" :lesson-id="parsed.lesson" :block-id="parsed.block"/>
-        <CourseReader v-else-if="parsed.name==='course' && parsed.id" :id="parsed.id" :lesson-id="parsed.lesson" :initial-view="parsed.tab" :study-id="parsed.study" :exercise-id="parsed.exercise" />
+        <FrozenSource v-else-if="parsed.name==='source' && parsed.id && parsed.lesson" :study-id="parsed.id" :lesson-id="parsed.lesson" :block-id="parsed.block" :section-id="parsed.section"/>
+        <CourseReader v-else-if="parsed.name==='course' && parsed.id" :id="parsed.id" :plan-line-id="parsed.plan" :lesson-id="parsed.lesson" :initial-view="parsed.tab" :study-id="parsed.study" :exercise-id="parsed.exercise" />
+        <EnglishTrainingPage v-else-if="parsed.name==='english' && parsed.id" :id="parsed.id"/>
+        <EnglishRetestPage v-else-if="parsed.name==='english-retest' && parsed.id" :id="parsed.id"/>
+        <MistakeWorkspace v-else-if="parsed.name==='mistakes'" :plans="plans"/>
         <QueueView v-else-if="parsed.name==='queue'" :data="queue" />
         <SubmissionFeedback v-else-if="parsed.name==='submission' && parsed.id" :id="parsed.id" />
         <WorkspaceSettings v-else-if="parsed.name==='settings'" :doctor="doctor" />

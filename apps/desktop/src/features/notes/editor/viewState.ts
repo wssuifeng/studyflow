@@ -1,0 +1,6 @@
+import {storageKey} from '../../../shared/ui'
+import type {Scope} from './model'
+export interface NoteSelection {fromId:string;fromOffset:number;toId:string;toOffset:number}
+export interface NotebookViewState {scope:Scope;following:boolean;collapsed:string[];scrollTop:number;selection?:NoteSelection}
+export function loadViewState(pid:string):NotebookViewState|null{try{const value=JSON.parse(localStorage.getItem(storageKey('notebook:'+pid+':v2:view'))||'null');if(!value||!['PLAN','COURSE','LESSON'].includes(value.scope?.mode)||typeof value.following!=='boolean'||!Array.isArray(value.collapsed)||value.collapsed.length>1000||!value.collapsed.every((k:unknown)=>typeof k==='string'&&k.length<180)||!Number.isFinite(value.scrollTop)||value.scrollTop<0)return null;if(value.selection&&(![value.selection.fromId,value.selection.toId].every(v=>typeof v==='string'&&v.length<=64)||![value.selection.fromOffset,value.selection.toOffset].every(v=>Number.isInteger(v)&&v>=0)))delete value.selection;return value}catch{return null}}
+export function saveViewState(pid:string,state:NotebookViewState){try{localStorage.setItem(storageKey('notebook:'+pid+':v2:view'),JSON.stringify(state));return true}catch{return false}}

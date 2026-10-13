@@ -3,8 +3,10 @@ import ast
 import importlib
 from pathlib import Path
 
-EXPECTED_TABLES = {"plan_lines", "stages", "tasks", "time_blocks", "courses", "plan_course_items", "course_schedule_items", "lessons", "exercises", "submissions", "review_feedback", "learning_progress", "submission_write_receipts", "course_write_receipts", "documents", "context_snapshots", "event_logs", "course_study_sessions", "study_notes", "study_note_receipts", "plan_notebooks", "plan_notebook_receipts", "submission_chain_links", "retest_tasks", "course_revisions", "plan_write_receipts"}
+EXPECTED_TABLES = {"plan_lines", "stages", "tasks", "time_blocks", "courses", "plan_course_items", "course_schedule_items", "lessons", "exercises", "submissions", "review_feedback", "learning_progress", "submission_write_receipts", "course_write_receipts", "documents", "context_snapshots", "event_logs", "course_study_sessions", "study_notes", "study_note_receipts", "plan_notebooks", "plan_notebook_receipts", "plan_notebook_sources", "submission_chain_links", "retest_tasks", "course_revisions", "plan_write_receipts"}
 
+EXPECTED_TABLES.add("course_reference_views")
+EXPECTED_TABLES.update({"english_items","english_study_states","english_check_attempts","english_submission_details","mistake_notebooks","english_error_aggregates","english_error_evidence","english_review_items","general_mistake_entries","general_mistake_occurrences","english_remediation_courses","english_remediation_sources"})
 
 def test_business_modules_are_importable():
     for name in ("planning", "courses", "learning", "reviews", "documents", "workspace"):

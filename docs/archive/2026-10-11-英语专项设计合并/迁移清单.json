@@ -1,0 +1,19 @@
+{
+  "date": "2026-10-11",
+  "purpose": "按用户请求合并程序与页面设计为一个当前稿；不改变功能方案",
+  "current": "docs/30_系统设计/英语专项功能设计稿-v1.md",
+  "items": [
+    {
+      "action": "copy-before-rewrite",
+      "source": "docs/30_系统设计/英语专项功能设计稿-v1.md",
+      "archived": "英语专项程序设计-v1.1-原稿.md",
+      "sha256": "F5CE9914D81061591E4134B4A3A375E6AA2C0E1C27636A94812BAD5CA539465E"
+    },
+    {
+      "action": "move",
+      "source": "docs/30_系统设计/英语专项页面设计.md",
+      "archived": "英语专项页面设计-v1-原稿.md",
+      "sha256": "8FC86FCF976C5BE97347315CEE9E6B483EAF5C8B8E94598BE08C0BEB8E03FD91"
+    }
+  ]
+}

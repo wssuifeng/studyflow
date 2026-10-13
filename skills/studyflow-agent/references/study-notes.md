@@ -32,3 +32,17 @@ The response contains `ok`, `study_session_id` and `note`; use its new version f
 - Out-of-workspace paths, unsupported extensions, missing files and non-UTF-8 content are rejected without creating a note or review task.
 
 Do not use this operation to simulate a learner's understanding or automatically turn personal scratch text into submitted answers.
+
+
+## Authorized deletion of obsolete scratch history
+
+The current notebook UI has no old-scratch footer. Old scratch rows are not intrinsically undeletable; preserve them only until the learner explicitly authorizes deletion or migration. Do not confuse them with format1 plan notebook assets or current notebook recovery buffers.
+
+Discover `workspace_purge_legacy_notes` before use. An installation without the capability cannot perform this operation; use the approved known source checkout only when maintaining the software, not a guessed executable. First verify the intended workspace, zero exit/ok=true and doctor healthy/writable.
+
+```text
+studyflow workspace purge-legacy-notes --dry-run --format json
+studyflow workspace purge-legacy-notes --confirm --preview-token <returned-token> --format json
+```
+
+This deletes all `StudyNote` and `StudyNoteReceipt` records in the selected workspace, including replay copies of old text. Preview returns counts and a workspace-bound token, not learner prose. A changed inventory is refused; re-preview rather than forcing. An empty re-preview/confirm is a safe no-op. It keeps current plan notebooks/sources, courses, learning rounds, answers and reviews; it neither initializes nor upgrades the existing database. It does not delete workspace backups or local recovery buffers, and it is not a secure-erasure utility. This broad legacy-history scope requires explicit user authorization; never use `purge-courses` or direct SQL to approximate it.

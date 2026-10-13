@@ -63,7 +63,7 @@ def test_0006_auto_upgrade_preserves_events_and_removes_signature(tmp_path):
             assert db.execute("SELECT summary FROM event_logs WHERE id='old'").fetchone()[0] == "draft saved"
             db.execute("INSERT INTO event_logs (id,source,object_type,object_id,action,summary) VALUES ('new','USER_WEB','submission','s','DRAFT_SAVE','draft saved')")
             assert db.execute("SELECT count(*) FROM event_logs").fetchone()[0] == 2
-            assert db.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0012_plan_management"
+            assert db.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
         backups = list(tmp_path.glob("old.backup-*.db"))
         assert len(backups) == 1
         with sqlite3.connect(backups[0]) as backup:

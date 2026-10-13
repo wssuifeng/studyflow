@@ -43,7 +43,7 @@
   "sound_profile": "soft-tap",
   "display": {
     "layout": "rail",
-    "navigation_width": 184,
+    "navigation_width": 264,
     "reading_width": 1000,
     "tools_width": 420,
     "reading_shell": "workbench",

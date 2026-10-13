@@ -82,3 +82,33 @@ def notebook_save(plan_id: str = typer.Option(...,"--id"), file: str = typer.Opt
         blocks=payload.get("blocks") if isinstance(payload,dict) else payload
         output({"ok":True, **service.save_plan_notebook(plan_id,blocks,expected_version,idempotency_key,source="AGENT_CLI")},format)
     except Exception as exc: fail(exc)
+
+
+@plan_app.command("notebook-read")
+def notebook_read(plan_id: str = typer.Option(...,"--id"), course_id: str | None = typer.Option(None,"--course"),
+                  lesson_id: str | None = typer.Option(None,"--lesson"), entry_id: list[str] | None = typer.Option(None,"--entry"),
+                  query: str = typer.Option("","--query"), offset: int = typer.Option(0,"--offset"),
+                  limit: int = typer.Option(100,"--limit"), expected_version: int | None = typer.Option(None,"--expected-version"),
+                  format: str = typer.Option("text","--format")):
+    try:
+        output({"ok":True, **runtime.service().read_plan_notebook(plan_id, course_id=course_id, lesson_id=lesson_id,
+            entry_ids=entry_id, query=query, offset=offset, limit=limit, expected_version=expected_version)},format)
+    except Exception as exc: fail(exc)
+
+
+@plan_app.command("notebook-apply")
+def notebook_apply(plan_id: str = typer.Option(...,"--id"), file: str = typer.Option(...,"--file"),
+                   expected_version: int = typer.Option(...,"--expected-version"),
+                   idempotency_key: str = typer.Option(...,"--idempotency-key"), format: str = typer.Option("text","--format")):
+    try:
+        import json
+        from studyflow.infrastructure.markdown import safe_resolve
+        from studyflow.shared.domain import DomainError
+        service=runtime.service(); path=safe_resolve(service.settings.workspace_root,file)
+        if path.suffix.lower()!=".json" or not path.is_file(): raise DomainError("DOCUMENT_NOT_FOUND","笔记命令需要工作区内的JSON文件。")
+        if path.stat().st_size>8_000_000: raise DomainError("INVALID_ARGUMENT","笔记命令文件超过8MB。")
+        try: payload=json.loads(path.read_text(encoding="utf-8-sig"))
+        except (UnicodeError,ValueError) as exc: raise DomainError("INVALID_ARGUMENT","笔记命令不是有效UTF-8 JSON。") from exc
+        if not isinstance(payload,dict) or set(payload)-{"operations","new_sources"}: raise DomainError("INVALID_ARGUMENT","仅允许operations和new_sources字段。")
+        output({"ok":True, **service.apply_plan_notebook(plan_id,expected_version,idempotency_key,payload.get("operations"),payload.get("new_sources",[]),source="AGENT_CLI")},format)
+    except Exception as exc: fail(exc)

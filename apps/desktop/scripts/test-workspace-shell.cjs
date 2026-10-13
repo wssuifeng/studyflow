@@ -60,3 +60,5 @@ test('前端审计修复保持生命周期与异常边界',()=>{
  assert.match(states,/\.error-state\{background:color-mix\(in srgb,var\(--theme-status-danger-soft\)/)
  assert.match(interaction,/if\(raw===null\)return 72/)
 })
+
+test('隐藏主题文件选择器有定位锚点，不从长设置正文溢出到窗口根滚动区',()=>{assert.match(read('features/workspace/styles/themes.css'),/\.visually-hidden\s*\{position:absolute;top:0;left:0;/)})

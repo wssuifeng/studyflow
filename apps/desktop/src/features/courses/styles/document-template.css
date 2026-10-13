@@ -1,0 +1,42 @@
+/* Shared editorial template: semantic hierarchy, not a wall of identical cards. */
+:root .teaching-content.document-template .teaching-group{display:block;min-width:0}
+:root .teaching-content.document-template .teaching-block{margin-bottom:30px;min-width:0;box-shadow:none}
+:root .teaching-content.document-template .teaching-block-heading{justify-content:space-between;align-items:baseline;gap:14px;margin-bottom:14px}
+:root .teaching-content.document-template .teaching-block-heading h4{order:0;font-size:19px;line-height:1.5;letter-spacing:-.2px;font-weight:650}
+:root .teaching-content.document-template .teaching-kind{order:1;font-size:10px;line-height:1.5;letter-spacing:.2px;color:var(--theme-text-muted)}
+:root .teaching-content.document-template .teaching-concept{padding:8px 0 24px;border:0;border-bottom:1px solid var(--theme-border-subtle);border-radius:0;background:transparent}
+:root .teaching-content.document-template .teaching-richtext{font-size:var(--reading-font,15px);line-height:var(--reading-line-height,1.85);max-width:68ch;overflow-wrap:anywhere;color:var(--theme-text-primary)}
+:root .teaching-content.document-template .teaching-richtext p{margin:0 0 14px;line-height:inherit}
+:root .teaching-content.document-template .teaching-richtext h1,:root .teaching-content.document-template .teaching-richtext h2{font-size:17px!important;margin:24px 0 10px!important;line-height:1.6}
+:root .teaching-content.document-template .teaching-richtext h3,:root .teaching-content.document-template .teaching-richtext h4{font-size:15px!important;margin:20px 0 8px!important;line-height:1.6}
+:root .teaching-content.document-template .teaching-richtext li{margin-block:6px;line-height:inherit}
+:root .teaching-content.document-template .teaching-richtext strong{font-weight:650;color:var(--theme-text-primary)}
+:root .teaching-content.document-template .teaching-richtext blockquote{padding:10px 16px;border-left:2px solid var(--theme-accent-primary);background:var(--theme-accent-soft);margin:18px 0;color:var(--theme-text-secondary)}
+:root .teaching-content.document-template .teaching-richtext code{font-size:.9em;border-radius:4px;padding:2px 5px;background:var(--theme-code-background)}
+:root .teaching-content.document-template .teaching-richtext pre{padding:16px;overflow:auto;border-radius:8px}
+:root .teaching-content.document-template .teaching-richtext pre code{padding:0;white-space:pre;overflow-wrap:normal}
+:root .teaching-content.document-template .teaching-example{padding:22px 24px;border-left:3px solid var(--theme-status-success);background:var(--theme-surface-panel)}
+:root .teaching-content.document-template .example-label{font-size:11px;letter-spacing:.3px;font-weight:600;color:var(--theme-text-muted)}
+:root .teaching-content.document-template .example-conclusion{background:var(--theme-status-success-soft);padding:14px 16px;border:0;border-radius:7px}
+:root .teaching-content.document-template .teaching-table-scroll th,:root .teaching-content.document-template .teaching-table-scroll td{line-height:1.8;padding:12px 16px}
+:root .teaching-content.document-template .teaching-table-scroll tbody tr:nth-child(even) td{background:color-mix(in srgb,var(--theme-surface-panel) 70%,var(--theme-accent-soft))}
+:root .teaching-content.document-template .teaching-details{padding:20px 22px;border:1px solid var(--theme-border-subtle);border-radius:10px;background:color-mix(in srgb,var(--theme-accent-soft) 25%,var(--theme-surface-raised))}
+.teaching-disclosure{margin-top:14px;border-top:1px solid var(--theme-border-subtle)}
+.teaching-disclosure>summary{display:flex;align-items:center;gap:8px;cursor:pointer;list-style:none;padding:12px 0 0;font-size:12px;font-weight:600;color:var(--theme-accent-primary)}
+.teaching-disclosure>summary::-webkit-details-marker{display:none}
+.teaching-disclosure>summary svg{width:14px;height:14px;stroke:currentColor;fill:none;stroke-width:1.5;transition:transform .15s ease;flex:none}
+.teaching-disclosure[open]>summary svg{transform:rotate(90deg)}
+.teaching-disclosure>summary small{margin-left:auto;color:var(--theme-text-muted);font-weight:400;font-size:11px}
+.teaching-disclosure>summary:focus-visible{outline:2px solid var(--theme-focus-ring);outline-offset:4px;border-radius:3px}
+.teaching-detail-body{margin-top:16px;padding-top:16px;border-top:1px dashed var(--theme-border-subtle)}
+@media(max-width:700px){:root .teaching-content.document-template .teaching-kind{white-space:normal}:root .teaching-content.document-template .teaching-details,:root .teaching-content.document-template .teaching-example{padding:16px}.teaching-disclosure>summary small{display:none}}
+@media(prefers-reduced-motion:reduce){.teaching-disclosure>summary svg{transition:none}}
+
+.study-restart-entry{display:flex;align-items:center;gap:12px;margin:8px 0;font-size:11px;color:var(--theme-text-muted)}
+.study-restart-dialog{position:fixed;inset:0;z-index:300;margin:auto;width:min(480px,calc(100vw - 40px));max-height:80vh;overflow:auto;padding:26px;border:1px solid var(--theme-border-subtle);border-radius:14px;background:var(--theme-surface-raised);color:var(--theme-text-primary);box-shadow:0 20px 60px color-mix(in srgb,var(--theme-shadow-ink) 18%,transparent)}
+.study-restart-dialog h3{font-size:19px;margin:0 0 14px}.study-restart-dialog p{font-size:14px;line-height:1.8;margin:0 0 18px}.study-restart-dialog>div{display:flex;justify-content:flex-end;gap:10px}
+
+.study-restart-dialog::backdrop{background:color-mix(in srgb,var(--theme-shadow-ink) 24%,transparent)}
+
+:root .teaching-content.document-template .teaching-richtext h5{font-size:16px;margin:20px 0 10px;line-height:1.6;font-weight:650}
+:root .teaching-content.document-template .teaching-richtext h6{font-size:14px;margin:16px 0 8px;line-height:1.6;font-weight:650;color:var(--theme-text-secondary)}
