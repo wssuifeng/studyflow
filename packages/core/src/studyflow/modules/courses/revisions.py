@@ -11,16 +11,18 @@ from studyflow.modules.documents.models import Document
 from studyflow.infrastructure.markdown import safe_resolve, parse_front_matter, inspect_document
 from .models import Course, Lesson, Exercise, CourseRevision
 from .packages import inspect_package, package_lock
-from .content import SCHEMA, fallback_markdown
+from .content import SCHEMA, DETAILS_SCHEMA, PROGRESSION_SCHEMA, fallback_markdown
 
 def existing_content(service,db,course):
     lessons=db.scalars(select(Lesson).where(Lesson.course_id==course.id,Lesson.included==True).order_by(Lesson.position,Lesson.id)).all()
     previous=db.scalar(select(CourseRevision).where(CourseRevision.course_id==course.id).order_by(CourseRevision.number.desc()))
     mapping=json.loads(previous.mapping_json) if previous else {"lessons":{},"exercises":{}}
     sources=[]
+    schemas_seen=set()
     for row in lessons:
         text=safe_resolve(service.settings.workspace_root,row.markdown_path).read_text(encoding="utf-8")
         meta,body=parse_front_matter(text)
+        schemas_seen.add(meta.get("content_schema"))
         source=meta.get("structured_lesson")
         exercises=db.scalars(select(Exercise).where(Exercise.lesson_id==row.id,Exercise.included==True).order_by(Exercise.position,Exercise.id)).all()
         if not source:
@@ -30,6 +32,10 @@ def existing_content(service,db,course):
         for ex,model in zip(source.get("exercises",[]),exercises):mapping["exercises"][source["id"]+":"+ex["id"]]=model.id
         sources.append(source)
     package={"schema":SCHEMA,"package_id":"existing-"+course.id,"plan_line":course.plan_line.name if course.plan_line else "","course":{"title":course.title,"summary":course.summary,"subject":course.subject,"difficulty":course.difficulty},"lessons":sources}
+    if course.learning_mode=="english":
+        package["schema"]="studyflow.course-package/2";package["course"]["learning_mode"]="english"
+    if DETAILS_SCHEMA in schemas_seen or any(b.get("type")=="details" for l in sources for b in l["blocks"]):package["schema"]=DETAILS_SCHEMA
+    if PROGRESSION_SCHEMA in schemas_seen:package["schema"]=PROGRESSION_SCHEMA
     return package,mapping
 
 def preview(service,course_id,path,expected_revision):
@@ -40,6 +46,17 @@ def preview(service,course_id,path,expected_revision):
         if isinstance(expected_revision,bool) or expected_revision!=course.version:raise DomainError("VERSION_CONFLICT","课程发布版本已变化。")
         if not course.plan_line or data["plan_line"]!=course.plan_line.name:raise DomainError("INVALID_ARGUMENT","修订不能把课程移到其他计划。")
         old,mapping=existing_content(service,db,course)
+        if old["schema"]==PROGRESSION_SCHEMA and course.learning_mode=="english":
+            from .english.progression import validate_chains
+            if data["schema"]!=PROGRESSION_SCHEMA:raise DomainError("INVALID_ARGUMENT","递进课程修订不能静默降级协议。")
+            from studyflow.modules.mistakes.remediation.models import EnglishRemediationCourse
+            profile=db.get(EnglishRemediationCourse,course_id)
+            validate_chains(data,required=profile is not None)
+            if profile:
+                old_goals={o for l in old["lessons"] for e in l.get("exercises",[]) for o in e.get("english",{}).get("objective_ids",[])}
+                new_goals={o for l in data["lessons"] for e in l.get("exercises",[]) for o in e.get("english",{}).get("objective_ids",[])}
+                if not old_goals<=new_goals:raise DomainError("INVALID_ARGUMENT","修订不能移除已有补充学习目标；新目标应发布独立补充课程。")
+        if data["course"].get("learning_mode","general")!=course.learning_mode:raise DomainError("COURSE_MODE_CHANGE_UNSUPPORTED","首版不在既有课程上转换学习模式，请新建对应模式的课程。")
         old_keys={l["id"] for l in old["lessons"]};new_keys={l["id"] for l in data["lessons"]}
         old_ex={l["id"]+":"+e["id"] for l in old["lessons"] for e in l.get("exercises",[])};new_ex={l["id"]+":"+e["id"] for l in data["lessons"] for e in l.get("exercises",[])}
         result={"course_id":course_id,"expected_revision":expected_revision,"new_revision":expected_revision+1,"content_hash":info["content_hash"],"added_lessons":sorted(new_keys-old_keys),"removed_lessons":sorted(old_keys-new_keys),"added_exercises":sorted(new_ex-old_ex),"removed_exercises":sorted(old_ex-new_ex),"changed_lessons":[l["id"] for l in data["lessons"] if l["id"] in old_keys and l!=next(o for o in old["lessons"] if o["id"]==l["id"])],"order_changed":[l["id"] for l in old["lessons"]]!=[l["id"] for l in data["lessons"]],"affected_study_rounds":db.scalar(select(func.count(CourseStudySession.id)).where(CourseStudySession.course_id==course_id)),"historical_entities_retained":True}
@@ -69,13 +86,13 @@ def apply(service,course_id,path,expected_revision,preview_hash,idempotency_key)
             db.execute(update(Lesson).where(Lesson.course_id==course_id).values(included=False))
             db.execute(update(Exercise).where(Exercise.lesson_id.in_(select(Lesson.id).where(Lesson.course_id==course_id))).values(included=False))
             info_course=data["course"]
-            course.title=info_course["title"];course.summary=info_course.get("summary","");course.subject=info_course.get("subject","");course.difficulty=info_course.get("difficulty","")
+            course.title=info_course["title"];course.summary=info_course.get("summary","");course.subject=info_course.get("subject","");course.difficulty=info_course.get("difficulty","");course.learning_mode=info_course.get("learning_mode","general")
             for position,source in enumerate(data["lessons"],1):
                 lid=mapping["lessons"].get(source["id"])
                 lesson=db.get(Lesson,lid) if lid else Lesson(id=new_id(),course_id=course_id)
                 lesson.semantic_id=source["id"];lesson.included=True;lesson.title=source["title"];lesson.position=position
                 path_relative=f"content/course-revisions/{course_id}/{expected_revision+1}-{info['content_hash']}/{source['id']}.md"
-                meta={"content_schema":SCHEMA,"structured_lesson":source,"exercises":source.get("exercises",[])}
+                meta={"content_schema":data["schema"],"learning_mode":info_course.get("learning_mode","general"),"structured_lesson":source,"exercises":source.get("exercises",[])}
                 content="---\n"+yaml.safe_dump(meta,allow_unicode=True,sort_keys=False)+"---\n"+fallback_markdown(source)
                 target=safe_resolve(service.settings.workspace_root,path_relative);target.parent.mkdir(parents=True,exist_ok=True)
                 try:
@@ -87,6 +104,11 @@ def apply(service,course_id,path,expected_revision,preview_hash,idempotency_key)
                     key=source["id"]+":"+ex["id"];eid=mapping["exercises"].get(key)
                     model=db.get(Exercise,eid) if eid else Exercise(id=new_id(),lesson_id=lesson.id)
                     model.semantic_id=ex["id"];model.included=True;model.title=ex["title"];model.prompt=ex["prompt"];model.requirements=ex.get("requirements","");model.position=pos;model.exercise_type=ex.get("type","SHORT_ANSWER");db.add(model);mapping["exercises"][key]=model.id
+                    if "english" in ex:
+                        db.flush() # Insert the Exercise before its one-to-one English extension.
+                        from studyflow.modules.courses.english.models import EnglishItem
+                        item=db.get(EnglishItem,model.id) or EnglishItem(exercise_id=model.id)
+                        item.spec_json=json.dumps(ex["english"],ensure_ascii=False);db.add(item)
                 inspection=inspect_document(service.settings.workspace_root,path_relative)
                 if not db.scalar(select(Document.id).where(Document.relative_path==path_relative)):
                     db.add(Document(id=new_id(),relative_path=path_relative,document_type="LESSON",status=inspection.status,file_size=inspection.file_size,modified_at=inspection.modified_at,content_hash=inspection.content_hash))

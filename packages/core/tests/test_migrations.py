@@ -52,7 +52,7 @@ def test_empty_database_runs_checked_in_alembic_chain(tmp_path):
     check = sqlite3.connect(db_path)
     tables = {row[0] for row in check.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
     assert {"plan_lines", "tasks", "courses", "exercises", "alembic_version", "course_write_receipts"}.issubset(tables)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0012_plan_management"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
     assert "task_kind" in {row[1] for row in check.execute("PRAGMA table_info(tasks)")}
     assert "content_type" in {row[1] for row in check.execute("PRAGMA table_info(courses)")}
     assert "exercise_type" in {row[1] for row in check.execute("PRAGMA table_info(exercises)")}
@@ -84,7 +84,7 @@ def test_current_legacy_database_gets_version_stamp_without_data_loss(tmp_path):
     result = upgrade_sqlite(settings)
     assert result["status"] == "LEGACY_STAMPED_UPGRADED"
     check = sqlite3.connect(db_path)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0012_plan_management"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
     assert check.execute("SELECT name FROM plan_lines WHERE id='p1'").fetchone()[0] == "Current Plan"
     assert "learning_progress" in {row[0] for row in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     check.close()
@@ -101,7 +101,7 @@ def test_empty_alembic_version_table_is_stamped_without_rebuilding(tmp_path):
     result = upgrade_sqlite(settings)
     assert result["status"] == "LEGACY_STAMPED_UPGRADED"
     check = sqlite3.connect(db_path)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0012_plan_management"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
     assert check.execute("SELECT name FROM plan_lines WHERE id='p1'").fetchone()[0] == "Unstamped Plan"
     check.close()
 
@@ -141,7 +141,7 @@ def test_0005_upgrade_preserves_answers_and_original_migrations(tmp_path):
     con=sqlite3.connect(tmp_path/'old.db')
     assert con.execute("SELECT answer_text,status,study_session_id,batch_id FROM submissions WHERE id='s'").fetchone()==('legacy answer','WAITING_REVIEW',None,None)
     assert con.execute("SELECT count(*) FROM course_study_sessions").fetchone()[0]==0
-    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=='0012_plan_management'
+    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=='0017_course_experience'
     con.close()
 
 
@@ -155,7 +155,54 @@ def test_startup_upgrades_known_0005_with_backup_without_manual_service(tmp_path
     backups=list(tmp_path.glob("startup.backup-*.db"))
     assert len(backups)==1
     con=sqlite3.connect(tmp_path/'startup.db')
-    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0012_plan_management"
+    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0017_course_experience"
     con.close();init_db(engine)
     assert len(list(tmp_path.glob("startup.backup-*.db")))==1
+    engine.dispose()
+
+
+def test_startup_upgrades_0014_with_backup_and_preserves_main_courses(tmp_path):
+    from alembic import command
+    from studyflow.infrastructure.persistence.migrations import _alembic_config
+    settings = Settings(workspace_root=tmp_path, database_url=f"sqlite:///{(tmp_path / 'old-0014.db').as_posix()}")
+    command.upgrade(_alembic_config(settings), "0014_study_restart")
+    with sqlite3.connect(tmp_path / "old-0014.db") as con:
+        con.execute("INSERT INTO plan_lines (id,name,priority,status) VALUES ('p','Existing Plan',1,'ACTIVE')")
+        con.execute("INSERT INTO courses (id,title,plan_line_id) VALUES ('c','Existing Course','p')")
+        con.execute("INSERT INTO plan_course_items (id,plan_line_id,course_id,sequence_number,status) VALUES ('pc','p','c',1,'PLANNED')")
+        con.execute("INSERT INTO lessons (id,course_id,title,markdown_path) VALUES ('l','c','Existing Lesson','existing.md')")
+        con.execute("INSERT INTO exercises (id,lesson_id,title,prompt) VALUES ('e','l','Existing Question','existing prompt')")
+        con.execute("INSERT INTO submissions (id,exercise_id,answer_text,status) VALUES ('s','e','Saved Answer','DRAFT')")
+    engine = build_engine(settings)
+    init_db(engine)
+    backups = list(tmp_path.glob("old-0014.backup-*.db"))
+    assert len(backups) == 1
+    with sqlite3.connect(backups[0]) as con:
+        assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0014_study_restart"
+        assert con.execute("SELECT answer_text FROM submissions WHERE id='s'").fetchone()[0] == "Saved Answer"
+    with sqlite3.connect(tmp_path / "old-0014.db") as con:
+        assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
+        assert con.execute("SELECT sequence_number,track FROM plan_course_items WHERE id='pc'").fetchone() == (1, "MAIN")
+        assert con.execute("SELECT answer_text,status FROM submissions WHERE id='s'").fetchone() == ("Saved Answer", "DRAFT")
+        assert con.execute("SELECT count(*) FROM english_remediation_courses").fetchone()[0] == 0
+    init_db(engine)
+    assert len(list(tmp_path.glob("old-0014.backup-*.db"))) == 1
+    engine.dispose()
+
+
+def test_current_remediation_revision_with_missing_provenance_fails_closed(tmp_path):
+    import pytest
+    from alembic import command
+    from studyflow.domain import DomainError
+    from studyflow.infrastructure.persistence.migrations import _alembic_config
+    settings = Settings(workspace_root=tmp_path, database_url=f"sqlite:///{(tmp_path / 'broken-0015.db').as_posix()}")
+    command.upgrade(_alembic_config(settings), "head")
+    with sqlite3.connect(tmp_path / "broken-0015.db") as con:
+        con.execute("DROP TABLE english_remediation_sources")
+    engine = build_engine(settings)
+    with pytest.raises(DomainError) as error:
+        init_db(engine)
+    assert error.value.code == "SCHEMA_REVISION_MISMATCH"
+    with sqlite3.connect(tmp_path / "broken-0015.db") as con:
+        assert not con.execute("SELECT 1 FROM sqlite_master WHERE name='english_remediation_sources'").fetchone()
     engine.dispose()

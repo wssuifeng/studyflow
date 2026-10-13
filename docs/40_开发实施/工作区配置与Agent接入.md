@@ -1,6 +1,6 @@
-# 工作区配置与Agent接入（app1.7.0 / Skill2.0.0）
+# 工作区配置与Agent接入（app1.7.0 / 仓库 Skill2.2.0）
 
-直接上游：[桌面架构](../30_系统设计/系统架构设计.md)、[CLI契约](../30_系统设计/接口与CLI契约.md)。这份说明描述已经实现的行为；工程验证与正式数据/用户体验验收分开。
+直接上游：[桌面架构](../30_系统设计/系统架构设计.md)、[CLI契约](../30_系统设计/接口与CLI契约.md)。这份说明区分已发布历史与 2026-10-11 当前源码增量；工程验证与正式数据/用户体验验收分开。本轮源码尚未打入新安装包。
 
 ## 1. 三种目录不能混用
 
@@ -12,7 +12,7 @@ Release首次默认使用`$env:APPDATA\local.studyflow.desktop`；以后使用�
 
 ## 2. 外部Agent接入同一工作区
 
-1.7.0安装包附独立`binaries/studyflow.exe`及Skill资源，不写PATH。外部Agent先从应用复制接入说明，再显式选中同一个数据工作区：
+既有 1.7.0 安装包附独立 CLI 及 Skill，不写 PATH。当前源码通过 `system.installation` 确认运行时实际 CLI/Skill/工作区路径和可用标识：安装态发现 Engine 同目录资源，开发态提供实际 Python 解释器 argv 与仓库 Skill，不再猜公共目录或拼出错误路径。设置加载中、文件缺失或 doctor 工作区冲突时禁用复制；就绪后输出分行接入说明。外部 Agent 显式选择同一数据工作区。下例为安装态通用模板，具体路径必须以实际发现结果为准：
 
 ```powershell
 $cli = '<install-directory>\binaries\studyflow.exe'
@@ -53,6 +53,6 @@ $env:STUDYFLOW_WORKSPACE = '<new-data-workspace>'
 
 ## 4. Skill资源与公共安装
 
-仓库源为`skills/studyflow-agent/`；安装目录附`binaries/studyflow-agent/`，两者本轮为2.0.0。公共安装位置通常为`~/.agents/skills/studyflow-agent/`，不是项目的`AGENTS.md`；其他Agent使用其支持的Skill目录。应复制整个目录，保留`agents/`、`references/`与`examples/`。
+仓库源为 `skills/studyflow-agent/`，当前 2.2.0；安装目录附随安装包生成的 Skill，不能假定已同步仓库源。公共安装位置通常为`~/.agents/skills/studyflow-agent/`，不是项目的`AGENTS.md`；其他Agent使用其支持的Skill目录。应复制整个目录，保留`agents/`、`references/`与`examples/`。
 
-安装程序不覆盖Agent公共目录或修改PATH。公共副本本轮只读核对为1.9.0，未同步到2.0.0；如需同步，先授权目标目录、备份现有自定义内容、复制并校验哈希/格式。安装资源可直接交给其他Agent读取。具体闭环见[Skill2.0契约](../../skills/studyflow-agent/references/closed-loop-contract.md)。
+安装程序不覆盖Agent公共目录或修改PATH。历史公共副本同步证据：2026-10-09 安装目录、公共目录与当时 2.0.0 仓库源 12 文件 SHA-256 一致；此前“公共副本仍为1.9.0未同步”为过时表述，已更正。本轮未核验或改写公共/安装副本，不将历史哈希证据升级为 2.2.0 同步成功。安装资源可读取，但先以当前 CLI 能力决定可用功能。具体闭环见[Skill闭环契约](../../skills/studyflow-agent/references/closed-loop-contract.md)。

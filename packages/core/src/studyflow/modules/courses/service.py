@@ -13,6 +13,7 @@ from studyflow.modules.planning.models import CourseScheduleItem, PlanCourseItem
 from studyflow.shared.ids import new_id
 from studyflow.shared.constants import AGENT_SOURCE
 from studyflow.modules.reviews.models import RetestTask, ReviewFeedback
+from studyflow.modules.courses.publication.purge_extensions import inventory as extension_inventory
 from studyflow.modules.planning.repository import ensure_course_membership
 from studyflow.modules.learning.repository import latest_attempts, annotate_course
 
@@ -98,12 +99,12 @@ class CoursesService(Service):
             self._event(db, AGENT_SOURCE, "course", course.id, "IMPORT_MARKDOWN", relative_path)
             return {"created": True, "course_id": course.id, "lesson_id": lesson.id, "plan_course_item_id": plan_course_item.id, "path": relative_path, "course_title": course.title}
 
-    def get_course(self, course_id: str) -> Course | None:
+    def get_course(self, course_id: str, as_detail: bool = False):
         with self.session() as db:
             course = db.scalar(select(Course).options(joinedload(Course.plan_line), joinedload(Course.lessons.and_(Lesson.included == True)).joinedload(Lesson.exercises.and_(Exercise.included == True))).where(Course.id == course_id))
             if course:
                 item = db.scalar(select(PlanCourseItem).where(PlanCourseItem.course_id == course.id).order_by(PlanCourseItem.sequence_number))
-                total = db.scalar(select(func.count(PlanCourseItem.id)).where(PlanCourseItem.plan_line_id == item.plan_line_id)) if item else 0
+                total = db.scalar(select(func.count(PlanCourseItem.id)).where(PlanCourseItem.plan_line_id == item.plan_line_id, PlanCourseItem.track == item.track)) if item else 0
                 exercise_ids = [exercise.id for lesson in course.lessons for exercise in lesson.exercises]
                 latest = latest_attempts(db, exercise_ids)
                 drafts = db.scalars(select(Submission).where(Submission.exercise_id.in_(exercise_ids), Submission.status == "DRAFT").order_by(Submission.updated_at, Submission.id)).all()
@@ -125,7 +126,7 @@ class CoursesService(Service):
                     for exercise in lesson.exercises:
                         exercise.latest_submission = latest.get(exercise.id)
                         exercise.draft = drafts_by_exercise.get(exercise.id)
-            return course
+            return course_detail(course) if as_detail and course else course
 
     def preview_course_purge(self, course_ids: list[str] | None = None) -> dict:
         """Return a safe, read-only inventory for deleting all course-owned data.
@@ -165,10 +166,12 @@ class CoursesService(Service):
             schedule_ids = inventory["schedule_item_ids"]
             item_ids = inventory["plan_course_item_ids"]
 
+            from studyflow.modules.courses.publication.purge_extensions import purge as purge_extensions
+            purge_extensions(db,course_ids)
             # Null the self-reference before deleting the submission set. This
             # keeps SQLite foreign-key enforcement safe even for revision chains.
             if submission_ids:
-                db.execute(update(Submission).where(Submission.id.in_(submission_ids)).values(parent_submission_id=None))
+                db.execute(update(Submission).where(Submission.id.in_(submission_ids)).values(parent_submission_id=None,retest_task_id=None))
                 db.execute(delete(ReviewFeedback).where(ReviewFeedback.submission_id.in_(submission_ids)))
                 db.execute(delete(SubmissionChainLink).where(or_(SubmissionChainLink.parent_id.in_(submission_ids), SubmissionChainLink.child_id.in_(submission_ids))))
                 db.execute(delete(SubmissionWriteReceipt).where(SubmissionWriteReceipt.submission_id.in_(submission_ids)))
@@ -286,6 +289,7 @@ class CoursesService(Service):
                 "retest_tasks": len(retest_ids), "course_revisions": len(course_ids), "learning_progress": len(course_ids),
                 "plan_course_items": len(item_ids), "schedule_items": len(schedule_ids), "linked_tasks": len(task_ids),
                 "documents": len(deletable_document_paths), "protected_documents": len(protected_document_paths),
+                **extension_inventory(db,course_ids),
             },
         }
 
@@ -298,7 +302,9 @@ class CoursesService(Service):
         return import_package(self, source_path)
 
     def course_detail(self, course_id: str) -> dict:
-        row = self.get_course(course_id)
+        row = self.get_course(course_id, as_detail=True)
         if row is None:
             raise DomainError("OBJECT_NOT_FOUND", "课程不存在。", "先读取课程列表确认课程 ID。")
-        return course_detail(row)
+        from studyflow.infrastructure.installation import workspace_key
+        row["workspace_key"]=workspace_key(self.settings.workspace_root)
+        return row

@@ -1,13 +1,15 @@
 <script setup lang="ts">
 import {computed, inject, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch} from 'vue'
 import {isTauri, studyApi} from '../../../shared/api'
-import type {CourseStudyDetailData} from '../../../shared/api/contracts'
+import type {CourseStudyDetailData,StudyRestartPreview} from '../../../shared/api/contracts'
 import {makeRequestKey, navigate, notify, reportError, statusLabel, windowStorageKey} from '../../../shared/ui'
 import KnowledgePointPager from './KnowledgePointPager.vue'
 import CourseOutline from './CourseOutline.vue'
 import {activeTheme} from '../../../shared/themes'
 import {soundEnabled,setSoundEnabled} from '../../../shared/ui/interaction'
 import TeachingContent from './TeachingContent.vue'
+import {revealTeachingTarget} from '../detailsDisclosure'
+import {readRestartRequest,storeRestartRequest,definitiveRestartFailure,type RestartParams} from '../studyRestartRequest'
 import ThemeReadingArtwork from '../../../shared/components/ThemeReadingArtwork.vue'
 import DisplaySlot from '../../../shared/components/DisplaySlot.vue'
 import { activeDisplay } from '../../../shared/themes/display-loader'
@@ -28,7 +30,7 @@ import {emitTo,listen} from '@tauri-apps/api/event'
 import {useSafeStudyExit} from '../../learning/composables/useSafeStudyExit'
 import {useCourseAnswers} from '../../learning/composables/useCourseAnswers'
 
-const props = defineProps<{id: string; lessonId?: string; initialView?: string; studyId?: string; exerciseId?: string}>()
+const props = defineProps<{id: string; planLineId?:string; lessonId?: string; initialView?: string; studyId?: string; exerciseId?: string}>()
 const data = ref<CourseStudyDetailData | null>(null)
 const detached=ref<ToolTab[]>([])
 const answersOwner=computed(()=>!detached.value.includes('exercises'))
@@ -46,7 +48,7 @@ const sidebarOpen=computed({get:()=>!dock.value.collapsed,set:open=>{dock.value=
 const dockMaxWidth=computed(()=>shellPanel?.geometry.value.maxWidth||820)
 const layoutClass=computed(()=>['study-unit-layout',sidebarOpen.value?'tools-visible':'tools-hidden',shellPanel?.geometry.value.compact?'tools-compact':''])
 const readingShellProps=computed(()=>({class:layoutClass.value,'data-reading-shell':activeDisplay.value.reading_shell,style:{'--study-height':layoutHeight.value+'px'}}))
-const selection=ref<{text:string;x:number;y:number;blockId?:string}|null>(null)
+const selection=ref<{text:string;x:number;y:number;blockId?:string;sectionId?:string}|null>(null)
 const toolsToggle=ref<HTMLButtonElement|null>(null)
 async function openPractice(exerciseId:string) {
  if(blocked.value)return
@@ -68,7 +70,9 @@ async function jumpToBlock(lessonIndex:number,blockId:string) {
  if(index.value!==lessonIndex)return
  if(shellPanel?.geometry.value.compact||dock.value.full)sidebarOpen.value=false
  await nextTick()
- body.value?.querySelector<HTMLElement>(`[data-content-block="${blockId}"]`)?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})
+ const target=body.value?.querySelector<HTMLElement>(`[data-content-block="${blockId}"]`)||null
+ revealTeachingTarget(target,true);await nextTick()
+ target?.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})
 }
 async function toggleTools() {
  if(sidebarOpen.value)sidebarOpen.value=false
@@ -140,11 +144,52 @@ const studyLayout = ref<HTMLElement | null>(null)
 const layoutHeight = ref(520)
 const actionBar = ref<HTMLElement | null>(null)
 const layoutOverflow = ref(false)
+const restartDialog=ref<HTMLDialogElement|null>(null)
+const restartPreview=ref<StudyRestartPreview|null>(null),restartPending=ref<RestartParams|null>(null),restartBusy=ref(false),restartCacheUnavailable=ref(false)
+const restartCacheKey=windowStorageKey('study-restart:'+props.id)
+watch(restartPreview,async value=>{await nextTick();if(value&&restartDialog.value&&!restartDialog.value.open)restartDialog.value.showModal()})
+let restartHold:string|undefined
+function restartStorage(){try{return localStorage}catch{return null}}
+function cacheRestart(){const saved=storeRestartRequest(restartStorage(),restartCacheKey,data.value?.study.workspace_key||'',restartPending.value);restartCacheUnavailable.value=!!restartPending.value&&!saved}
+async function closeRestartDialog(){if(restartBusy.value)return;restartPreview.value=null;moving.value=false;if(restartHold){await releaseTools(restartHold);restartHold=undefined}}
+async function previewRestart(){
+ if(blocked.value||!data.value)return
+ if(answers.pending.value||notes.pending.value||answers.recovery.value||notes.recovery.value||answers.saveFailed.value||notes.saveFailed.value||progressFailed.value){notify('请先处理保存或恢复状态，再重新开始。','info');return}
+ moving.value=true;clearTimeout(timer)
+ const held=await prepareTools('hold');restartHold=held.requestId
+ try{
+  if(!held.ok){notify('独立工具窗口仍有未确认内容，本轮未结束。','info');await closeRestartDialog();return}
+  if(!await answers.write('save')||!await notes.save()||!await savePosition()){await closeRestartDialog();return}
+  const info=await studyApi.previewStudyRestart(data.value.study.id)
+  if(!info.can_restart){notify(info.blocked_reasons.map(r=>r.message).join(' '),'info');await closeRestartDialog();return}
+  restartPreview.value=info
+ }catch(cause){reportError(cause);await closeRestartDialog()}
+}
+async function confirmRestart(){
+ if(restartBusy.value||!data.value)return
+ const info=restartPreview.value
+ if(!restartPending.value){if(!info?.can_restart||!info.expected_content_hash)return;restartPending.value={study_session_id:info.study_session_id,expected_version:info.expected_version,expected_content_hash:info.expected_content_hash,idempotency_key:makeRequestKey('study-restart')};cacheRestart()}
+ restartBusy.value=true;moving.value=true
+ try{
+  if(!restartHold){const held=await prepareTools('hold');restartHold=held.requestId;if(!held.ok){notify('工具窗口内容未确认；已保留原重开请求。','info');return}}
+  let fresh=await studyApi.restartStudy({...restartPending.value!})
+  if(disposed||safeExit.leaving.value)return
+  if(!fresh.study.is_current)fresh=await studyApi.openCourseStudy(props.id,makeRequestKey('study-resume'))
+  if(disposed||safeExit.leaving.value)return
+  restartPending.value=null;cacheRestart();data.value=fresh;index.value=0;readingScrollTop.value=0;pendingReadingScroll.value=null;restartPreview.value=null
+  await Promise.all([answers.load(),notes.load()]);await syncToolContext(false);await nextTick();if(body.value)body.value.scrollTop=0
+  window.history.replaceState(null,'','#/course/'+props.id+'?study='+fresh.study.id+(props.planLineId?'&plan='+props.planLineId:''))
+  notify('已用最新版重新开始；原轮次与笔记保留。');interactionFeedback('complete')
+ }catch(cause){
+  if(definitiveRestartFailure((cause as {code?:string})?.code||'')){restartPending.value=null;cacheRestart();restartPreview.value=null}
+  if(!disposed&&!safeExit.leaving.value)reportError(cause)
+ }finally{restartBusy.value=false;moving.value=false;if(restartHold){await releaseTools(restartHold);restartHold=undefined}}
+}
 const newVersionConfirm = ref(false)
 const openingRequest=ref<{key:string;newVersion:boolean;reviewRound:boolean}|null>(null)
 const lesson = computed(() => data.value?.lessons[index.value])
 watch(()=>[dock.value.collapsed,dock.value.width,dock.value.full,loading.value,!!lesson.value,answers.failed.value],()=>shellPanel?.publish(panelOwner,{visible:!dock.value.collapsed&&!loading.value&&!!lesson.value&&!answers.failed.value,width:dock.value.width,full:dock.value.full}),{immediate:true})
-const blocked = computed(() => openingWindow.value || moving.value || submitting.value || !!answers.pending.value && !answers.busy.value || !!answers.recovery.value || !!notes.pending.value && !notes.busy.value || !!notes.recovery.value)
+const blocked = computed(() => !!restartPending.value || openingWindow.value || moving.value || submitting.value || !!answers.pending.value && !answers.busy.value || !!answers.recovery.value || !!notes.pending.value && !notes.busy.value || !!notes.recovery.value)
 const feedbackNeeded = computed(() => answers.rows.value.filter(row => row.action === 'REVISION' || row.action === 'RETEST').length)
 const readingPercent = computed(() => data.value?.lessons.length ? Math.round(data.value.lessons.reduce((sum,l)=>sum+l.progress.progress_percent,0)/data.value.lessons.length) : 0)
 const planPosition = computed(() => ({current: Math.max(1, data.value?.course.sequence || 1), total: Math.max(1, data.value?.course.total || 1)}))
@@ -155,10 +200,10 @@ const renderedLesson = computed(() => lesson.value && data.value ? highlightNote
 const documentHeadings=ref<{id:string;title:string;level:number}[]>([])
 const activeHeading=ref('')
 function collectDocumentHeadings() {
- const nodes=body.value?.querySelectorAll<HTMLElement>('.legacy-teaching-content h1,.legacy-teaching-content h2,.legacy-teaching-content h3,.legacy-teaching-content h4,.teaching-block-heading h4,.teaching-steps h5')||[]
- documentHeadings.value=Array.from(nodes).map((node,i)=>{
+ const nodes=body.value?.querySelectorAll<HTMLElement>('.legacy-teaching-content h1,.legacy-teaching-content h2,.legacy-teaching-content h3,.legacy-teaching-content h4,.teaching-block-heading h4,.teaching-section-title,.teaching-steps h5,.teaching-richtext h1,.teaching-richtext h2,.teaching-richtext h3,.teaching-richtext h4,.teaching-richtext h5,.teaching-richtext h6')||[]
+ documentHeadings.value=Array.from(nodes).filter(node=>!node.closest('[data-outline-hidden="true"]')).map((node,i)=>{
   const id=node.id||'section-'+lesson.value?.id+'-'+i;node.id=id
-  const level=node.closest('.teaching-block-heading')?2:node.tagName==='H5'?3:Math.max(2,Number(node.tagName.slice(1)))
+  const level=node.dataset.outlineLevel?Number(node.dataset.outlineLevel):node.closest('.teaching-block-heading')?2:node.closest('.teaching-richtext')?Math.max(3,Number(node.tagName.slice(1))-2):node.tagName==='H5'?3:Math.max(2,Number(node.tagName.slice(1)))
   return {id,title:node.textContent?.trim()||'',level}
  }).filter(item=>item.title)
  updateActiveHeading()
@@ -166,14 +211,14 @@ function collectDocumentHeadings() {
 function updateActiveHeading() {
  if(!body.value)return
  const top=body.value.getBoundingClientRect().top+96
- const current=documentHeadings.value.filter(item=>{const node=document.getElementById(item.id);return node&&node.getBoundingClientRect().top<=top}).at(-1)
+ const current=documentHeadings.value.filter(item=>{const node=document.getElementById(item.id);return node&&node.getClientRects().length>0&&node.getBoundingClientRect().top<=top}).at(-1)
  activeHeading.value=current?.id||documentHeadings.value[0]?.id||''
 }
 async function jumpToHeading(id:string) {
  if(shellPanel?.geometry.value.compact||dock.value.full)sidebarOpen.value=false
  await nextTick()
  const node=document.getElementById(id)
- if(node&&body.value?.contains(node)){node.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});activeHeading.value=id}
+ if(node&&body.value?.contains(node)){revealTeachingTarget(node);await nextTick();node.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});activeHeading.value=id}
 }
 function toggleSound(){setSoundEnabled(!soundEnabled.value);if(soundEnabled.value)interactionFeedback('preview')}
 watch(()=>[renderedLesson.value,lesson.value?.id,lesson.value?.content_blocks],async()=>{await nextTick();collectDocumentHeadings()},{flush:'post'})
@@ -188,10 +233,11 @@ async function load(newVersion = false,reviewRound=false) {
   if(openingRequest.value){newVersion=openingRequest.value.newVersion;reviewRound=openingRequest.value.reviewRound}
   openingRequest.value={key,newVersion,reviewRound}
   try {
-    data.value = props.studyId && !newVersion && !reviewRound ? await studyApi.courseStudy(props.studyId) : await studyApi.openCourseStudy(props.id,key,newVersion,reviewRound)
+    data.value = props.studyId && !newVersion && !reviewRound ? await studyApi.courseStudy(props.studyId) : await studyApi.openCourseStudy(props.id,key,newVersion,reviewRound,props.planLineId)
     openingRequest.value=null
     if(data.value.course.id!==props.id){data.value=null;throw new Error('学习轮次与课程不匹配。')}
-    if(!data.value.study.is_current){const source='/source/'+data.value.study.id+'?lesson='+(props.lessonId||data.value.lessons[0]?.id);data.value=null;await navigate(source);return}
+    restartPending.value=readRestartRequest(restartStorage(),restartCacheKey,data.value.study.workspace_key||'')
+    if(!data.value.study.is_current&&!restartPending.value){const source='/source/'+data.value.study.id+'?lesson='+(props.lessonId||data.value.lessons[0]?.id);data.value=null;await navigate(source);return}
     try{localStorage.removeItem(keyName)}catch{/* content is frozen in the workspace */}
     const requested = newVersion ? undefined : props.lessonId || data.value.resume_lesson_id
     const found = data.value.lessons.findIndex(row=>row.id === requested)
@@ -228,6 +274,7 @@ async function restorePosition() {
   fitStudyLayout(); collectDocumentHeadings(); ready.value = true
 }
 async function savePosition(complete = false): Promise<boolean> {
+  if(restartPending.value)return false
   if (safeExit.leaving.value) return true
   clearTimeout(timer)
   if (progressFlight && !await progressFlight) return false
@@ -262,13 +309,14 @@ async function flushCurrent() {
 }
 const safeExit = useSafeStudyExit({
   busy: () => moving.value || submitting.value || !!answers.busy.value || notes.busy.value,
-  hasProblem: () => !!(answers.saveFailed.value || notes.saveFailed.value || progressFailed.value || answers.pending.value || notes.pending.value || answers.recovery.value || notes.recovery.value),
+  hasProblem: () => !!(restartPending.value || answers.saveFailed.value || notes.saveFailed.value || progressFailed.value || answers.pending.value || notes.pending.value || answers.recovery.value || notes.recovery.value),
   flush: flushCurrent, retry: retrySaving,
   suspend: () => {clearTimeout(timer); answers.suspendAutosave(); notes.suspendAutosave(); if(safeExit.dialog.value?.path==='close-window'){void suspendTools();window.dispatchEvent(new CustomEvent('studyflow-discard-close'))}},
 })
+watch(()=>safeExit.dialog.value,async dialog=>{await nextTick();if(dialog)restartDialog.value?.close();else if(restartPreview.value&&restartDialog.value&&!restartDialog.value.open)restartDialog.value.showModal()})
 function exportUnsaved() {
   try {
-    const content = {study_session_id: data.value?.study.id, exported_at: new Date().toISOString(),
+    const content = {pending_restart:restartPending.value,study_session_id: data.value?.study.id, exported_at: new Date().toISOString(),
       answers: answers.rows.value.map(row => ({exercise_id: row.exercise_id, answer_text: row.answer})),
       recovered_answers: answers.recovery.value, pending_answers: answers.pending.value,
       notes: notes.blocks.value,
@@ -337,6 +385,7 @@ async function syncFeedback() {
   catch (cause) {reportError(cause)}
 }
 async function retrySaving() {
+  if(restartPending.value){await confirmRestart();if(restartPending.value)return}
   if (answers.saveFailed.value || answers.pending.value) await answers.retry()
   if (notes.saveFailed.value || notes.pending.value) await notes.retry()
   if (progressFailed.value && data.value) {
@@ -393,12 +442,14 @@ function captureSelection() {
  const anchorId=anchor?.closest<HTMLElement>('[data-content-block]')?.dataset.contentBlock
  const endId=end?.closest<HTMLElement>('[data-content-block]')?.dataset.contentBlock
  const blockId=anchorId===endId?anchorId:undefined
+ const sectionStart=anchor?.closest<HTMLElement>('[data-content-section]')?.dataset.contentSection,sectionEnd=end?.closest<HTMLElement>('[data-content-section]')?.dataset.contentSection
+ const sectionId=blockId&&sectionStart===sectionEnd?sectionStart:undefined
  const r=selected.getRangeAt(0).getBoundingClientRect()
- selection.value={text,blockId,x:Math.max(10,Math.min(window.innerWidth-190,r.left)),y:Math.max(8,Math.min(window.innerHeight-48,r.bottom+8))}
+ selection.value={text,blockId,sectionId,x:Math.max(10,Math.min(window.innerWidth-190,r.left)),y:Math.max(8,Math.min(window.innerHeight-48,r.bottom+8))}
 }
 async function markNote() {
  if(!selection.value||!data.value||!lesson.value||!context.value)return
- const block={id:makeRequestKey('excerpt').slice(0,64),text:'',quote:selection.value.text,source_block_id:selection.value.blockId||null,course_id:data.value.course.id,
+ const block={id:makeRequestKey('excerpt').slice(0,64),text:'',quote:selection.value.text,source_block_id:selection.value.blockId||null,source_section_id:selection.value.sectionId||null,course_id:data.value.course.id,
   lesson_id:lesson.value.id,source_study_id:data.value.study.id,course_title:data.value.course.title,lesson_title:lesson.value.title}
  if(!notesOwner.value){if(!await addDetachedNote(context.value.planId,block)){notify('笔记窗口暂时不能接收摘录，选文仍保留，请处理该窗口后重试。','info');return}}
  else {if(notes.failed.value||notes.loading.value||notes.recovery.value||notes.pending.value||notes.cacheUnreadable.value){notify('请先恢复笔记的保存状态，再添加摘录。','info');return}notes.add(block);sidebarOpen.value=true;tab.value='notes'}
@@ -425,6 +476,7 @@ async function listenTools(){
   if(p.tool==='notes'&&p.planId===data.value?.course.plan_line_id&&!notesOwner.value)await notes.load()
  })
 }
+onBeforeUnmount(()=>{if(restartHold)void releaseTools(restartHold)})
 async function startNewVersion() {
   if (!await flushCurrent()) return
   newVersionConfirm.value = false
@@ -459,6 +511,11 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
 </script>
 
 <template>
+ <Teleport to="body"><dialog v-if="restartPreview" ref="restartDialog" class="study-restart-dialog" aria-labelledby="study-restart-title" @cancel.prevent="closeRestartDialog">
+  <h3 id="study-restart-title">用最新版重新开始？</h3><p>原轮次和已保存笔记会保留。本轮阅读位置不迁移，新轮次从头开始；不会删除课程或学习历史。</p>
+  <p v-if="restartPending" role="status">请求结果尚未确认，请使用原请求重试。也可以稍后处理，软件不会自动丢弃请求。</p>
+  <div><button class="secondary-button" :disabled="restartBusy" @click="closeRestartDialog">{{restartPending?'稍后处理':'取消'}}</button><button class="primary-button" :disabled="restartBusy" @click="confirmRestart">{{restartBusy?'确认中…':restartPending?'重试原请求':'保留历史并重新开始'}}</button></div>
+ </dialog></Teleport>
   <Teleport to="body"><button v-if="selection" class="selection-note-action" :style="{left:selection.x+'px',top:selection.y+'px'}" @mousedown.prevent @click="markNote" @keydown.esc="selection=null">≡ 记入计划笔记</button></Teleport>
   <LeaveStudyDialog v-if="safeExit.dialog.value" :closing="safeExit.dialog.value.path === 'close-window'" :reason="safeExit.dialog.value.reason" :retrying="safeExit.dialog.value.retrying" @retry="safeExit.retry" @discard="safeExit.finish(true, true)" @cancel="safeExit.finish(false)" @export="exportUnsaved"/>
   <div v-if="loading" class="loading-state" role="status">正在恢复课程、笔记与反馈…</div>
@@ -482,6 +539,8 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
     </header>
     </div>
     <div v-if="['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')&&!data.study.source_changed" class="study-version-note"><span>本轮已通过。可以只回看，或明确开启一轮新的复习；旧答案保留。</span><button class="text-button" @click="newVersionConfirm=true">开启复习轮次</button><span v-if="newVersionConfirm"><button class="text-button" @click="async()=>{if(await flushCurrent()){newVersionConfirm=false;await load(false,true)}}">确认重新学习与作答</button><button class="text-button" @click="newVersionConfirm=false">取消</button></span></div>
+    <div v-if="restartPending" class="study-version-note" role="status"><span>重新开始的结果待确认，原请求已保留。请勿重复创建轮次。</span><span v-if="restartCacheUnavailable">本机缓存不可用；原请求仅在本窗口保留。离开前可导出未保存数据。</span><button class="text-button" :disabled="restartBusy" @click="confirmRestart">{{restartBusy?'确认中…':'重试原请求'}}</button></div>
+    <div v-else-if="!['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')" class="study-restart-entry"><button class="text-button" :disabled="blocked" @click="previewRestart">用最新版重新开始</button><span>仅无作答记录时可用 · 历史与笔记保留</span></div>
     <div v-if="data.study.source_changed" class="study-version-note"><span>{{data.study.source_available ? '材料已更新，本次学习仍使用开始时的版本。' : '源文件暂时不可读，仍可使用本次学习的固定材料。'}}</span><button v-if="data.study.source_available && ['PASSED','READ_COMPLETED'].includes(data.course.study_status || '')" class="text-button" @click="newVersionConfirm=true">开始新版学习</button><span v-if="newVersionConfirm">旧答案和反馈将保留。<button class="text-button" @click="startNewVersion">确认开始</button><button class="text-button" @click="newVersionConfirm=false">取消</button></span></div>
     <StudyRecovery :answers="answers" :notebook="notes" :progress-failed="progressFailed" @retry="retrySaving" @notes="sidebarOpen=true;tab='notes'"/>
     <div v-if="answers.failed.value" class="error-state"><p>作答状态读取失败，没有覆盖已有答案。</p><button class="secondary-button" @click="answers.load">重新读取作答</button></div>
@@ -489,7 +548,7 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
       <div v-if="!sequenceTheme" class="reader-navigation"><KnowledgePointPager :lessons="data.lessons" :index="index" :busy="blocked" :answer-states="answers.rows.value" @select="selectLesson"/><span class="reader-current-title" :class="{visible:readingScrollTop>90}">{{lesson.title}}</span><button ref="toolsToggle" class="tools-toggle" :aria-expanded="sidebarOpen" aria-controls="workspace-tool-panel" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div>
       <DisplaySlot slot="reading-shell" :fallback="'div'" :view-props="readingShellProps">
         <div ref="studyLayout" :style="{'--study-height': layoutHeight+'px'}" :class="layoutClass">
-        <article :key="lesson.id" class="study-material" aria-label="知识点正文"><div ref="body" data-reading-scroll-container class="study-material-body" tabindex="0" @scroll.passive="onScroll();selection=null" @mouseup="captureSelection" @keyup="captureSelection"><header class="study-unit-heading"><ThemeReadingArtwork v-if="!sequenceTheme"/><p class="eyebrow"><template v-if="sequenceTheme">第 {{planPosition.current}} / {{planPosition.total}} 课 · </template>知识点 {{String(index+1).padStart(2,'0')}} / {{data.lessons.length}}</p><h3>{{lesson.title.replace(/^\d+[｜|·.、\s]+/,'')}}</h3><p v-if="sequenceTheme && lesson.summary" class="sequence-lesson-summary">{{lesson.summary}}</p><span v-if="sequenceTheme" class="sequence-reading-status">{{courseStatus}} · 本课阅读 {{readingPercent}}%</span></header><TeachingContent v-if="lesson.content_blocks?.length" :blocks="lesson.content_blocks" :exercises="lesson.exercises" :notes="notes.blocks.value" :study-id="data.study.id" :lesson-id="lesson.id" :blocked="blocked" @practice="openPractice"/><div v-else class="markdown-body legacy-teaching-content" v-html="renderedLesson"/>
+        <article :key="lesson.id" class="study-material" aria-label="知识点正文"><div ref="body" data-reading-scroll-container class="study-material-body" tabindex="0" @scroll.passive="onScroll();selection=null" @mouseup="captureSelection" @keyup="captureSelection"><header class="study-unit-heading"><ThemeReadingArtwork v-if="!sequenceTheme"/><p class="eyebrow"><template v-if="sequenceTheme">第 {{planPosition.current}} / {{planPosition.total}} 课 · </template>知识点 {{String(index+1).padStart(2,'0')}} / {{data.lessons.length}}</p><h3>{{lesson.title.replace(/^\d+[｜|·.、\s]+/,'')}}</h3><p v-if="sequenceTheme && lesson.summary" class="sequence-lesson-summary">{{lesson.summary}}</p><span v-if="sequenceTheme" class="sequence-reading-status">{{courseStatus}} · 本课阅读 {{readingPercent}}%</span></header><TeachingContent :lesson-title="lesson.title" v-if="lesson.content_blocks?.length" :blocks="lesson.content_blocks" :exercises="lesson.exercises" :notes="notes.blocks.value" :study-id="data.study.id" :lesson-id="lesson.id" :blocked="blocked" :preference-scope="(data.study.workspace_key||data.study.id)+':'+data.study.content_hash" @practice="openPractice"/><div v-else class="markdown-body legacy-teaching-content" v-html="renderedLesson"/>
         <section v-if="sequenceTheme && lesson.exercises.length" class="sequence-practice-entry"><div><span class="sequence-practice-icon">✓</span><h4>知识点练习</h4><span>{{lesson.exercises.length}} 道练习</span></div><p>把理解写下来，答案会随本课自动保存。也可以暂时跳过，最后统一提交。</p><button class="secondary-button" :disabled="blocked" @click="openPractice(lesson.exercises[0].id)">打开本节练习 <span>→</span></button></section>
         <nav v-if="sequenceTheme" class="sequence-page-turn" aria-label="上下知识点"><button :disabled="index===0||blocked" @click="selectLesson(index-1)"><small>‹ 上一节</small><span>{{index>0?data.lessons[index-1].title:'已是第一节'}}</span></button><span class="sequence-page-number"><b>{{String(index+1).padStart(2,'0')}}</b> / {{String(data.lessons.length).padStart(2,'0')}}</span><button :disabled="index===data.lessons.length-1||blocked" @click="selectLesson(index+1)"><small>下一节 ›</small><span>{{index<data.lessons.length-1?data.lessons[index+1].title:'已是最后一节'}}</span></button></nav>
         </div></article>

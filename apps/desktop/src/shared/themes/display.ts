@@ -187,7 +187,7 @@ export function parseDisplay(value: unknown, tokens?: Record<string, string>): T
 
   const display: ThemeDisplay = {
     layout: choice(source.layout, LAYOUTS, '布局组合'),
-    navigation_width: integer(source.navigation_width, 56, 240, '导航宽度'),
+    navigation_width: integer(source.navigation_width, 56, 280, '导航宽度'),
     reading_width: integer(source.reading_width, 560, 1080, '阅读宽度'),
     tools_width: integer(source.tools_width, 300, 640, '工具区宽度'),
     reading_shell: choice(source.reading_shell, READING_SHELLS, '阅读壳'),

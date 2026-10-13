@@ -1,0 +1,82 @@
+# 英语制课：原料、句序与迁移
+
+先读[共用制课](course-authoring.md)与[展示审核](authoring-presentation.md)。源码支持英语不等于安装版支持：以实际capabilities为准。以下是教学规则，合法JSON形状见第9节和course-packages；不能把作者蓝图列直接加成未知包字段。
+
+## 1. 三层工件，不把词表直接变成课程
+
+1. **原料层**：来源/版本/定位、词目与词形/词族/变体、词义、词性/搭配、缺失释义/待核实项；可选场景群/功能组/作者难度标签、稳定目标ID。
+2. **计划与课蓝图**：目标/学习者基础、课程先后依赖、句型/词义范围、新增成分、回顾与迁移节点、可检验结果。
+3. **具体课**：必要短讲解、多个有联系的训练组、有序词句、完整答案/变体与评估策略、词典目标、作者审核。
+
+原料标注和课程写入分别授权。先小样词群/蓝图审核再扩展，不从一份汇报推导可以给全部词表标注或补AI释义。正文/训练/声音资源职责分开；不是一串随机句子，也不是每句一页长文。
+
+长期阶段/反馈按[工作区治理](learning-workspace-governance.md)，现有词表按[按需取词](vocabulary-selection.md)：目标先行，从母表有界检索形成可复用小表，不预先全量分类/拆分。小表候选数不等于每课新词数，缺释义仅核实当前需要项；未用项留母表，阶段检查防长期遗漏。
+
+## 2. 来源和范围的三种“覆盖”
+
+- 源文件提取是否完整、提取清单之间是否覆盖、学习者是否掌握，是三件事。集合覆盖100%不能消除OCR漏行/漏标；材料编成也不等于学完。
+- 官方词目、派生词族、大小写/地域变体、作者补充词分开计数；总主背表大于官方提取集并不表示官方范围更大。
+- L1—L4/场景标签只是任务内作者约定，未经映射验证不能叫官方等级/CEFR或真实能力测评。
+- 词义必须标来源；缺失可留待补，AI释义注明作者草稿并核对。不能把不确定音标/词义包装成官方词典回执。
+- 具体考试/教材口径留计划，不把某个考试词量、每课配额或报考选择写成全局Skill硬规则。句子构造训练不替代完整阅读/听力/写译或特定考试题型训练。
+
+## 3. 目标、先修与新增难度
+
+可观察结果示例：“用已知I/like和本课名词表达喜好，并在中文提示下无提示输入”。列真实已知成分、本课新增词义/句型和未确认假设；参考项目第一课不是学习者已知证据。
+
+一条题目新增的难度能解释：不同时加入陌生词、时态和从句后仍称i+1。初学者可以从词/短语起步，已有基础可从句子起步；8—15新词、一个句型或六步序列只是可能的试点规模，不强制所有课。多组共用课程目标，不为每词建一课。
+
+## 4. 句序表：每一项有用途
+
+作者先列：稳定题ID | 中文提示 | 目标完整文本/变体 | 所用已知成分 | 新增成分 | 教学作用 | 有/无提示检验。该表是蓝图，不是额外schema字段。
+
+按目标选适当路径：必要词义回忆→完整短句→替换已知成分→同型新情景→穿插旧项→无提示回忆/迁移。不机械走完六步、不连续换多个未知成分、不把同句重复多遍当渐进。
+
+**简短合成示意**（不是完整可导入课程）：假设已讲I like X.，新词tea/coffee；先回忆词义，组合“I like tea.”，再用coffee替换对象；用新中文场景无提示检验。第三人称/否定可留后课。这不是所有人的默认起点，完整包仍需讲解、目标和变体策略。
+
+## 5. 题面、变体与声音
+
+- 中文提示自然、范围清楚；词汇题、结构练习和开放表达的评估口径不同，别把英文等同逐字翻译。
+- 目标与accepted_answers都是合法完整句；按实际token/缩写/连字符策略校验。首版不同词位数的变体不能硬塞local_exact，开放表达按支持的agent模式或先留草稿。
+- 本地检查不等于智能语义评分；合理表达可交Agent复核，不能从字符串不匹配直接诊断语法缺陷。
+- requirements仍只写作答约束；英语target是训练必要数据，但不得在无提示题面的正文里预填该题答案。查看答案/教学提示属于有提示活动，不能算独立检验通过。
+- 教学讲解用当前合法组件，在首次使用前解释语法/词义；长讲解不是每句重复一次。保持大纲定位与引用可读。
+- 当前词典优先，冻结目标用于查询；phonetic/gloss/explanation按实际契约填真实作者辅助，可为空。语音质量和教材文本正确分别验证；TTS预生成是独立授权/能力，不由制课自动开启。
+
+## 6. 复习与错误驱动补充
+
+实际能力支持后，指定计划/course/english领域 → 聚合/复习摘要 → 有界重点列表 → 少量冻结题面/原尝试/反馈。先看近期、频度与错误性质，不把一次手误等同长期缺口；Agent接受的合理变体不再当错误教。
+
+普通错题和英语训练高频错误分域；跨课相同文本不自动合并。原题修正/复测与渐进式SUPPLEMENT课程是不同链；补充课读[english-remediation](english-remediation.md)，不复制第三份答案或自动解决来源错误、更新主线进度/代学习者作答。
+
+## 7. 发表关口
+
+目标/先修→句序/新增负荷→中文与英文意义/完整变体/token→作者参考/词典来源→当前CLI schema→实际全窗口训练/提示与检验边界。每项与目标对应；回顾有目的，不凑句数。
+
+先小样蓝图和课确认，再扩批；validate/导入回读只表示数据交付，不表明发音听辨或掌握。稳定objective_ids来自作者原料层且能反查目标，不能用随机序号假装知识治理。
+
+## 8. 任务入口
+
+用[authoring-prompts](authoring-prompts.md)的英语或错误驱动模板，按本次任务补齐真实输入和写入许可。批量/OCR才读authoring-workflows。没有安装版能力就交蓝图/数据草稿，不升级/改数据库或改成普通课绕过。
+
+## 9. 当前可写入契约
+
+先确认 `capabilities.content.course_package_schemas` 包含 `studyflow.course-package/2`，以及英语方法存在。以[完整合成样例](../examples/english-course-package.json)为合法形状参考，不照搬样例课程内容。
+
+- 顶层继续使用 `schema/package_id/plan_line/course/lessons`；`course.learning_mode="english"`。不是新增独立 `english_items` 顶层数组。
+- 每个 lesson 是训练组，保留 `blocks` 教学讲解和 `exercises` 有序训练。整课最多500项、每项1—80词位；至少一项训练/组。
+- 每个 exercise 内必须有 `english.target`；可选 `accepted_answers`（最多12条）、`evaluation_mode`（默认`local_exact`）、`case_sensitive`（默认false）、`phonetic/gloss/explanation`、`objective_ids`（最多20个稳定ID）。其他字段拒绝。
+- 本地模式按整句变体判定，忽略规范化的空白/边缘标点；词内缩写/连字符保留。首版每个变体必须与目标有相同词位数；不同句式、语义等价表达用`agent`，不能靠组合各变体单词凑答案。
+- 教学讲解首次定义新概念，并由概览或本组讲解入口渲染；不能只登记一串缺少目标和前置的句子。发音不是JSON里的任意URL；词典由软件从冻结目标解析。作者辅助信息可为空，不能伪造词典结果。
+- `plan_line`名称引用既有计划；通过 `course validate-package`、获授权后 `course import-package`，再 `course detail` 与 `plan detail` 回读。修订使用中立call的`course.update.preview/apply`，保护活跃轮次，首版禁止原地改变学习模式。
+- 外部AGENT默认不调用`course.english.save/check/submit`；这些是学习者写入，只有明确授权模拟测试时才可执行。
+
+能力缺失时停在草稿；不要升级安装版、改数据库或把英语训练伪装为普通课程绕过检查。
+
+## 10. Error-driven supplemental learning
+
+When explicitly requested to build progressive learning from English error evidence, use [supplemental authoring](english-remediation.md). This is a normal English course in a separate SUPPLEMENT grouping, not an expanded RetestTask or a new learning mode. Use `/4` progression and the dedicated preview/publish methods; preserve source evidence and mainline progress. Only plan notes appear in the English side tool; practice remains in the full training work surface. This publication contract is separate from the shared authoring-quality and presentation checks; publishing alone does not prove learning.
+
+
+## 1.8.0增量能力
+发现实际capabilities中的/5后，可沿用原普通/英语/递进契约并增加受控小节与本地答案解析。批改参考、提示证据、计划课程位置和新字段详见[course-experience-v5](course-experience-v5.md)。不支持时不使用新字段；安装与仓库副本不自动一致。

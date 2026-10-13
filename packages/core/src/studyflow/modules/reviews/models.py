@@ -9,6 +9,9 @@ from studyflow.infrastructure.persistence.base import Base, TimestampMixin
 class ReviewFeedback(TimestampMixin, Base):
     __tablename__ = "review_feedback"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    reference_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    reference_revision: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    reference_reason: Mapped[str] = mapped_column(Text, default="", server_default="")
     submission_id: Mapped[str] = mapped_column(ForeignKey("submissions.id"), index=True)
     summary: Mapped[str] = mapped_column(Text)
     issues_json: Mapped[str] = mapped_column(Text, default="[]", server_default="[]")
@@ -25,6 +28,8 @@ class ReviewFeedback(TimestampMixin, Base):
 class RetestTask(TimestampMixin, Base):
     __tablename__ = "retest_tasks"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    task_mode: Mapped[str] = mapped_column(String(20), default="general", server_default="general")
+    payload_json: Mapped[str] = mapped_column(Text, default="{}", server_default="{}")
     parent_submission_id: Mapped[str] = mapped_column(ForeignKey("submissions.id"), unique=True)
     study_session_id: Mapped[Optional[str]] = mapped_column(ForeignKey("course_study_sessions.id"), nullable=True)
     title: Mapped[str] = mapped_column(String(200))

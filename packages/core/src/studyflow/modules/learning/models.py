@@ -67,6 +67,7 @@ class CourseWriteReceipt(TimestampMixin, Base):
 
 
 class CourseStudySession(TimestampMixin, Base):
+    hint_tracking_enabled: Mapped[bool] = mapped_column(default=True, server_default="0")
     """One local learning round: immutable content plus mutable reading position."""
     __tablename__ = "course_study_sessions"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
@@ -80,6 +81,7 @@ class CourseStudySession(TimestampMixin, Base):
     resume_lesson_id: Mapped[Optional[str]] = mapped_column(String(36), nullable=True)
     version: Mapped[int] = mapped_column(Integer, default=1)
     reading_completed: Mapped[bool] = mapped_column(default=False)
+    abandoned_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     __table_args__ = (UniqueConstraint("course_id", "revision", name="uq_course_study_revision"),)
 
 
@@ -108,6 +110,8 @@ class PlanNotebook(TimestampMixin, Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     plan_line_id: Mapped[str] = mapped_column(ForeignKey("plan_lines.id"), unique=True)
     blocks_json: Mapped[str] = mapped_column(Text, default="[]")
+    format_version: Mapped[int] = mapped_column(Integer, default=1)
+    document_json: Mapped[str] = mapped_column(Text, default='{"entries":[]}')
     version: Mapped[int] = mapped_column(Integer, default=1)
 
 
@@ -127,3 +131,19 @@ class SubmissionChainLink(TimestampMixin, Base):
     child_id: Mapped[str] = mapped_column(ForeignKey("submissions.id"), unique=True)
     source: Mapped[str] = mapped_column(String(32), default="USER_ENGINE")
     reason: Mapped[str] = mapped_column(Text, default="")
+
+
+class PlanNotebookSource(TimestampMixin, Base):
+    """Verified immutable excerpts, independent of the lifetime of a study session."""
+    __tablename__ = "plan_notebook_sources"
+    notebook_id: Mapped[str] = mapped_column(ForeignKey("plan_notebooks.id"), primary_key=True)
+    id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    data_json: Mapped[str] = mapped_column(Text)
+
+
+class CourseReferenceView(TimestampMixin, Base):
+    """User viewing is evidence of hints, not a grading or mastery claim."""
+    __tablename__ = "course_reference_views"
+    study_session_id: Mapped[str] = mapped_column(ForeignKey("course_study_sessions.id"), primary_key=True)
+    exercise_id: Mapped[str] = mapped_column(ForeignKey("exercises.id"), primary_key=True)
+    reference_hash: Mapped[str] = mapped_column(String(64), primary_key=True)

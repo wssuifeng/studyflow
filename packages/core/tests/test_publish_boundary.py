@@ -10,6 +10,8 @@ GUARD = runpy.run_path(str(Path(__file__).resolve().parents[3] / "scripts/check_
     "apps/desktop/src/app/App.vue",
     "apps/desktop/scripts/test-course-answers.cjs",
     "apps/desktop/scripts/test-themes.cjs",
+    "apps/desktop/scripts/test-learning-experience.cjs",
+    "apps/desktop/scripts/test-notebook-v2.cjs",
     "apps/desktop/scripts/check-theme.cjs",
     "apps/desktop/src/shared/themes/builtin/sequence-light.json",
     "apps/desktop/src/shared/themes/builtin/white-violet.json",

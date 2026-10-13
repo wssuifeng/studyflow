@@ -88,3 +88,8 @@ test('theme shell contract fixes navigation and scroll ownership for course and 
  assert.match(runtime,/theme-shell-contract[^}]+grid-column:2!important/)
  assert.match(shell,/['\"]workspace-shell['\"]:\s*!props\.focus/)
 })
+
+test('导航展示契约兼容旧宽度和完整课程大纲，仍拒绝越界',()=>{
+ for(const width of [56,184,240,264,280])assert.equal(display.parseDisplay({...validDisplay(),navigation_width:width}).navigation_width,width)
+ for(const width of [55,281,264.5])assert.throws(()=>display.parseDisplay({...validDisplay(),navigation_width:width}))
+})

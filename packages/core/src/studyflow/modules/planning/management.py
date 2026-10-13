@@ -27,15 +27,31 @@ def edit_plan(service,plan_line_id,expected_version,idempotency_key,operation,va
             if "priority" in values and (isinstance(values["priority"],bool) or not isinstance(values["priority"],int) or not 1<=values["priority"]<=100):raise DomainError("INVALID_ARGUMENT","优先级范围1—100。")
             if values.get("status",plan.status) not in {"ACTIVE","PAUSED","ARCHIVED"}:raise DomainError("INVALID_ARGUMENT","status支持ACTIVE/PAUSED/ARCHIVED。")
             if values.get("focus_course_id") is not None and values["focus_course_id"] not in by_course:raise DomainError("INVALID_ARGUMENT","重点课程不属于计划。")
+            if values.get("focus_course_id") and by_course[values["focus_course_id"]].track!="MAIN":raise DomainError("INVALID_ARGUMENT","补充课程不替换主线重点课程。")
             for k,v in values.items():setattr(plan,k,v.strip() if k=="name" else v)
         elif operation=="REORDER":
+            items=[item for item in items if item.track=="MAIN"]
+            by_course={i.course_id:i for i in items}
             ordered=values.get("course_ids")
             if set(values)!={"course_ids"} or not isinstance(ordered,list) or len(ordered)!=len(items) or len(set(ordered))!=len(ordered) or set(ordered)!=set(by_course):raise DomainError("INVALID_ARGUMENT","重排必须包含计划内全部课程且不重复。")
             for n,cid in enumerate(ordered,1):by_course[cid].sequence_number=n
+        elif operation=="COURSE_POSITION":
+            if set(values)-{"course_id","position","reason"}:raise DomainError("INVALID_ARGUMENT","未知课程位置字段。")
+            item=by_course.get(values.get("course_id"))
+            if not item:raise DomainError("SCOPE_MISMATCH","课程不属于本计划。")
+            position=values.get("position");reason=values.get("reason","")
+            if position not in ("NORMAL","OTHER") or not isinstance(reason,str) or len(reason)>1000:raise DomainError("INVALID_ARGUMENT","位置NORMAL/OTHER，原因最多1000字符。")
+            if position=="OTHER" and not reason.strip():raise DomainError("INVALID_ARGUMENT","移入其他需说明原因。")
+            item.management_position=position;item.management_reason=reason.strip() if position=="OTHER" else ""
+            if position=="OTHER":
+                if plan.focus_course_id==item.course_id:plan.focus_course_id=None
+                for schedule in item.schedule_items:
+                    if schedule.status=="PLANNED" and schedule.scheduled_date>=date.today():schedule.status="CANCELLED"
         elif operation=="SCHEDULE":
             if set(values)-{"course_id","date","start_time","end_time"}:raise DomainError("INVALID_ARGUMENT","未知日程字段。")
             item=by_course.get(values.get("course_id"))
             if not item:raise DomainError("INVALID_ARGUMENT","课程不属于计划。")
+            if item.management_position=="OTHER":raise DomainError("COURSE_ON_HOLD","先恢复到正常课程，再安排学习。")
             try:
                 day=date.fromisoformat(values["date"])
                 start=time.fromisoformat(values["start_time"]) if values.get("start_time") else None
@@ -50,6 +66,7 @@ def edit_plan(service,plan_line_id,expected_version,idempotency_key,operation,va
             if not row or row.plan_course_item_id not in {i.id for i in items}:raise DomainError("INVALID_ARGUMENT","日程不属于计划。")
             if operation=="CANCEL_SCHEDULE":row.status="CANCELLED"
             else:
+                if row.plan_course_item.management_position=="OTHER":raise DomainError("COURSE_ON_HOLD","先恢复课程位置，再顺延安排。")
                 try:day=date.fromisoformat(values["date"])
                 except (KeyError,TypeError,ValueError) as exc:raise DomainError("INVALID_ARGUMENT","日期YYYY-MM-DD。") from exc
                 if db.scalar(select(CourseScheduleItem.id).where(CourseScheduleItem.plan_course_item_id==row.plan_course_item_id,CourseScheduleItem.scheduled_date==day,CourseScheduleItem.id!=row.id)):raise DomainError("VERSION_CONFLICT","目标日期已有安排。")

@@ -1,6 +1,6 @@
 """Atomic registration of a whole immutable content package; no direct Agent DB access."""
 from __future__ import annotations
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 import os
 import hashlib
 import json
@@ -21,7 +21,7 @@ from studyflow.shared.constants import AGENT_SOURCE
 def inspect_package(path):
     data=read_package(path)
     digest=hashlib.sha256(json.dumps(data,ensure_ascii=False,sort_keys=True,separators=(",",":")).encode()).hexdigest()
-    summary={"valid":True,"schema":SCHEMA,"package_id":data["package_id"],"content_hash":digest,"course_title":data["course"]["title"],"plan_line":data["plan_line"],"knowledge_total":len(data["lessons"]),"exercise_total":sum(len(l.get("exercises",[])) for l in data["lessons"]),"block_total":sum(len(l["blocks"]) for l in data["lessons"])}
+    summary={"valid":True,"schema":data["schema"],"learning_mode":data["course"].get("learning_mode","general"),"package_id":data["package_id"],"content_hash":digest,"course_title":data["course"]["title"],"plan_line":data["plan_line"],"knowledge_total":len(data["lessons"]),"exercise_total":sum(len(l.get("exercises",[])) for l in data["lessons"]),"block_total":sum(len(l["blocks"]) for l in data["lessons"])}
     return data,summary
 
 
@@ -57,11 +57,11 @@ def import_package(service,path):
         return _import_package(service,data,summary)
 
 
-def _import_package(service,data,summary):
+def _import_package(service,data,summary,db=None,track="MAIN"):
     base=f"content/course-packages/{data['package_id']}/"
     folder=base+summary['content_hash']+"/"
     expected=[folder+lesson['id']+".md" for lesson in data['lessons']]
-    with service.session() as db:
+    with (nullcontext(db) if db is not None else service.session()) as db:
         revisions=db.scalars(select(CourseRevision)).all()
         for revision in revisions:
             stored=json.loads(revision.package_json)
@@ -83,13 +83,13 @@ def _import_package(service,data,summary):
         if db.scalar(select(Course).where(Course.plan_line_id==plan.id,Course.title==data['course']['title'])):
             raise DomainError("COURSE_ALREADY_EXISTS","同计划中已有同名课程，未追加或覆盖。","新版本使用明确的新课程标题；旧课程及答案保留。")
         info=data['course']
-        course=Course(id=new_id(),plan_line_id=plan.id,title=info['title'],summary=info.get('summary',''),subject=info.get('subject',''),difficulty=info.get('difficulty',''),source_type=AGENT_SOURCE)
+        course=Course(id=new_id(),learning_mode=data["course"].get("learning_mode","general"),plan_line_id=plan.id,title=info['title'],summary=info.get('summary',''),subject=info.get('subject',''),difficulty=info.get('difficulty',''),source_type=AGENT_SOURCE)
         db.add(course);db.flush()
-        membership=ensure_course_membership(db,plan,course)
+        membership=ensure_course_membership(db,plan,course,track=track)
         ids=[]
         mapping={"lessons":{},"exercises":{}}
         for index,(source,relative) in enumerate(zip(data['lessons'],expected),1):
-            metadata={'course':info['title'],'lesson':source['title'],'plan_line':data['plan_line'],'summary':info.get('summary',''),'content_schema':SCHEMA,'package_id':data['package_id'],'package_hash':summary['content_hash'],'structured_lesson':source,'exercises':source.get('exercises',[])}
+            metadata={'course':info['title'],'lesson':source['title'],'plan_line':data['plan_line'],'summary':info.get('summary',''),'content_schema':data['schema'],'learning_mode':info.get('learning_mode','general'),'package_id':data['package_id'],'package_hash':summary['content_hash'],'structured_lesson':source,'exercises':source.get('exercises',[])}
             content='---\n'+yaml.safe_dump(metadata,allow_unicode=True,sort_keys=False)+'---\n'+fallback_markdown(source)
             target=safe_resolve(service.settings.workspace_root,relative)
             target.parent.mkdir(parents=True,exist_ok=True)
@@ -100,9 +100,13 @@ def _import_package(service,data,summary):
             lesson=Lesson(id=new_id(),semantic_id=source["id"],course_id=course.id,title=source['title'],position=index,markdown_path=relative,summary='')
             for pos,ex in enumerate(source.get('exercises',[]),1):
                 lesson.exercises.append(Exercise(id=new_id(),semantic_id=ex["id"],title=ex['title'],prompt=ex['prompt'],requirements=ex.get('requirements',''),exercise_type=ex.get('type','SHORT_ANSWER'),position=pos))
-            db.add(lesson);ids.append(lesson.id)
+            db.add(lesson);db.flush();ids.append(lesson.id)
             mapping["lessons"][source["id"]]=lesson.id
-            for ex,model in zip(source.get("exercises",[]),lesson.exercises):mapping["exercises"][source["id"]+":"+ex["id"]]=model.id
+            for ex,model in zip(source.get("exercises",[]),lesson.exercises):
+                mapping["exercises"][source["id"]+":"+ex["id"]]=model.id
+                if "english" in ex:
+                    from studyflow.modules.courses.english.models import EnglishItem
+                    db.add(EnglishItem(exercise_id=model.id,spec_json=json.dumps(ex["english"],ensure_ascii=False)))
             inspection=inspect_document(service.settings.workspace_root,relative)
             db.add(Document(id=new_id(),relative_path=relative,document_type='LESSON',status=inspection.status,file_size=inspection.file_size,modified_at=inspection.modified_at,content_hash=inspection.content_hash))
         db.flush()

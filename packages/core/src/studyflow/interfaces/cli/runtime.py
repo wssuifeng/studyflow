@@ -21,6 +21,8 @@ from .registry import app
 PROTOCOL_VERSION = "1.2"
 
 CAPABILITIES = [
+    {"name":"plan_notebook_read","command":"studyflow plan notebook-read --id <plan-id> --limit 100 --format json","kind":"read"},
+    {"name":"plan_notebook_apply","command":"studyflow plan notebook-apply --id <plan-id> --file <commands.json> --expected-version <n> --idempotency-key <key> --format json","kind":"write"},
     {"name": "course_package_validate", "command": "studyflow course validate-package --file <package.json> --format json", "kind": "read"},
     {"name": "course_package_import", "command": "studyflow course import-package --file <package.json> --format json", "kind": "write"},
     {"name":"plan_notebook_get","command":"studyflow plan notebook-get --id <plan-id> --format json","kind":"read"},
@@ -47,6 +49,7 @@ CAPABILITIES = [
     {"name": "submission_retest", "command": "studyflow submission retest --parent <id> --file <path> --format json", "kind": "write"},
     {"name": "snapshot_generate", "command": "studyflow snapshot generate --format json", "kind": "write"},
     {"name": "workspace_export", "command": "studyflow workspace export --output <backup.zip> --format json", "kind": "write"},
+    {"name": "workspace_purge_legacy_notes", "command": "studyflow workspace purge-legacy-notes --dry-run --format json", "kind": "maintenance"},
     {"name": "workspace_purge_courses", "command": "studyflow workspace purge-courses --dry-run --format json", "kind": "maintenance"},
     {"name": "workspace_import", "command": "studyflow workspace import --file <backup.zip> --target <workspace-dir> --format json", "kind": "write"},
 ]
@@ -220,13 +223,15 @@ def _dashboard_payload(data: dict[str, Any], target_date: date, settings: Settin
         "capabilities": [item["name"] for item in CAPABILITIES],
     }
 
-def service(*, read_only: bool = False) -> AppService:
+def service(*, read_only: bool = False, existing_only: bool = False) -> AppService:
     """Build the CLI service with an explicit read/write runtime boundary.
 
     Read-only commands must be usable from a workspace whose parent directory
     is not writable. They therefore do not create a lease, create directories,
     or run schema migrations. Write commands keep the historical exclusive
-    lease and initialization path.
+    lease and initialization path. ``existing_only`` is reserved for narrow
+    maintenance commands: acquire the normal write lease, but never create or
+    migrate a database while deleting legacy data.
     """
     settings = Settings.from_env()
     from studyflow.infrastructure.leases import workspace_lease
@@ -235,13 +240,24 @@ def service(*, read_only: bool = False) -> AppService:
     if not read_only:
         lease = workspace_lease(settings.workspace_root)
         lease.__enter__()
+    engine = None
     try:
-        if not read_only:
+        if not read_only and not existing_only:
             settings.ensure_layout()
         engine = build_engine(settings)
-        if not read_only:
+        if existing_only:
+            from sqlalchemy import inspect
+            if engine.dialect.name == "sqlite" and engine.url.database != ":memory:":
+                if not engine.url.database or not Path(engine.url.database).is_file():
+                    raise DomainError("DATABASE_NOT_FOUND", "历史清理仅适用于已有工作区数据库。")
+            required = {"study_notes", "study_note_receipts", "event_logs"}
+            if not required.issubset(inspect(engine).get_table_names()):
+                raise DomainError("SCHEMA_INCOMPATIBLE", "当前数据库缺少旧草稿清理所需表；未创建或迁移数据库。")
+        if not read_only and not existing_only:
             init_db(engine)
     except Exception:
+        if engine is not None:
+            engine.dispose()
         if lease is not None:
             lease.__exit__(None, None, None)
         raise

@@ -1,8 +1,8 @@
 ---
 name: studyflow-agent
-description: Use the local StudyFlow CLI from any external Agent or script to discover the workspace, inspect current learning state, create or import courses, process review queues, and write lifecycle-safe feedback. Use when operating an explicit StudyFlow data workspace, including an installed desktop app-data workspace; do not use it for direct database access or unrelated project files.
+description: Use the local StudyFlow CLI from any external Agent or script to discover the workspace, inspect current learning state, create or import courses, process review queues, and write lifecycle-safe feedback. Use when operating an explicit StudyFlow data workspace, including an installed desktop app-data workspace, or maintaining explicitly authorized course-authoring materials and bounded vocabulary selections; keep material and data roots separate and never access databases directly.
 metadata:
-  version: "2.0.0"
+  version: "2.7.0"
 ---
 
 # StudyFlow Agent
@@ -37,6 +37,10 @@ Use this skill when an external Agent needs to operate StudyFlow. The CLI is Age
 
 The stable response envelope is in [CLI contract](references/cli-contract.md). App 1.7.0 includes an installed `binaries/studyflow.exe` from the same frozen Core as Engine. No source tree, Python, venv or system PATH is required. Invoke its absolute path and set `STUDYFLOW_WORKSPACE` explicitly. Engine method names are not shell commands: the neutral CLI exposes `call --method <method> --file <request.json> --format json`. Discover `engine_capabilities` before using it; old named commands remain compatible. Read [closed-loop contract](references/closed-loop-contract.md) for compact queues, structured reviews, retests and course updates.
 
+## Course-authoring material governance
+
+For long-term course planning, rolling feedback, stage closure, workspace maintenance or bounded vocabulary selection, read [learning workspace governance](references/learning-workspace-governance.md). For purposeful vocabulary retrieval and reusable small tables, read [vocabulary selection](references/vocabulary-selection.md) and invoke the standard-library helper from this actual Skill's `scripts/authoring_workspace.py` only when a Python3.10+ runtime is available. These helpers operate an explicitly authorized material root, not AppData or databases. They do not require or generate a full upfront vocabulary partition, do not certify content quality, and never imply learner mastery. Keep examination-specific counts, real paths, phase budgets and private course material in the user's plan/task, not this shared Skill.
+
 ## Common workflows
 
 ### Inspect current work
@@ -67,6 +71,14 @@ Rules:
 - Import must target a new directory or an explicitly selected replacement directory. It validates archive paths, declared members, schema revision, database hash and Markdown hashes before switching; an existing target is renamed aside rather than deleted.
 - After import, run `doctor` and a read-only command such as `today` before any write operation. If import fails, preserve the original workspace and report the CLI error/next action.
 - The current format is for the managed SQLite/Markdown local workspace. Do not represent it as a formal MySQL production backup, and never put database credentials in archive metadata or commands.
+
+### Course-authoring task routing
+
+For plan/new-course/revision/audit work, read [shared authoring](references/course-authoring.md) and [presentation/content review](references/authoring-presentation.md), then the relevant task in [authoring prompts](references/authoring-prompts.md). English additionally reads [English authoring](references/english-course-authoring.md); error-driven supplemental publication reads english-remediation. Only batch/OCR/resume jobs need [workflow safeguards](references/authoring-workflows.md). Do not load all references for an ordinary queue review.
+
+Author a coherent learning sequence, not a fixed set of component types. Learner-visible prompt/requirements never carry the solution or grading-answer checklist. If discovered, use package /5 review_reference bound to stable exercise ID and frozen question fingerprint; this is local purpose separation, not account permissions. Read [current sections/reference/groups contract](references/course-experience-v5.md) before using it. Schema validation, content review and real rendering are distinct gates. A report or generated course does not authorize live course revision, learner submissions, vocabulary annotation or restarting a frozen round. Source facts and local resource limits remain in the task/plan, not universal Skill constraints.
+
+The repository Core now has English capabilities, but an older installed executable may not. Discover `content.course_package_schemas`, `content.learning_modes`, and `engine_capabilities` on the actual executable. If the required capability is absent, stop at blueprint/data draft; do not invent commands or masquerade an English course as a general package. Public/installed Skill copies do not automatically receive repository edits. Dictionary audio is the current first implementation; TTS generation remains outside this workflow.
 
 ### Structured teaching components (preferred for new authored courses)
 
@@ -168,7 +180,7 @@ Read the supporting contract only when exact fields, exit behavior, or a command
 
 - Default notes are one continuous plan notebook, optionally associated with a course/knowledge point. They are not answer drafts and never enter the review queue.
 - For an authorized note operation read [plan notebooks](references/plan-notebooks.md) and use the advertised plan notebook CLI commands. Preserve learner blocks and versions; never fabricate learner notes or turn them into answers.
-- [Legacy scratch notes](references/study-notes.md) remain supported for explicit old-data operations; do not silently migrate/delete them.
+- [Legacy scratch notes](references/study-notes.md) are a compatibility API, not a permanent preservation requirement or a normal UI feature. Explicit user authorization may delete them via the discovered `workspace purge-legacy-notes` workflow. Do not delete current plan notes, infer data-loss permission, or substitute course cleanup.
 
 
 ### Closed-loop and local management (app 1.7+)
@@ -176,3 +188,25 @@ Read the supporting contract only when exact fields, exit behavior, or a command
 Use [closed-loop contract](references/closed-loop-contract.md). A learner's correction is edited in the course, not the read-only feedback history. A new retest requires an explicit Agent-authored immutable task; never hide the question in prose. Course revisions use preview/apply without creating a second course. Plan management and notebook retrieval are versioned CLI capabilities.
 
 Installed Skill files are bundled beside the CLI under `binaries/studyflow-agent/`. Installing/upgrading the application does not silently overwrite public Agent Skill directories or change system PATH. A public copy synchronization is an explicit, backed-up maintenance action.
+
+## English courses and scoped mistakes
+
+For authoring, use the single [course-authoring task route](#course-authoring-task-routing) above. For English operation or review, read [English operations](references/english-operations.md) and discover the required methods on the actual executable; do not infer installed support from repository documentation.
+
+English uses the same plan → course → group structure, with controlled `english` fields on exercises in `studyflow.course-package/2`. Authoring never implies permission to open rounds, check learner answers, select their review items or submit on their behalf. Dictionary audio is the first implementation; TTS generation and detachable English answer editors are not available. For errors, explicitly scope by plan/notebook, domain and optional course, read summary → bounded list → required context only. See [English operations](references/english-operations.md) for discovered methods, query counts and retry boundaries.
+
+
+## Structured document display and safe restart (discover support first)
+
+For /3 structured courses, read [course packages](references/course-packages.md): `details` keeps its summary visible and folds only supplementary explanations. Teaching content is single-column by default; do not merge unrelated concepts or stretch paragraphs to work around old automatic pairing. This is a software display contract; teaching/content rules are maintained in the authoring references, not inferred from component count.
+
+The current-source settings copy includes verified `system.installation` CLI argv, an installed/repository Skill path and explicit workspace. An installed Skill is not automatically the public Skill. Keep argv paths intact and discover executable support; updating this repository Skill does not update the installed executable or public copy.
+
+`course.study.restart.preview` / `course.study.restart` are only for an explicitly authorized learner restart of an unsubmitted general round. Never use them automatically after a course edit. Read [closed-loop contract](references/closed-loop-contract.md); existing answers, uncertain writes and English training block the operation. History and notes are retained; old snapshots are not rewritten.
+
+## Error-driven English supplemental courses
+
+For an explicitly authorized request to create targeted English learning from recorded errors, read [supplemental authoring](references/english-remediation.md) and the English authoring reference. Discover `course.remediation.*` and supported package `/4` or `/5`; these are distinct from original-item retests. Publish through the supplemental preview/publish contract, not normal import. Never automatically generate, schedule, resolve source mistakes, or act as the learner.
+
+
+Notebook format 2: for an explicitly authorized note task, read [plan-notebooks.md](references/plan-notebooks.md). Use bounded `plan notebook-read` and atomic ID-addressed `plan notebook-apply`; never write a filtered projection back as a complete notebook. Repository Skill 2.5.0 does not imply the public or installed copy is synchronized.

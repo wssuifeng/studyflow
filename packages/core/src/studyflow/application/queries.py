@@ -1,6 +1,6 @@
 from __future__ import annotations
 from datetime import date
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.orm import joinedload
 from studyflow.modules.courses.presentation import course_summary
 from studyflow.shared.domain import TASK_KINDS, DomainError
@@ -55,29 +55,31 @@ class QueriesService(Service):
                 joinedload(PlanCourseItem.plan_line),
                 joinedload(PlanCourseItem.course).joinedload(Course.plan_line),
                 joinedload(PlanCourseItem.course).joinedload(Course.lessons.and_(Lesson.included == True)).joinedload(Lesson.exercises.and_(Exercise.included == True)),
-            ).join(Course, Course.id == PlanCourseItem.course_id).where(Course.status == "ACTIVE").order_by(PlanCourseItem.plan_line_id, PlanCourseItem.sequence_number)
+            ).join(Course, Course.id == PlanCourseItem.course_id).where(Course.status == "ACTIVE", PlanCourseItem.track == "MAIN", PlanCourseItem.management_position == "NORMAL").order_by(PlanCourseItem.plan_line_id, PlanCourseItem.sequence_number)
             if plan_line_id:
                 item_query = item_query.where(PlanCourseItem.plan_line_id == plan_line_id)
             plan_items = db.scalars(item_query).unique().all()
             schedule_query = select(CourseScheduleItem).options(
                 joinedload(CourseScheduleItem.plan_course_item).joinedload(PlanCourseItem.plan_line),
                 joinedload(CourseScheduleItem.plan_course_item).joinedload(PlanCourseItem.course).joinedload(Course.lessons.and_(Lesson.included == True)).joinedload(Lesson.exercises.and_(Exercise.included == True)),
-            ).where(CourseScheduleItem.scheduled_date == target_date, CourseScheduleItem.status != "CANCELLED").order_by(CourseScheduleItem.position, CourseScheduleItem.start_time)
+            ).where(CourseScheduleItem.scheduled_date == target_date, CourseScheduleItem.status != "CANCELLED").join(PlanCourseItem,CourseScheduleItem.plan_course_item_id==PlanCourseItem.id).where(PlanCourseItem.management_position=="NORMAL").order_by(CourseScheduleItem.position, CourseScheduleItem.start_time)
             if plan_line_id:
-                schedule_query = schedule_query.join(CourseScheduleItem.plan_course_item).where(PlanCourseItem.plan_line_id == plan_line_id)
+                schedule_query = schedule_query.where(PlanCourseItem.plan_line_id == plan_line_id)
             schedules = db.scalars(schedule_query).unique().all()
             by_course = {item.course.id: item for item in plan_items}
             total_by_plan: dict[str, int] = {}
             for item in plan_items:
                 total_by_plan[item.plan_line_id] = total_by_plan.get(item.plan_line_id, 0) + 1
-            exercise_ids = [exercise.id for item in plan_items for lesson in item.course.lessons for exercise in lesson.exercises]
+            exercise_ids = [exercise.id for item in plan_items+[s.plan_course_item for s in schedules] for lesson in item.course.lessons for exercise in lesson.exercises]
             latest = latest_attempts(db, exercise_ids)
             courses: list[Course] = []
             seen: set[str] = set()
             for schedule in schedules:
                 course = schedule.plan_course_item.course
                 if course.id not in seen:
-                    annotate_course(course, by_course.get(course.id), schedule, total_by_plan.get(schedule.plan_course_item.plan_line_id, 0), latest)
+                    member=schedule.plan_course_item
+                    total=total_by_plan.get(member.plan_line_id,0) if member.track=="MAIN" else db.scalar(select(func.count(PlanCourseItem.id)).where(PlanCourseItem.plan_line_id==member.plan_line_id,PlanCourseItem.track=="SUPPLEMENT"))
+                    annotate_course(course, member, schedule, total, latest)
                     courses.append(course)
                     seen.add(course.id)
             for item in plan_items:
@@ -94,9 +96,9 @@ class QueriesService(Service):
                 "waiting_retest": [x for x in pending if x.status == "RETEST_REQUIRED"],
                 "items": pending,
             }
-            current_course = next((course for course in courses if not course.learning_submitted), None)
+            current_course = next((course for course in courses if getattr(course,"plan_track","MAIN")=="MAIN" and not course.learning_submitted), None)
             for plan in plans:
-                focused=next((course for course in courses if course.id==plan.focus_course_id),None)
+                focused=next((course for course in courses if course.id==plan.focus_course_id and getattr(course,"plan_track","MAIN")=="MAIN"),None)
                 if focused:current_course=focused;break
             return {
                 "date": target_date,

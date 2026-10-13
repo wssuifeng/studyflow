@@ -11,12 +11,12 @@ from studyflow.modules.learning.repository import latest_attempts, annotate_cour
 
 
 
-def ensure_course_membership(db: Session, plan: PlanLine, course: Course) -> PlanCourseItem:
+def ensure_course_membership(db: Session, plan: PlanLine, course: Course, track: str = "MAIN") -> PlanCourseItem:
     item = db.scalar(select(PlanCourseItem).where(PlanCourseItem.plan_line_id == plan.id, PlanCourseItem.course_id == course.id))
     if item:
         return item
-    next_sequence = db.scalar(select(func.max(PlanCourseItem.sequence_number)).where(PlanCourseItem.plan_line_id == plan.id)) or 0
-    item = PlanCourseItem(id=new_id(), plan_line_id=plan.id, course_id=course.id, sequence_number=next_sequence + 1)
+    next_sequence = db.scalar(select(func.max(PlanCourseItem.sequence_number)).where(PlanCourseItem.plan_line_id == plan.id, PlanCourseItem.track == track)) or 0
+    item = PlanCourseItem(id=new_id(), plan_line_id=plan.id, course_id=course.id, sequence_number=next_sequence + 1, track=track)
     db.add(item)
     db.flush()
     return item
@@ -34,6 +34,8 @@ def build_plan_summary(db: Session, plan: PlanLine, target_date: date, include_c
         joinedload(PlanCourseItem.course).joinedload(Course.lessons.and_(Lesson.included == True)).joinedload(Lesson.exercises.and_(Exercise.included == True)),
         joinedload(PlanCourseItem.course).joinedload(Course.plan_line),
     ).where(PlanCourseItem.plan_line_id == plan.id).order_by(PlanCourseItem.sequence_number)).unique().all()
+    supplement_total = sum(item.track == "SUPPLEMENT" for item in items)
+    items = [item for item in items if item.track == "MAIN"]
     exercise_ids = [exercise.id for item in items for lesson in item.course.lessons for exercise in lesson.exercises]
     latest = latest_attempts(db, exercise_ids)
     schedules = []
@@ -48,21 +50,22 @@ def build_plan_summary(db: Session, plan: PlanLine, target_date: date, include_c
     current_course = None
     for item in items:
         annotate_course(item.course, item, schedule_by_item.get(item.id), len(items), latest)
-        if item.course.progress_percent >= 100:
+        if item.course.learning_group=="COMPLETED":
             completed_courses += 1
-        if current_course is None and not item.course.learning_submitted:
+        if current_course is None and item.course.learning_group=="PENDING":
             current_course = item.course
         courses.append(item.course)
     if plan.focus_course_id and plan.status == "ACTIVE":
-        current_course = next((c for c in courses if c.id == plan.focus_course_id),current_course)
+        current_course = next((c for c in courses if c.id == plan.focus_course_id and c.learning_group=="PENDING"),current_course)
     if plan.status != "ACTIVE": current_course = None
-    progress = round(completed_courses / len(courses) * 100) if courses else 0
+    normal_courses=[c for c in courses if c.learning_group!="OTHER"]
+    progress = round(completed_courses / len(normal_courses) * 100) if normal_courses else 0
     summary = {
         "id": plan.id,
         "name": plan.name,
         "priority": plan.priority, "version":plan.version, "focus_course_id":plan.focus_course_id,
         "status": plan.status,
-        "course_total": len(courses),
+        "course_total": len(courses), "supplement_total": supplement_total,
         "completed_courses": completed_courses,
         "progress_percent": progress,
         "current_course": current_course,

@@ -24,6 +24,12 @@ class AppService:
         self.settings = settings
         self.session_factory = session_factory
         self.runtime = Runtime(settings, session_factory, read_only=read_only)
+        from studyflow.application.english import EnglishApplication
+        from studyflow.modules.mistakes.query.service import MistakesService
+        from studyflow.modules.audio.resolution.service import AudioService
+        self.audio = AudioService(self.runtime)
+        self.english = EnglishApplication(self.runtime)
+        self.mistakes = MistakesService(self.runtime)
         self.planning = PlanningService(self.runtime)
         self.courses = CoursesService(self.runtime)
         self.learning = LearningService(self.runtime)
@@ -31,6 +37,8 @@ class AppService:
         self.documents = DocumentsService(self.runtime)
         self.queries = QueriesService(self.runtime)
         self.demo = DemoService(self.runtime)
+        from .english_remediation import EnglishRemediationApplication
+        self.remediation = EnglishRemediationApplication(self.runtime)
         self.workspace = WorkspaceService(self.runtime, self.queries.dashboard)
 
     def session(self, read_only: bool | None = None):
@@ -41,6 +49,14 @@ class AppService:
 
     def plan_notebook(self, plan_line_id):
         return self.learning.plan_notebook(plan_line_id)
+
+    def read_plan_notebook(self, plan_line_id, **filters):
+        from studyflow.modules.learning.notebook.queries import read
+        return read(self.learning, plan_line_id, **filters)
+
+    def apply_plan_notebook(self, plan_line_id, expected_version, idempotency_key, operations, new_sources=None, source="USER_WEB"):
+        from studyflow.modules.learning.notebook.commands import apply
+        return apply(self.learning, plan_line_id, expected_version, idempotency_key, operations, new_sources, source)
 
     def save_plan_notebook(self, plan_line_id, blocks, expected_version, idempotency_key, source="USER_WEB"):
         return self.learning.save_plan_notebook(plan_line_id, blocks, expected_version, idempotency_key, source)
@@ -120,14 +136,18 @@ class AppService:
     def course_detail(self, course_id: str) -> dict:
         return self.courses.course_detail(course_id)
 
-    def open_course_study(self, course_id, idempotency_key, new_version=False, review_round=False):
-        return self.learning.open_course_study(course_id, idempotency_key, new_version, review_round)
+    def open_course_study(self, course_id, idempotency_key, new_version=False, review_round=False, plan_line_id=None):
+        return self.learning.open_course_study(course_id, idempotency_key, new_version, review_round, plan_line_id)
 
     def course_study_detail(self, study_session_id):
         return self.learning.course_study_detail(study_session_id)
 
     def save_study_progress(self, study_session_id, lesson_id, progress_percent, last_position="", expected_version=None):
         return self.learning.save_study_progress(study_session_id, lesson_id, progress_percent, last_position, expected_version)
+
+    def legacy_note_cleanup(self, *, confirm=False, preview_token=None):
+        from studyflow.modules.learning.legacy_cleanup import cleanup
+        return cleanup(self.learning, confirm=confirm, preview_token=preview_token)
 
     def study_notes(self, study_session_id):
         return self.learning.study_notes(study_session_id)
@@ -165,8 +185,8 @@ class AppService:
     def list_pending_submissions(self) -> list[Submission]:
         return self.reviews.list_pending_submissions()
 
-    def write_review(self, submission_id: str, summary: str, detail_markdown: str='', issue_count: int=0, needs_revision: bool=False, idempotency_key: str | None=None, source: str=AGENT_SOURCE, *, decision: str | None=None, next_action: str='', issues: list | None=None) -> ReviewFeedback:
-        return self.reviews.write_review(submission_id, summary, detail_markdown, issue_count, needs_revision, idempotency_key, source, decision=decision, next_action=next_action, issues=issues)
+    def write_review(self, submission_id: str, summary: str, detail_markdown: str='', issue_count: int=0, needs_revision: bool=False, idempotency_key: str | None=None, source: str=AGENT_SOURCE, *, decision: str | None=None, next_action: str='', issues: list | None=None, reference_hash: str | None=None, reference_revision: int | None=None, reference_reason: str='') -> ReviewFeedback:
+        return self.reviews.write_review(submission_id, summary, detail_markdown, issue_count, needs_revision, idempotency_key, source, decision=decision, next_action=next_action, issues=issues, reference_hash=reference_hash, reference_revision=reference_revision, reference_reason=reference_reason)
 
     def update_task_status(self, task_id: str, target: str, reason: str='', next_action: str='') -> Task:
         return self.planning.update_task_status(task_id, target, reason, next_action)

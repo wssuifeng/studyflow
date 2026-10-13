@@ -1,19 +1,24 @@
 {
   "name": "studyflow-desktop",
   "private": true,
-  "version": "1.7.0",
+  "version": "1.8.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
-    "test:learning": "node --test scripts/test-course-answers.cjs scripts/test-study-tools.cjs scripts/test-plan-notebook.cjs scripts/test-dock.cjs scripts/test-workspace-panel.cjs",
+    "test:learning": "node --test scripts/test-course-answers.cjs scripts/test-study-tools.cjs scripts/test-plan-notebook.cjs scripts/test-dock.cjs scripts/test-workspace-panel.cjs scripts/test-learning-experience.cjs scripts/test-notebook-v2.cjs scripts/test-q234.cjs",
     "test:themes": "node --test scripts/test-themes.cjs scripts/test-white-violet.cjs scripts/test-sequence-light.cjs scripts/test-workspace-shell.cjs",
-    "theme:check": "node scripts/check-theme.cjs"
+    "theme:check": "node scripts/check-theme.cjs",
+    "test:english": "node --test scripts/test-english.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
+    "@tiptap/core": "3.31.4",
+    "@tiptap/pm": "3.31.4",
+    "@tiptap/starter-kit": "3.31.4",
+    "@tiptap/vue-3": "3.31.4",
     "vue": "^3.5.13"
   },
   "devDependencies": {

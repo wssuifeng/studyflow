@@ -1,4 +1,4 @@
-# Closed-loop CLI contract · app/Core 1.7.0, Skill 2.0.0
+# Closed-loop CLI contract · app/Core 1.7.0, repository Skill 2.1.0
 
 ## Discovery and transport
 
@@ -35,3 +35,18 @@ After RETEST_REQUIRED, publish `review.retest.publish`: parent_submission_id, ti
 ## Uncertain outcomes
 
 ENGINE_TIMEOUT/ENGINE_UNCONFIRMED/CONNECTION_FAILED means a write may have committed. Preserve the original payload/key and inputs. Read back or retry the exact same payload; never generate a fresh key to retry an uncertain write. ENGINE_BUSY explicitly means that request was not dispatched. IDEMPOTENCY_KEY_CONFLICT is a changed request; IDEMPOTENCY_UNVERIFIABLE is legacy history without a verifiable payload hash and requires readback, not false success. Historical branching returns SUBMISSION_BRANCH_CONFLICT. Resolve only with explicit authorization using submission.resolve-branch, parent_submission_id, child_submission_id and audit reason; no record is deleted.
+
+## English and errors
+
+For current-source English capabilities read [English operations](english-operations.md), including exercise extensions, frozen training, original-item retests and plan/domain-scoped mistakes. Installed app1.7.0 artifacts built before this work do not acquire English support by updating a Skill file. Discover the executable's capabilities. New-sentence English migration retests, TTS registration and English detached answer editors remain unsupported; do not apply the ordinary retest editor instructions to an English task by assumption.
+
+
+## Explicit safe restart of a general round
+
+Not a publishing workflow and not course deletion. Only with learner authorization:
+
+1. `course.study.restart.preview` with study_session_id. Read can_restart, blocked_reasons, expected_version and expected_content_hash. It does not acquire a writer lease or close the round.
+2. The desktop coordinates all editors; do not use CLI to bypass unsaved/uncertain input in open windows. A CLI actor cannot inspect unsubmitted editor memory, so request desktop confirmation rather than inferring safety from low reading percent.
+3. `course.study.restart` uses exactly study_session_id, expected_version, expected_content_hash and a stable idempotency_key. Any draft (including empty), answer-write receipt, submission or English training record blocks restart. A changed version/source rejects without ending the old round.
+4. Success returns the new frozen round; the old has study_status ABANDONED, is_current=false, retained notes and immutable history. It does not mean passed or mastered. Late old writes are rejected.
+5. Uncertain response: preserve/retry original payload and key. Do not create another round with a new key. No automatic restart/cleanup to make new course formatting visible.

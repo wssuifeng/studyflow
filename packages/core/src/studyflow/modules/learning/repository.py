@@ -57,6 +57,7 @@ def annotate_course(course: Course, item: PlanCourseItem | None, schedule: Cours
         setattr(course,"learning_submitted",submitted)
     setattr(course, "planned_start", item.planned_start if item else None)
     setattr(course, "planned_end", item.planned_end if item else None)
+    setattr(course, "plan_track", item.track if item else "MAIN")
     setattr(course, "plan_sequence", item.sequence_number if item else None)
     setattr(course, "plan_total", total)
     setattr(course, "schedule_item", schedule)
@@ -65,3 +66,6 @@ def annotate_course(course: Course, item: PlanCourseItem | None, schedule: Cours
     setattr(course, "exercise_total", getattr(course,"frozen_exercise_total",len(exercises)))
     setattr(course, "exercise_completed", completed)
     setattr(course, "progress_percent", round(completed / course.exercise_total * 100) if course.exercise_total else 100 if getattr(course,"study_status",None)=="READ_COMPLETED" else 0)
+    if item and db:
+        from studyflow.modules.planning.course_state import membership_state
+        membership_state(db,course,item)

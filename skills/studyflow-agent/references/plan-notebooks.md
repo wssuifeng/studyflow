@@ -1,38 +1,54 @@
-# Plan notebooks (app/Core 1.5.0 additive capability)
+# Plan notebook contract · format 2
 
-Read this for an authorized continuous learning-note operation. This is not the homework or legacy scratch-note contract.
+## Permission and ownership
 
-## Meaning and discovery
+Learner notes are not assignments. Authoring courses does not authorize writing, reorganizing or cleaning learner notes. Read only the explicitly selected plan/range. One plan owns one notebook/version, not one document/version per card. Main, plan and tool windows use the same notebook; ordinary course tools expose exercises/notes, English tools expose only notes. On opening, the UI defaults to the current knowledge point, with whole-course and whole-plan selectors.
 
-- One `PlanLine` owns one continuous notebook. Every block belongs to the plan. Optional `course_id` and `lesson_id` are associations for filtering, not separate documents.
-- Default reading covers the whole plan. Notes do not create submissions, review tasks or learning progress, and are not proof of mastery.
-- Discover support with `capabilities`, then use the plan ID from a supported plan read. Do not open a course round just to get a notebook.
+## Discovery and bounded read
 
-`studyflow plan notebook-get --id <plan-id> --format json`
+Run `version`, `capabilities`, `doctor`; inspect `system.schema` for `plan.notebook.read` / `plan.notebook.apply`. An installed older build may not support these repository capabilities. Do not guess support from this Skill's version.
 
-The result includes `plan_line_id, version, blocks, updated_at, legacy_notes`. An absent notebook reads as version 0 / empty blocks without creating a row. Legacy per-round scratch text stays intact; copying it into the new notebook is explicit, not an automatic migration.
+```
+studyflow plan notebook-read --id <plan-id> --course <course-id> --lesson <lesson-id> --limit 100 --format json
+studyflow plan notebook-read --id <plan-id> --entry <entry-id> --format json
+studyflow plan notebook-read --id <plan-id> --offset <next_cursor> --limit 100 --expected-version <first-page-version> --format json
+```
 
-## Authorized update
+Responses include `format_version, version, entries, sources, citations, total, next_cursor`. Maximum page size100. Keep scope and version unchanged while paging; a version conflict means restart reading. A format1 read is a lossless *projection*, not an implicit write or DB conversion. Unknown future formats refuse write. Never treat a page/filtered result as the whole plan.
 
-Provide UTF-8 JSON inside the selected data workspace:
+## Atomic commands
 
-`{"blocks":[{"id":"stable-block-id","text":"A learner-authorized note","course_id":null,"lesson_id":null}]}`
+Create a UTF-8 JSON file within the selected data workspace. Exact minimal example:
 
-`studyflow plan notebook-save --id <plan-id> --file <workspace-contained.json> --expected-version <read-version> --idempotency-key <stable-key> --format json`
+```json
+{"operations":[{"type":"insert_entry","entry":{"id":"authorized-note-1","scope":"PLAN","course_id":null,"lesson_id":null,"content":[{"type":"paragraph","content":[{"type":"text","text":"Learner-authorized note"}]}]}}],"new_sources":[]}
+```
 
-This replaces the whole block list under optimistic version control. Start with the read list and preserve other blocks. Empty `blocks` intentionally clears the notebook; never use it as a cleanup or conflict workaround. The command does not authorize writing a learner's understanding on their behalf.
+```
+studyflow plan notebook-apply --id <plan-id> --file <workspace-contained.json> --expected-version <read-version> --idempotency-key <stable-key> --format json
+```
 
-Each block has a unique ID (<=64 chars) and `text` (<=200,000 chars). Optional course/lesson associations must belong to the plan/course. Server-derived `scope, course_title, lesson_title, content_hash` are display/provenance metadata, not fields to invent.
+Operations:
+- `insert_entry`: entry has stable ID, scope `PLAN|COURSE|LESSON`, course/lesson IDs and content. Core derives title snapshots. Optional `after_id` is a same-scope anchor; null means first in that group, omitted means append in that group.
+- `replace_entry`: `entry_id, content` only. It does not change ownership or other records.
+- `remove_entry`: explicit `entry_id`; authorized removal only.
+- `move_entry`: `entry_id, scope, course_id, lesson_id` plus optional same-group `after_id`. It changes the primary ownership, not citation provenance.
 
-An excerpt additionally requires `quote, course_id, lesson_id, source_study_id`. Quote text must occur in that frozen lesson; live Markdown is not a substitute. The server records frozen titles/hash. Original Markdown and frozen HTML are never rewritten. Prefer the UI's select-text → note operation for learner excerpts.
+One transaction, one CAS, one receipt: any invalid node/source/anchor rejects the entire batch. Max1000 entries,1M characters,8MB document JSON,200K per entry; max2000 operations and100 source registrations per batch. Controlled blocks are paragraph, heading(level2/3), bulletList, orderedList, listItem and hardBreak; text marks are bold/italic/code/citation. Do not send arbitrary HTML, links, images, scripts or invented attributes.
 
-## Conflict / uncertain write
+## Immutable sources / editable excerpts
 
-- Same key + identical payload returns the original receipt. Reusing a key with changed blocks/version is `IDEMPOTENCY_KEY_CONFLICT`.
-- `VERSION_CONFLICT`: preserve the proposed local text and re-read. Ask for a merge/choice rather than overwrite another window/Agent. A deliberate merged update uses the new read version and a new key.
-- Unknown I/O outcome: keep exactly the original payload, expected version and key; retry that request only after health recovery. A new key is not a recovery mechanism.
-- Re-read the notebook after success; a saved note does not change the assignment queue or frozen study round.
+A source registration has `id, original, course_id, lesson_id, source_study_id` and optional `source_block_id`. Core checks against the actual frozen source, stores titles/hash and retains the immutable excerpt even if the full study snapshot is later unavailable. Never invent VERIFIED status or title/hash fields. Existing source IDs cannot be reused for changed provenance.
 
-## Desktop ownership
+A text `citation` mark carries exactly `{sourceId, occurrenceId}`. The current words live in the editable document; no duplicate current_text field. Copies/splits use fresh occurrence IDs, preserving the source ID. Editing the text is allowed; Core derives ORIGINAL/PARTIAL/EDITED with NFC/newline normalization only. Punctuation/case are not ignored. Old sources that cannot be verified are explicitly LEGACY_UNVERIFIED, not silently upgraded to verified.
 
-A detached note tab follows the main course while still displaying the entire plan's notebook by default. Main and tool windows share data and versions; the tool is the editor while detached, and the dock shows a placeholder. A tool window is not a new course/study round. Final whole-course answer submission stays in the main window; note saves are separate.
+## Reliability / legacy guard
+
+Same key + identical payload returns the original receipt; a changed payload/version/key reuse rejects. An unknown result must be retried with the *exact original request*. VERSION_CONFLICT requires preserving local data and comparing stable record IDs; do not blindly overwrite, clear or append duplicate records. After explicit merge, use the new version and a fresh key.
+
+`notebook-get/save` remain format1 compatibility commands; save refuses a format2 notebook with NOTEBOOK_FORMAT_UPGRADE_REQUIRED. Never downgrade it. First apply atomically converts legacy quote+text into the same entry, retaining original blocks_json. It does not alter answers or learning rounds. JSON export preserves structure/provenance; Markdown/plain text are lossy.
+
+Public/installed Skill synchronization, real workspace migration and learner-note updates require separate explicit permission and evidence.
+
+
+Definite pre-validation rejection (INVALID_ARGUMENT or immutable/unsupported source/format) is not an unknown I/O outcome: correct the rejected content before an explicit new request. Preserve it for diagnostics/export. The desktop only preserves structured clipboard citations within the same plan and known provenance; cross-plan/other-window or external clipboard safely degrades to text with a notice. This does not claim native cross-window clipboard verification is complete.

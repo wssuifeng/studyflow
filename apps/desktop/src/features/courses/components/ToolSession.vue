@@ -22,6 +22,7 @@ const blocked=computed(()=>props.paused||!!answers.recovery.value||!!answers.pen
 async function load(){loading.value=true;failed.value=false;try{
  const detail=await studyApi.courseStudy(props.context.studyId)
  if(detail.course.id!==props.context.courseId || detail.course.plan_line_id!==props.context.planId)throw Error('工具窗口与冻结学习轮次不一致，未加载其他课程。')
+ if(detail.course.learning_mode==='english'&&props.tool!=='notes')throw Error('英语训练使用完整学习界面，独立工具仅支持笔记。')
  if(!alive)return
  data.value=detail;if(props.tool==='notes'&&!await notebook.load())throw Error('计划笔记未能读取，请重试加载。');if(props.tool!=='notes'&&!await answers.load())throw Error('本轮作答状态未能读取，请重试加载。')
  if(!alive)return
@@ -50,9 +51,9 @@ onMounted(load)
  <div v-if="loading" class="loading-state" role="status">正在打开共享的冻结课程…</div>
  <div v-else-if="failed" class="error-state"><p>工具内容未能加载；没有创建新的学习轮次。</p><button class="secondary-button" @click="load">重试加载</button></div>
  <template v-else-if="data">
-  <header class="tool-course-context"><span>{{context.planTitle||data.course.plan_line}}</span><h2>{{data.course.title}}</h2><label class="tool-knowledge-select">{{tool==='notes'?'关联知识点':'浏览知识点'}}<select :value="index" :disabled="paused" @change="select(Number(($event.target as HTMLSelectElement).value))"><option v-for="(lesson,i) in data.lessons" :key="lesson.id" :value="i">{{i+1}} · {{lesson.title}}</option></select></label><p v-if="tool==='notes'">全计划连续笔记 · 课程关联不拆分笔记</p></header>
+  <header v-if="tool!=='notes'" class="tool-course-context"><span>{{context.planTitle||data.course.plan_line}}</span><h2>{{data.course.title}}</h2><label class="tool-knowledge-select">浏览知识点<select :value="index" :disabled="paused" @change="select(Number(($event.target as HTMLSelectElement).value))"><option v-for="(lesson,i) in data.lessons" :key="lesson.id" :value="i">{{i+1}} · {{lesson.title}}</option></select></label></header>
   <div v-if="answers.recovery.value && tool==='exercises'" class="notebook-alert"><p>本窗口有未保存的作答，需要你确认。</p><button class="text-button" @click="answers.restoreCache">恢复</button><button class="text-button" @click="exportUnsaved">导出</button><button class="text-button" @click="answers.discardCache">使用工作区版本</button></div>
-  <div class="native-tool-content"><CourseToolContent :tool="tool" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notebook" :plan-title="context.planTitle||data.course.plan_line||undefined" :course-id="context.courseId" @select="select" @section="(i,b)=>emitTo('main','studyflow-focus-section',{lessonId:data!.lessons[i].id,blockId:b,studyId:context.studyId})"/></div>
+  <div class="native-tool-content" :data-tool="tool"><CourseToolContent :tool="tool" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notebook" :plan-title="context.planTitle||data.course.plan_line||undefined" :course-id="context.courseId" @select="select" @section="(i,b)=>emitTo('main','studyflow-focus-section',{lessonId:data!.lessons[i].id,blockId:b,studyId:context.studyId})"/></div>
   <footer v-if="tool==='exercises'" class="native-tool-footer"><span aria-live="polite">{{answers.busy.value?'正在保存':answers.saveFailed.value?'保存失败，输入已保留':answers.dirty.value?'等待自动保存':answers.savedAt.value?'已保存 '+answers.savedAt.value:'答案自动保存 · 整课提交在主窗口完成'}}</span><button v-if="answers.saveFailed.value||answers.pending.value" class="text-button" @click="retry">重试保存</button></footer>
  </template>
 </template>

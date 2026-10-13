@@ -72,6 +72,7 @@ def capabilities(format: str = typer.Option("text", "--format")) -> None:
         "app_version": __version__,
         **_discovery_metadata(settings),
         "capabilities": CAPABILITIES+[{"name":"engine_call","command":"call --method <method> --file <json> --format json","kind":"transport"}],
+        "content": __import__("studyflow.interfaces.engine.protocol",fromlist=["content_capabilities"]).content_capabilities(),
         "engine_capabilities": __import__("studyflow.interfaces.engine.protocol",fromlist=["all_capabilities"]).all_capabilities(),
         "next_action": "运行 studyflow doctor --format json，再按当前任务选择能力。",
     }, format)

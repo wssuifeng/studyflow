@@ -1,0 +1,8 @@
+{
+  "format": 1,
+  "current_stage_id": "S01",
+  "state_file": "governance/current.md",
+  "stage_file": "governance/stage-S01.json",
+  "index_file": "INDEX.md",
+  "max_chars": {"governance/current.md": 5000, "governance/stage-S01.json": 64000, "INDEX.md": 4000}
+}

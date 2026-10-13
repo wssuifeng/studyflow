@@ -1,0 +1,9 @@
+{
+  "format": 1,
+  "selection_id": "reading-basics",
+  "revision": 1,
+  "stage_id": "S01",
+  "objective": "Use one reviewed meaning in an observable task",
+  "sources": [{"id": "base", "path": "vocabulary/base.tsv", "sha256": "replace-with-query-source-sha256"}],
+  "items": [{"entry_id": "replace-with-query-entry-id", "role": "new", "sense": "v. read written words", "reason": "Necessary for the current objective", "meaning_verified": true, "evidence_refs": []}]
+}

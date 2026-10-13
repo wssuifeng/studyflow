@@ -1,0 +1,31 @@
+{
+  "schema": "studyflow.course-package/3",
+  "package_id": "synthetic-details",
+  "plan_line": "合成计划",
+  "course": {
+    "title": "位权与进位",
+    "learning_mode": "general"
+  },
+  "lessons": [
+    {
+      "id": "binary",
+      "title": "理解二进制位权",
+      "blocks": [
+        {
+          "id": "definition",
+          "type": "concept",
+          "title": "先理解位权",
+          "body": "位权是该位一个单位所代表的数值。"
+        },
+        {
+          "id": "binary-detail",
+          "type": "details",
+          "title": "为什么位权是二的幂",
+          "summary": "相邻两位的位权相差两倍。",
+          "body": "### 推导\n每一位只有 0 或 1，向高位进位后表示两个低位单位。"
+        }
+      ],
+      "exercises": []
+    }
+  ]
+}

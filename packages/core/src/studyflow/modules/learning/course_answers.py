@@ -103,6 +103,8 @@ def write_answers(service, course_id: str, answers, operation: str, idempotency_
             raise DomainError("OBJECT_NOT_FOUND", "课程不存在。", "先读取 course.detail 确认课程 ID。")
         from .study_sessions import current_study, require_study, exercise_ids, study_attempts
         study = require_study(db, study_session_id, course_id, active=True) if study_session_id is not None else current_study(db, course_id)
+        if study and json.loads(study.snapshot_json)["course"].get("learning_mode")=="english":
+            raise DomainError("ENGLISH_ENDPOINT_REQUIRED","英语答案需使用course.english保存、检查与确认，不能绕过规则。")
         ids = exercise_ids(study) if study else list(db.scalars(select(Exercise.id).join(Lesson).where(Lesson.course_id == course_id, Lesson.included == True, Exercise.included == True)).all())
         if not seen.issubset(set(ids)):
             raise DomainError("INVALID_ARGUMENT", "答案包含不属于本课的练习。", "仅提交当前课程的题目。")

@@ -1,0 +1,12 @@
+<script setup lang="ts">
+import {computed,ref} from 'vue'
+import TeachingContent from '../../courses/components/TeachingContent.vue'
+import {engineCall} from '../../../shared/api'
+import {navigate,makeRequestKey,reportError,notify} from '../../../shared/ui'
+import type {CourseDetailData,CourseStudyDetailData} from '../../../shared/api/contracts'
+const props=defineProps<{data:CourseDetailData;planLineId?:string}>()
+const busy=ref(false)
+const count=computed(()=>props.data.lessons.reduce((n,l)=>n+l.exercises.length,0))
+async function start(reviewRound=false){busy.value=true;try{const opened=await engineCall<CourseStudyDetailData>('course.study.open',{course_id:props.data.course.id,idempotency_key:makeRequestKey('english-open'),review_round:reviewRound,new_version:false,...(props.planLineId?{plan_line_id:props.planLineId}:{})});if((opened as CourseStudyDetailData & {scope_notice?:string}).scope_notice)notify((opened as CourseStudyDetailData & {scope_notice:string}).scope_notice,'info');await navigate('/english/'+opened.study.id)}catch(e){reportError(e)}finally{busy.value=false}}
+</script>
+<template><section class="english-overview"><button class="back-button" @click="navigate((planLineId||data.course.plan_line_id)?'/plan/'+(planLineId||data.course.plan_line_id):'/plans')">← 返回学习计划</button><span class="english-kicker">ENGLISH · 词句训练</span><h2>{{data.course.title}}</h2><p class="english-intro">{{data.course.summary}}</p><div class="english-course-meta"><span>{{data.lessons.length}} 个训练组</span><span>{{count}} 个训练项</span><span>本地保存 · 随时继续</span></div><div class="english-overview-actions"><button class="primary-button" :disabled="busy" @click="start()">{{busy?'正在恢复…':'开始 / 继续训练 →'}}</button><button class="text-button" :disabled="busy" @click="start(true)">开启新的回顾轮次</button></div><ol class="english-group-list"><li v-for="lesson in data.lessons" :key="lesson.id"><div><h3>{{lesson.title}}</h3><p>{{lesson.exercises.length}} 个训练项</p></div><span>{{lesson.exercises.map(x=>x.title).slice(0,3).join(' · ')}}</span><details v-if="lesson.content_blocks?.length" class="english-overview-teaching"><summary>阅读本组讲解</summary><TeachingContent :blocks="lesson.content_blocks.filter(b=>b.type!=='practice')" :exercises="lesson.exercises" :notes="[]" study-id="" :lesson-id="lesson.id" :blocked="true" :preference-scope="(data.workspace_key||data.course.id)+':preview:'+data.course.content_revision"/></details></li></ol><p class="muted">词典发音需要网络；不可用时仍可完成文字训练。课程完成与长期掌握分开记录。</p></section></template>

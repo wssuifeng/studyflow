@@ -169,3 +169,8 @@ Additive CLI commands: `plan notebook-get --id` and `plan notebook-save --id --f
 ## Structured packages (Core/app 1.6.0)
 
 `course validate-package` is side-effect-free; `course import-package` registers a complete validated course in one transaction. See [course package contract](course-packages.md) for limits, replay and component fields. `course detail` and frozen study details include optional `content_blocks`; legacy clients may use `rendered_html`. No new required fields were added to legacy commands.\n\n## Controlled course cleanup\n\n`workspace purge-courses` is a destructive maintenance capability, not a normal course-management command. It must be discovered from `capabilities`. Use `--dry-run --format json` first; only an explicitly authorized follow-up may use `--confirm --backup <verified-backup> --format json`. The response includes the removed course-owned counts, preserved plan-line boundary, document file results and warnings. A missing lease or write permission is a hard stop; never replace it with SQL, SQLite editing, ACL changes or database deletion.\n
+
+
+## Notebook format 2 (repository Skill 2.4.0)
+
+Discover `plan_notebook_read/apply`. `plan notebook-read` is paged and range/ID-addressed; `plan notebook-apply` accepts atomic operations with CAS/immutable sources. See [plan-notebooks.md](plan-notebooks.md). The earlier `notebook-save` section describes format1 compatibility only; it cannot overwrite a format2 notebook.

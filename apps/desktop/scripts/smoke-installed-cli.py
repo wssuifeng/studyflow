@@ -5,7 +5,7 @@ from hashlib import sha256
 ROOT=Path(__file__).resolve().parents[1]
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument("--cli",required=True);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument("--cli",required=True);parser.add_argument("--notebook-v2",action="store_true");args=parser.parse_args()
     cli=Path(args.cli).resolve()
     results=ROOT/"test-results/implementation-20261003";results.mkdir(parents=True,exist_ok=True)
     root=Path(tempfile.mkdtemp(prefix="独立 CLI 合成工作区-",dir=results)).resolve()
@@ -15,15 +15,20 @@ def main():
     commands=[]
     def run(*arguments,expect_ok=True):
         process=subprocess.run([str(cli),*arguments],cwd=str(root.parent),env=environment,capture_output=True,text=True,encoding="utf-8",timeout=60)
-        data=json.loads(process.stdout)
+        # Dedicated CLI commands emit structured errors on stderr; Engine call
+        # adapters keep their envelope on stdout. Both are documented contracts.
+        raw=process.stdout.strip() or process.stderr.strip()
+        try:data=json.loads(raw)
+        except json.JSONDecodeError as exc:
+            raise AssertionError((process.returncode,process.stdout,process.stderr)) from exc
         assert (process.returncode==0)==expect_ok,(process.returncode,process.stdout,process.stderr)
         assert data.get("ok")==expect_ok,data
         commands.append({"arguments":list(arguments[:3]),"ok":data.get("ok")})
         return data
-    version=run("version","--format","json");assert version["app_version"]=="1.7.0"
+    version=run("version","--format","json");assert version["app_version"]==__import__("studyflow").__version__
     caps=run("capabilities","--format","json");assert any(i.get("method")=="course.update.apply" for i in caps["engine_capabilities"])
     run("doctor","--format","json")
-    run("plan","create","--name","合成独立CLI计划","--format","json")
+    plan=run("plan","create","--name","合成独立CLI计划","--format","json")
     package={"schema":"studyflow.course-package/1","package_id":"frozen-cli-synthetic","plan_line":"合成独立CLI计划","course":{"title":"合成独立CLI课程"},"lessons":[{"id":"unit","title":"知识点","blocks":[{"id":"concept","type":"concept","title":"理解概念","body":"合成资料，不是真实学习内容。"}],"exercises":[{"id":"question","title":"练习","prompt":"解释合成概念。"}]}]}
     file=root/"package.json";file.write_text(json.dumps(package,ensure_ascii=False),encoding="utf-8")
     run("course","validate-package","--file",str(file),"--format","json")
@@ -40,9 +45,19 @@ def main():
     context=call("assignment.context",{"submission_ids":[sid]});assert len(context["contexts"])==1
     call("review.write",{"submission_id":sid,"summary":"合成通过","decision":"PASSED","idempotency_key":"frozen-review"})
     assert call("assignment.summary",{"history":True})["items"][0]["status"]=="PASSED"
+    if args.notebook_v2:
+        assert {"plan.notebook.read","plan.notebook.apply"}.issubset({item["method"] for item in caps["engine_capabilities"]})
+        note=root/"笔记命令.json"
+        note.write_text(json.dumps({"operations":[{"type":"insert_entry","entry":{"id":"frozen-v2-note","scope":"PLAN","course_id":None,"lesson_id":None,"content":[{"type":"paragraph","content":[{"type":"text","text":"独立CLI合成笔记"}]}]}}],"new_sources":[]},ensure_ascii=False),encoding="utf-8")
+        args_note=("plan","notebook-apply","--id",plan["id"],"--file",str(note),"--expected-version","0","--idempotency-key","frozen-v2-apply","--format","json")
+        applied=run(*args_note);assert applied["version"]==1
+        replay=run(*args_note);assert replay==applied
+        scoped=run("plan","notebook-read","--id",plan["id"],"--entry","frozen-v2-note","--limit","1","--expected-version","1","--format","json")
+        assert scoped["entries"][0]["id"]=="frozen-v2-note" and scoped["version"]==1
+        run("plan","notebook-read","--id",plan["id"],"--expected-version","0","--format","json",expect_ok=False)
     run("workspace","export","--output",str(root.parent/(root.name+".zip")),"--format","json")
     call("assignment.summary",{"limit":1000},expect_ok=False)
-    result={"ok":True,"source_env_removed":True,"system_path_only":True,"arbitrary_cwd":True,"unicode_workspace":True,"cli_sha256":sha256(cli.read_bytes()).hexdigest(),"commands":commands}
+    result={"ok":True,"source_env_removed":True,"system_path_only":True,"arbitrary_cwd":True,"unicode_workspace":True,"cli_sha256":sha256(cli.read_bytes()).hexdigest(),"notebook_v2_verified":args.notebook_v2,"commands":commands}
     (results/"installed-cli-result.json").write_text(json.dumps(result,ensure_ascii=False,indent=2),encoding="utf-8")
     print(json.dumps(result,ensure_ascii=False))
 if __name__=="__main__":main()

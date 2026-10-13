@@ -23,6 +23,25 @@ def workspace_export(
     except Exception as exc:
         fail(exc)
 
+@workspace_app.command("purge-legacy-notes")
+def workspace_purge_legacy_notes(
+    dry_run: bool = typer.Option(False, "--dry-run", help="只盘点旧草稿及其保存回执，不输出正文。"),
+    confirm: bool = typer.Option(False, "--confirm", help="确认删除预览范围内的全部旧版随手草稿历史。"),
+    preview_token: str | None = typer.Option(None, "--preview-token", help="dry-run 返回的清单校验值，执行删除时必填。"),
+    format: str = typer.Option("text", "--format"),
+) -> None:
+    """只清理旧版随手草稿；保留计划笔记和全部学习作答数据，不升级库。"""
+    if dry_run == confirm:
+        fail(DomainError("CONFIRMATION_REQUIRED", "必须单独使用 --dry-run 或 --confirm。"))
+    if confirm and not preview_token:
+        fail(DomainError("PREVIEW_REQUIRED", "删除前需运行 --dry-run 并传入其 preview_token。"))
+    try:
+        service = runtime.service(read_only=dry_run, existing_only=True)
+        result = service.legacy_note_cleanup(confirm=confirm, preview_token=preview_token)
+        output({"ok": True, "mode": "purge" if confirm else "dry-run", **result}, format)
+    except Exception as exc:
+        fail(exc)
+
 @workspace_app.command("purge-courses")
 def workspace_purge_courses(
     dry_run: bool = typer.Option(False, "--dry-run", help="只盘点课程及其关联数据，不执行删除。"),

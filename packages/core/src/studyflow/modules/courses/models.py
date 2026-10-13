@@ -10,6 +10,7 @@ class Course(TimestampMixin, Base):
     __tablename__ = "courses"
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     plan_line_id: Mapped[Optional[str]] = mapped_column(ForeignKey("plan_lines.id"), nullable=True, index=True)
+    learning_mode: Mapped[str] = mapped_column(String(20), default="general", server_default="general")
     title: Mapped[str] = mapped_column(String(200))
     summary: Mapped[str] = mapped_column(Text, default="")
     subject: Mapped[str] = mapped_column(String(120), default="", server_default="")

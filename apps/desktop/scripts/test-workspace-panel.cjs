@@ -1,7 +1,7 @@
 const test=require('node:test'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path'),vm=require('node:vm'),ts=require('typescript')
 function load(file,requireFn=require){const mod={exports:{}};vm.runInNewContext(ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src',file),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText,{module:mod,exports:mod.exports,require:requireFn,Symbol});return mod.exports}
 const state=load('features/courses/dock/state.ts'),{restoreDockLayout}=load('features/courses/dock/restore.ts',n=>n==='./state'?state:require(n))
-const {panelGeometry}=load('shared/layout/workspacePanel.ts')
+const {panelGeometry,navigationRailWidth}=load('shared/layout/workspacePanel.ts')
 test('新课程默认关闭，旧缓存宽度顺序保留但不擅自展开',()=>{assert.equal(state.normalizeDock().collapsed,true);const x=restoreDockLayout(JSON.stringify({collapsed:false,full:true,width:620,order:['notes','outline','exercises']}));assert.equal(x.collapsed,true);assert.equal(x.full,false);assert.equal(x.width,620);assert.equal(x.order[0],'notes');assert.equal(restoreDockLayout('{').collapsed,true)})
 test('打开工具显式取消收起，不因默认策略阻止用户操作',()=>{const s=state.activateTool(restoreDockLayout(null),'notes');assert.equal(s.collapsed,false);assert.equal(s.panes[0],'notes')})
 test('桌面三栏同时让出空间，阅读区保留最小宽度',()=>{for(const width of [900,1024,1279,1280,1440,1920]){const g=panelGeometry(width,820);assert.ok(width-g.navigation-g.width>=360);assert.ok(g.width>=280);assert.ok(g.width<=g.maxWidth)}})
@@ -29,3 +29,25 @@ test('主题 shell contract 不得覆盖打开工具后的三栏几何',()=>{
  assert.match(css,/\.app-shell\.focus-shell:not\(\.panel-open\)[\s\S]*grid-template-columns:minmax\(0,1fr\)!important/)
 })
 
+
+// Regression: a full course outline cannot fit in the old 184px navigation rail.
+test('白紫课程导航声明可读宽度，全部断点与工具使用相同几何',()=>{
+ const theme=JSON.parse(fs.readFileSync(path.join(__dirname,'../src/shared/themes/builtin/white-violet.json'),'utf8'))
+ assert.equal(theme.display.navigation_width,264)
+ for(const [viewport,expected] of [[800,64],[899,64],[900,240],[1024,240],[1279,240],[1280,264],[1440,264],[1920,264]]){
+  const navigation=navigationRailWidth(viewport,theme.display.navigation_width)
+  assert.equal(navigation,expected)
+  const geometry=panelGeometry(viewport,420,false,false,navigation)
+  assert.equal(geometry.navigation,navigation)
+  if(viewport>=900)assert.ok(viewport-geometry.navigation-geometry.width>=360)
+  assert.equal(panelGeometry(viewport,420,false,true,navigation).navigation,0)
+ }
+})
+test('共享导航适配保留自定义主题宽度，不将小导航强制扩大',()=>{
+ assert.equal(navigationRailWidth(1440,76),76)
+ assert.equal(navigationRailWidth(1024,184),184)
+ assert.equal(navigationRailWidth(800,60),60)
+ const shell=fs.readFileSync(path.join(__dirname,'../src/app/layout/AppShell.vue'),'utf8')
+ assert.match(shell,/panelGeometry\(viewport.value,panel.width,panel.full,!!props.focus,navigationWidth.value\)/)
+ assert.match(shell,/'--theme-nav-width':navigationWidth.value\+'px'/)
+})
