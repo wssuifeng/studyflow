@@ -67,6 +67,7 @@ jobs:
       - run: python apps/desktop/scripts/smoke-iteration.py
       - run: python apps/desktop/scripts/smoke-english-cli.py
       - run: python apps/desktop/scripts/smoke-english.py
+      - run: python apps/desktop/scripts/smoke-english-light.py
   windows-engine-regression:
     name: windows-engine-regression
     if: github.event_name == 'workflow_dispatch'

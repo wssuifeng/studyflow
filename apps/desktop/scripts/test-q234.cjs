@@ -16,3 +16,11 @@ test('Q4 course management uses shared plan groups and versioned existing mutati
  assert.ok(source.includes('COURSE_POSITION'));assert.ok(source.includes('expected_version:data.value.plan.version'));assert.ok(source.includes('notebook.save()'))
  assert.ok(!source.includes('delete-course'));assert.ok(source.includes('保留全部答案'))
 })
+
+test('explicit outline navigation invalidates deferred theme/dock scroll restoration',()=>{
+ const source=read('features/courses/components/CourseReader.vue')
+ assert.ok(source.includes('readingRestoreGeneration++'))
+ assert.ok(source.includes('generation!==readingRestoreGeneration'))
+ assert.match(source,/explicitReadingNavigation=true\s+cancelReadingScrollRestore\(\)/)
+ assert.ok(source.includes('!explicitReadingNavigation&&!restoringReadingScroll.value'))
+})

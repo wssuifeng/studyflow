@@ -20,7 +20,7 @@ class Runtime:
         commits. Callers use it for inventory/diagnostic paths that must work
         when the workspace parent is not writable.
         """
-        effective_read_only = self.read_only if read_only is None else read_only
+        effective_read_only = self.read_only or bool(read_only)
         lease = None
         if not effective_read_only:
             from studyflow.infrastructure.leases import workspace_lease
@@ -30,6 +30,7 @@ class Runtime:
         try:
             yield session
             if effective_read_only:
+                session.expunge_all()
                 session.rollback()
             else:
                 session.commit()

@@ -18,11 +18,22 @@ class StudyFlowEngine:
     stdout is reserved for one JSON response per input line. Diagnostics belong on stderr.
     """
 
-    def __init__(self, settings: Settings | None = None, service: AppService | None = None):
+    def __init__(self, settings: Settings | None = None, service: AppService | None = None, *, read_only: bool = False):
         self.settings = settings or (service.settings if service else Settings.from_env())
+        self.read_only = read_only
+        self._owns_service = service is None
         from studyflow.infrastructure.leases import workspace_lease
         self.engine = None
         self._lease = None
+        if read_only:
+            if service is not None and not service.runtime.read_only:
+                raise ValueError("Read-only Engine requires a read-only service")
+            if service is None:
+                from studyflow.infrastructure.persistence.readonly import open_read_engine
+                self.engine = open_read_engine(self.settings)
+                service = AppService(self.settings, build_session_factory(self.engine), read_only=True)
+            self.service = service
+            return
         lease = workspace_lease(self.settings.workspace_root)
         lease.__enter__()
         self._lease = lease
@@ -39,6 +50,8 @@ class StudyFlowEngine:
 
     def close(self) -> None:
         try:
+            if self._owns_service and hasattr(self, "service"):
+                self.service.audio.provider.close()
             if self.engine is not None:
                 self.engine.dispose()
                 self.engine = None
@@ -62,7 +75,7 @@ class StudyFlowEngine:
             return make_response(request_id, data=data)
         except Exception as exc:
             error = error_payload(exc)
-            if not isinstance(exc, DomainError):
+            if not isinstance(exc, DomainError) and not self.read_only:
                 diagnostic = record_engine_error(self.settings.log_root, exc)
                 error.update(diagnostic)
                 error["next_action"] += " 诊断日志暂时无法写入，请检查磁盘空间和工作区可写性。" if error.get("diagnostic_unavailable") else " 诊断见工作区.studyflow/logs；保留原请求与本机输入。"
@@ -71,6 +84,11 @@ class StudyFlowEngine:
     def _dispatch(self, method: str, params: dict[str, Any]) -> dict[str, Any]:
         from .schemas import validate
         params=validate(method,params)
+        if self.read_only:
+            from .protocol import all_capabilities
+            kinds = {item["method"]: item["kind"] for item in all_capabilities()}
+            if kinds.get(method) not in {"read", "diagnostic"}:
+                raise DomainError("READ_ONLY_OPERATION", "只读Engine不允许写入操作。")
         from .extensions import METHODS, dispatch
         if method in METHODS: return dispatch(self,method,params)
         if method == "system.version":

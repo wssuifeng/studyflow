@@ -37,11 +37,11 @@ doctor = call("doctor")
 assert doctor["healthy"] and doctor["workspace"]["writable"]
 method("system.schema", {"method": "course.english.save"})
 plan = call("plan", "create", "--name", "Synthetic English")
-for sample in ["course-package.json", "english-course-package.json"]:
+for sample in ["english-course-package-v6.json", "course-package.json", "english-course-package.json"]:
     source = ROOT / "skills/studyflow-agent/examples" / sample
     validated = call("course", "validate-package", "--file", str(source))
     assert validated["valid"]
-    if sample.startswith("english"):
+    if sample=="english-course-package.json":
         course = call("course", "import-package", "--file", str(source))
         detail = call("course", "detail", "--id", course["course_id"])
         assert detail["course"]["learning_mode"] == "english"

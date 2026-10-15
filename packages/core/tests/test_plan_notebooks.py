@@ -74,7 +74,7 @@ def test_engine_cli_notebook_contract(app_service,study_course,monkeypatch):
     assert {"plan.notebook.get","plan.notebook.save"}.issubset(methods)
     saved=engine.handle({"id":2,"method":"plan.notebook.save","params":{"plan_line_id":pid,"blocks":[{"id":"engine","text":"合成笔记"}],"expected_version":0,"idempotency_key":"engine-notebook"}})
     assert saved["ok"] and saved["data"]["version"]==1
-    monkeypatch.setattr(runtime,"service",lambda:app_service)
+    monkeypatch.setattr(runtime,"service",lambda **kwargs:app_service)
     path=app_service.settings.workspace_root/"notebook.json"
     path.write_text(json.dumps({"blocks":[{"id":"cli","text":"CLI 连续笔记"}]}),encoding="utf-8")
     runner=CliRunner()

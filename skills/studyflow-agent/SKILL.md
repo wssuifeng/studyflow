@@ -2,7 +2,7 @@
 name: studyflow-agent
 description: Use the local StudyFlow CLI from any external Agent or script to discover the workspace, inspect current learning state, create or import courses, process review queues, and write lifecycle-safe feedback. Use when operating an explicit StudyFlow data workspace, including an installed desktop app-data workspace, or maintaining explicitly authorized course-authoring materials and bounded vocabulary selections; keep material and data roots separate and never access databases directly.
 metadata:
-  version: "2.7.0"
+  version: "2.9.0"
 ---
 
 # StudyFlow Agent
@@ -74,7 +74,7 @@ Rules:
 
 ### Course-authoring task routing
 
-For plan/new-course/revision/audit work, read [shared authoring](references/course-authoring.md) and [presentation/content review](references/authoring-presentation.md), then the relevant task in [authoring prompts](references/authoring-prompts.md). English additionally reads [English authoring](references/english-course-authoring.md); error-driven supplemental publication reads english-remediation. Only batch/OCR/resume jobs need [workflow safeguards](references/authoring-workflows.md). Do not load all references for an ordinary queue review.
+For plan/new-course/revision/audit work, read [shared authoring](references/course-authoring.md) and [presentation/content review](references/authoring-presentation.md), use the bounded advisory helper documented there when reviewing a package, then the relevant task in [authoring prompts](references/authoring-prompts.md). English additionally reads [English authoring](references/english-course-authoring.md); error-driven supplemental publication reads english-remediation. Only batch/OCR/resume jobs need [workflow safeguards](references/authoring-workflows.md). Do not load all references for an ordinary queue review.
 
 Author a coherent learning sequence, not a fixed set of component types. Learner-visible prompt/requirements never carry the solution or grading-answer checklist. If discovered, use package /5 review_reference bound to stable exercise ID and frozen question fingerprint; this is local purpose separation, not account permissions. Read [current sections/reference/groups contract](references/course-experience-v5.md) before using it. Schema validation, content review and real rendering are distinct gates. A report or generated course does not authorize live course revision, learner submissions, vocabulary annotation or restarting a frozen round. Source facts and local resource limits remain in the task/plan, not universal Skill constraints.
 

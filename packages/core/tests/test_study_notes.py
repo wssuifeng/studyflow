@@ -36,7 +36,7 @@ def test_engine_and_cli_discover_and_round_trip_notes(app_service, study_course,
     saved = engine.handle({"id": 2, "method": "course.notes.save", "params": params})
     assert saved["ok"]
     assert engine.handle({"id": 3, "method": "course.notes.save", "params": params})["data"] == saved["data"]
-    monkeypatch.setattr(runtime, "service", lambda: app_service)
+    monkeypatch.setattr(runtime, "service", lambda **kwargs: app_service)
     monkeypatch.setenv("STUDYFLOW_WORKSPACE", str(app_service.settings.workspace_root))
     path = app_service.settings.workspace_root / "note.txt"
     path.write_text("CLI synthetic scratch", encoding="utf-8")
@@ -63,7 +63,7 @@ def test_cli_notes_file_boundaries(app_service, study_course, monkeypatch, kind,
     from studyflow.interfaces.cli import runtime
     cid, lessons, _ = study_course
     study_id = app_service.open_course_study(cid, "file-boundary-open")["study"]["id"]
-    monkeypatch.setattr(runtime, "service", lambda: app_service)
+    monkeypatch.setattr(runtime, "service", lambda **kwargs: app_service)
     root = app_service.settings.workspace_root
     candidate = root / "note.txt"
     if kind == "outside":

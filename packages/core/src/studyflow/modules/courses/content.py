@@ -12,6 +12,7 @@ ENGLISH_SCHEMA = "studyflow.course-package/2"
 DETAILS_SCHEMA = "studyflow.course-package/3"
 PROGRESSION_SCHEMA = "studyflow.course-package/4"
 STRUCTURED_SCHEMA = "studyflow.course-package/5"
+ENGLISH_TRAINING_SCHEMA = "studyflow.course-package/6"
 BLOCK_TYPES = {"details", "concept", "comparison", "steps", "example", "callout", "summary", "practice"}
 ID = re.compile(r"^[a-z][a-z0-9_-]{0,63}$")
 
@@ -41,7 +42,7 @@ def sequence(value, where, minimum=1, maximum=80):
     return value
 
 
-def validate_lesson(lesson, where="lesson", english=False, details=False, progression=False, structured=False):
+def validate_lesson(lesson, where="lesson", english=False, details=False, progression=False, structured=False, english_training=False):
     obj(lesson, where, {"id", "title", "blocks", "exercises"}, {"id", "title", "blocks"})
     ident(lesson["id"], where+".id"); text(lesson["title"], where+".title", 200)
     exercises=sequence(lesson.get("exercises", []),where+".exercises",0,100)
@@ -54,7 +55,7 @@ def validate_lesson(lesson, where="lesson", english=False, details=False, progre
             validate_reference(ex["review_reference"],loc+".review_reference")
         if english:
             from studyflow.modules.courses.english.contract import validate_spec
-            validate_spec(ex["english"],loc+".english",progression=progression)
+            validate_spec(ex["english"],loc+".english",progression=progression, training=english_training)
         ident(ex["id"],loc+".id")
         if ex["id"] in seen: invalid(loc,"重复题目id")
         seen.add(ex["id"])
@@ -105,22 +106,22 @@ def validate_lesson(lesson, where="lesson", english=False, details=False, progre
 
 def validate_package(data):
     obj(data,"package",{"schema","package_id","plan_line","course","lessons"},{"schema","package_id","plan_line","course","lessons"})
-    if not isinstance(data["schema"],str) or data["schema"] not in {SCHEMA,ENGLISH_SCHEMA,DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA}:invalid("schema","不支持的课程协议版本")
+    if not isinstance(data["schema"],str) or data["schema"] not in {SCHEMA,ENGLISH_SCHEMA,DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA}:invalid("schema","不支持的课程协议版本")
     ident(data["package_id"],"package_id");text(data["plan_line"],"plan_line",200)
-    course=obj(data["course"],"course",{"title","summary","subject","difficulty"}|({"learning_mode"} if data["schema"] in {ENGLISH_SCHEMA,DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA} else set()),{"title"})
+    course=obj(data["course"],"course",{"title","summary","subject","difficulty"}|({"learning_mode"} if data["schema"] in {ENGLISH_SCHEMA,DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA} else set()),{"title"})
     mode=course.get("learning_mode","general")
     if not isinstance(mode,str) or mode not in {"general","english"}:invalid("course.learning_mode","未知学习模式")
     text(course["title"],"course.title",200)
     for k,limit in [("summary",4000),("subject",120),("difficulty",32)]:text(course.get(k,""),"course."+k,limit,empty=True)
     ids=set()
     for i,lesson in enumerate(sequence(data["lessons"],"lessons",1,50)):
-        validate_lesson(lesson,f"lessons[{i}]",english=mode=="english",details=data["schema"] in {DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA},progression=data["schema"] in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA},structured=data["schema"]==STRUCTURED_SCHEMA)
+        validate_lesson(lesson,f"lessons[{i}]",english=mode=="english",details=data["schema"] in {DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA},progression=data["schema"] in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA},structured=data["schema"] in {STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA},english_training=data["schema"]==ENGLISH_TRAINING_SCHEMA)
         if mode=="english" and not lesson.get("exercises"):invalid("lessons","英语训练组至少一项训练")
         if lesson["id"] in ids:invalid("lessons","重复知识点id")
         ids.add(lesson["id"])
     if sum(len(lesson.get("exercises", [])) for lesson in data["lessons"]) > 500:
         invalid("lessons.exercises", "整课最多500道题")
-    if data["schema"] in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA}:
+    if data["schema"] in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA}:
         from .english.progression import validate_chains
         validate_chains(data)
     return data
@@ -171,8 +172,8 @@ def render_blocks(content, exercise_ids):
     meta,_=parse_front_matter(content)
     structured=meta.get("structured_lesson")
     if structured is None:return []
-    if meta.get("content_schema") not in {SCHEMA,ENGLISH_SCHEMA,DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA}:invalid("content_schema","不支持的组件版本")
-    validate_lesson(structured,english=meta.get("learning_mode")=="english",details=meta.get("content_schema") in {DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA},progression=meta.get("content_schema") in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA},structured=meta.get("content_schema")==STRUCTURED_SCHEMA)
+    if meta.get("content_schema") not in {SCHEMA,ENGLISH_SCHEMA,DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA}:invalid("content_schema","不支持的组件版本")
+    validate_lesson(structured,english=meta.get("learning_mode")=="english",details=meta.get("content_schema") in {DETAILS_SCHEMA,PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA},progression=meta.get("content_schema") in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA},structured=meta.get("content_schema") in {STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA},english_training=meta.get("content_schema")==ENGLISH_TRAINING_SCHEMA)
     sources=structured.get("exercises",[])
     if len(sources)!=len(exercise_ids):invalid("exercises","源题目与已登记题目不一致，请导入新包")
     mapping={source["id"]:dbid for source,dbid in zip(sources,exercise_ids)}

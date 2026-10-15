@@ -35,7 +35,7 @@ test('Agent entry routes both authoring modes and separates visible constraints 
 const root=path.resolve(__dirname,'../../..'),skill=path.join(root,'skills/studyflow-agent')
 const read=name=>fs.readFileSync(path.join(skill,name),'utf8')
 test('authoring entry is versioned and task references are all resolvable',()=>{
- const entry=read('SKILL.md');assert.match(entry,/version: "2\.7\.0"/);assert.match(entry,/Course-authoring task routing/)
+ const entry=read('SKILL.md');assert.match(entry,/version: "2\.9\.0"/);assert.match(entry,/Course-authoring task routing/)
  for(const file of ['course-authoring.md','authoring-presentation.md','authoring-prompts.md','authoring-workflows.md','english-course-authoring.md']){assert.ok(entry.includes(file));assert.ok(fs.statSync(path.join(skill,'references',file)).isFile())}
  for(const file of fs.readdirSync(path.join(skill,'references')).filter(x=>x.endsWith('.md'))){const text=read('references/'+file);for(const link of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)){if(/^https?:|^#/.test(link[1]))continue;assert.ok(fs.existsSync(path.resolve(skill,'references',link[1].split('#')[0])),file+': '+link[1])}}
 })

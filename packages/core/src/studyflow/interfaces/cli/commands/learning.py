@@ -9,17 +9,17 @@ from ..registry import submission_app
 @submission_app.command("get")
 def submission_get(submission_id: str = typer.Option(..., "--id"), format: str = typer.Option("text", "--format")) -> None:
     try:
-        output({"ok": True, "submission": runtime.service().submission_detail(submission_id)}, format)
+        output({"ok": True, "submission": runtime.service(read_only=True).submission_detail(submission_id)}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 @submission_app.command("list-pending")
 def submission_pending(format: str = typer.Option("text", "--format")) -> None:
     try:
-        queue = runtime.service().agent_queue()
+        queue = runtime.service(read_only=True).agent_queue()
         output({"ok": True, "submissions": queue["waiting_review"], "queue": queue}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 @submission_app.command("revise")
 def submission_revise(parent_submission: str = typer.Option(..., "--parent"), answer_file: Path = typer.Option(..., "--file", exists=True, readable=True), idempotency_key: str | None = typer.Option(None, "--idempotency-key"), format: str = typer.Option("text", "--format")) -> None:

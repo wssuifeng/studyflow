@@ -141,7 +141,11 @@ def _database_diagnostic(settings: Settings) -> dict[str, Any]:
 
     engine = None
     try:
-        engine = build_engine(settings)
+        if driver.startswith("sqlite"):
+            from studyflow.infrastructure.persistence.readonly import open_read_engine
+            engine = open_read_engine(settings, validate_schema=False)
+        else:
+            engine = build_engine(settings)
         with engine.connect() as connection:
             connection.execute(sql_text("SELECT 1"))
             tables = set(inspect(connection).get_table_names())
@@ -244,7 +248,11 @@ def service(*, read_only: bool = False, existing_only: bool = False) -> AppServi
     try:
         if not read_only and not existing_only:
             settings.ensure_layout()
-        engine = build_engine(settings)
+        if read_only:
+            from studyflow.infrastructure.persistence.readonly import open_read_engine
+            engine = open_read_engine(settings, validate_schema=not existing_only)
+        else:
+            engine = build_engine(settings)
         if existing_only:
             from sqlalchemy import inspect
             if engine.dialect.name == "sqlite" and engine.url.database != ":memory:":
@@ -287,14 +295,18 @@ def _safe_error_message(error: Exception) -> str:
             break
     return message
 
-def fail(error: Exception) -> None:
+def fail(error: Exception, *, read_only: bool = False) -> None:
     if isinstance(error, DomainError):
         payload = {"ok": False, "error_code": error.code, "message": error.message, "next_action": error.next_action}
     else:
         from studyflow.infrastructure.errors import database_error_payload
         from studyflow.infrastructure.diagnostics import record_engine_error
         safe = database_error_payload(error) or {"code":"INTERNAL_ERROR","message":"CLI内部错误，请查看诊断编号。","next_action":"运行doctor并保留诊断编号；不要修改真实数据库。"}
-        payload = {"ok":False,"error_code":safe["code"],"message":safe["message"],"next_action":safe["next_action"],**record_engine_error(Settings.from_env().log_root,error)}
+        diagnostic = {} if read_only else record_engine_error(Settings.from_env().log_root,error)
+        payload = {"ok":False,"error_code":safe["code"],"message":safe["message"],"next_action":safe["next_action"],**diagnostic}
+        if read_only:
+            payload["diagnostic_unavailable"] = True
+            payload["next_action"] = "只读失败未写入诊断文件；保留命令与错误信息并核对工作区。"
     # 错误输出保持结构化 JSON，便于任意 Agent/脚本稳定解析；人类可读信息仍包含在 message 字段中。
     typer.echo(json.dumps(payload, ensure_ascii=False, default=str), err=True)
     raise typer.Exit(code=1)

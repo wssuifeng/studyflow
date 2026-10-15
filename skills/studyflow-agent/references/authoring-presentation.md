@@ -47,3 +47,21 @@
 - 内容的版本/状态、保存/退出没有因展示修订被重置。
 
 软件缺陷登记给开发，不要求作者把课文改成巨块或伪造标题。课文流去卡片、块内折叠、路线图等未实施能力只能列建议。机器验证不代表学习者阅读舒适、学会或完成；真实课修订仍需本任务授权。
+
+
+## 连续课文的具体编排：不是长白文
+
+- 连续指同一学习问题有主线与内部层级，不指把概念、过程、例子、对比和纠错都摊在一个长body或全main小节中。前端统一行宽/字号/容器，作者负责语义结构，两者不能互相替代。
+- 先给出当前任务需要的定义与最小解释，在必要位置接过程steps、共同维度comparison、推导example、真实易错callout；仅适合叙述的部分留在concept。不要把“过程”只写成大段散文，或者把无真实顺序的概念硬塞进steps。
+- /5 concept使用body或sections之一。main必须覆盖首次定义、做题所需条件与关键推理；supplement承载可暂不读的完整机制、旁证、边界扩展，并提供常显summary。summary是帮助决定是否展开的解释，不是“详解见下方”。不能通过隐藏必要内容追求首屏短。折叠后逐题反查，常显正文不能只剩引子而把定义、分类或适用条件全藏起来。生成器必须按明确的小节ID和语义边界组织，禁止按某个字符串位置一次截走后半篇。
+- 一个main小节跨多个不同认知问题或连续超过约400汉字时，作为人工检查候选：先判断是否需要分有意义的小节、提炼主线或使用已有功能组件，不机械按字数切割、截断事实或全折叠。200—300字也不是固定配额，简单概念可更短，严谨推导可更长。
+- 示例“CPU如何执行”：常显main说明CPU/指令/寄存器分工；完整取指→译码→执行过程使用steps；PC/IR等共同维度使用comparison；必要指令格式常显；非必需的硬件时序细节作为带摘要的supplement。具体选择依据本课目标，不要求每课同一六件套。
+- 旧body课程不由前端猜测哪些段落可以隐藏。纯样式可作用旧轮次，body→sections或变更正文属于内容修订；已有轮次保留冻结材料，按实际CLI证据报告生效范围。
+- 呈现验收分结构、几何、视觉三层：DOM/validate/截图文件存在只证明前两者的一部分。执行模型无法查看截图时必须标记视觉未验，并交用户或有视觉能力的检查者确认；不能将文本快照“齐全”写成排版/可读性通过。至少查看双主题中文长文、正常阅读与右栏展开、折叠前后、窄窗截图，报告实际看过的范围。截图必须实际包含所验收的内容与状态；仅有外壳、加载空白或文件名声称展开不构成证据。文字样式问题还须检查标题margin、布局gap、段落间距的叠加，不以全局缩字替代层次设计。
+
+
+## Bounded advisory report
+
+Run the standard-library helper from this actual Skill root: `python scripts/authoring_quality.py --package <explicit-package.json>`. Optional `--blueprint`, `--sources`, `--related` and `--validation-receipt` read only named local JSON files; stdout is the report, not a course rewrite. The CLI still owns protocol validation. To bind its receipt, wrap the actual result as `{"package_sha256":"<input-bytes-hash>","result":<CLI-result>}`; unbound or stale receipts are not passes.
+
+Reports are deterministic and hash/rule-version bound. Long sections, matching numeric examples, placeholder references and normalized duplicates are review candidates, never automatic cutting or semantic verdicts. Empty optional phonetics are allowed; nonempty phonetics still need source/accent/license checks. Track human decisions against each report item in the task workspace, and do not report unread ranges or inferred sentence frames as reviewed.

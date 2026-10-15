@@ -142,7 +142,7 @@ def test_cli_exposes_whole_course_answers(app_service, multi_course, monkeypatch
     from typer.testing import CliRunner
     import studyflow.cli as cli
     course_id, ids = multi_course
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     file = tmp_path / "answers.json"
     file.write_text(json.dumps({"answers": entries(ids)}, ensure_ascii=False), encoding="utf-8")
     runner = CliRunner()

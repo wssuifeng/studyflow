@@ -8,7 +8,7 @@ from studyflow.shared.ids import new_id
 from studyflow.modules.learning.write_contract import digest
 from studyflow.modules.learning.models import CourseWriteReceipt
 from studyflow.modules.planning.models import PlanLine
-from studyflow.modules.courses.content import PROGRESSION_SCHEMA, STRUCTURED_SCHEMA
+from studyflow.modules.courses.content import PROGRESSION_SCHEMA, STRUCTURED_SCHEMA, ENGLISH_TRAINING_SCHEMA
 from studyflow.modules.courses.packages import inspect_package, package_lock, _import_package
 from studyflow.modules.courses.english.progression import validate_chains
 from studyflow.modules.mistakes.query.models import MistakeNotebook
@@ -27,7 +27,7 @@ class EnglishRemediationApplication(Service):
         if len(set(objective_ids))!=len(objective_ids):raise DomainError("INVALID_ARGUMENT","目标标签不能重复。")
         text(rationale,"rationale",4000);sequence(sources,"sources",1,30)
         data,summary=inspect_package(safe_resolve(self.settings.workspace_root,path))
-        if data["schema"] not in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA} or data["course"].get("learning_mode")!="english":raise DomainError("INVALID_ARGUMENT","补充学习需要 /4 或 /5 英语课程与显式递进标识。")
+        if data["schema"] not in {PROGRESSION_SCHEMA,STRUCTURED_SCHEMA,ENGLISH_TRAINING_SCHEMA} or data["course"].get("learning_mode")!="english":raise DomainError("INVALID_ARGUMENT","补充学习需要 /4、/5 或 /6 英语课程与显式递进标识。")
         if data["plan_line"]!=plan.name:raise DomainError("SCOPE_MISMATCH","课程包计划与请求不一致。")
         chains=validate_chains(data,required=True)
         declared={o for l in data["lessons"] for ex in l.get("exercises",[]) for o in ex["english"].get("objective_ids",[])}

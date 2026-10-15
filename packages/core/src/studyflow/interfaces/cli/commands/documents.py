@@ -8,9 +8,9 @@ from ..registry import document_app
 @document_app.command("read")
 def document_read(path: str = typer.Option(..., "--path"), format: str = typer.Option("text", "--format")) -> None:
     try:
-        output({"ok": True, **runtime.service().read_document(path)}, format)
+        output({"ok": True, **runtime.service(read_only=True).read_document(path)}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 @document_app.command("check")
 def document_check(relative_path: str = typer.Option(..., "--path"), format: str = typer.Option("text", "--format")) -> None:

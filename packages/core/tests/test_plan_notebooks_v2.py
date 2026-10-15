@@ -140,7 +140,7 @@ def test_engine_cli_v2_contract_and_readonly_paging(app_service,study_course,mon
     assert {"plan.notebook.read","plan.notebook.apply"}.issubset({c["method"] for c in caps["capabilities"]})
     assert caps["content"]["notebook"]["legacy_write_v2"] is False
     payload={"operations":[{"type":"insert_entry","entry":entry("cli","可编辑笔记")}],"new_sources":[]}
-    monkeypatch.setattr(runtime,"service",lambda:app_service)
+    monkeypatch.setattr(runtime,"service",lambda **kwargs:app_service)
     path=app_service.settings.workspace_root/"v2.json";path.write_text(json.dumps(payload),encoding="utf-8")
     runner=CliRunner();result=runner.invoke(app,["plan","notebook-apply","--id",pid,"--file",str(path),"--expected-version","0","--idempotency-key","v2-cli","--format","json"])
     assert result.exit_code==0,result.output

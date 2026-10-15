@@ -174,3 +174,10 @@ Additive CLI commands: `plan notebook-get --id` and `plan notebook-save --id --f
 ## Notebook format 2 (repository Skill 2.4.0)
 
 Discover `plan_notebook_read/apply`. `plan notebook-read` is paged and range/ID-addressed; `plan notebook-apply` accepts atomic operations with CAS/immutable sources. See [plan-notebooks.md](plan-notebooks.md). The earlier `notebook-save` section describes format1 compatibility only; it cannot overwrite a format2 notebook.
+
+
+## Read-only workspace discovery boundary
+
+Read queries must not initialize a database, create workspace directories, take a write lease or migrate a schema. On a missing database, expect `WORKSPACE_NOT_INITIALIZED` and confirm the intended data root; do not fix a path problem by running `init` in an arbitrary cwd. Existing incompatible schemas return `SCHEMA_UPGRADE_REQUIRED` or `NEWER_SCHEMA_UNSUPPORTED` without modification. `version/capabilities/system.schema` remain available before initialization. `doctor` may perform its documented bounded temporary writability probe, but does not initialize a database; a healthy read is not proof that a later write can succeed.
+
+This boundary applies to direct CLI read commands and `call` read capabilities. Explicit `init` and the desktop's controlled first-start path remain write operations. Confirm the actual installed build: changing a repository Skill or building a candidate CLI does not update an existing installation.

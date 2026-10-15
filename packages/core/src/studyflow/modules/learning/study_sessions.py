@@ -178,8 +178,9 @@ def open_study(service, course_id, key, new_version=False, review_round=False, p
             if current and not new_version and not review_round:
                 identifier = current.id
             else:
-                if current and outcome(db,current)["study_status"] not in {"PASSED","READ_COMPLETED"}:
-                    raise DomainError("COURSE_STUDY_IN_PROGRESS", "当前学习尚未收口，不能切换材料版本。", "完成当前作答与反馈后，再开始新版学习。")
+                from .round_policy import next_round_allowed, round_start_info
+                if current and not next_round_allowed(db, current):
+                    raise DomainError("COURSE_STUDY_IN_PROGRESS", "当前学习尚未收口，不能切换材料版本。", round_start_info(db, current, None)["new_round_blocker"])
                 text, digest = capture(service, course_id,plan_line_id)
                 if current and digest == current.content_hash and not review_round:
                     raise DomainError("COURSE_VERSION_UNCHANGED", "学习材料没有更新，无需开始新版。", "继续回看当前课程即可。")
