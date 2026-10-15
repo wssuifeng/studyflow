@@ -13,7 +13,7 @@ def test_plan_create_and_list_json(monkeypatch, app_service):
     import json
     import studyflow.cli as cli
 
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     runner = CliRunner()
     created = runner.invoke(app, ["plan", "create", "--name", "English CET-4", "--format", "json"])
     assert created.exit_code == 0, created.output
@@ -27,7 +27,7 @@ def test_course_import_command(monkeypatch, app_service, tmp_path):
     import studyflow.cli as cli
 
     plan = app_service.create_plan_line("Java Employment")
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     source = tmp_path / "lesson.md"
     source.write_text("---\ncourse: Java Basics\nlesson: References\nplan_line: Java Employment\n---\n# References", encoding="utf-8")
     result = CliRunner().invoke(app, ["course", "import", "--file", str(source), "--format", "json"])
@@ -41,7 +41,7 @@ def test_task_top_level_aliases(monkeypatch, app_service):
     import studyflow.cli as cli
 
     plan = app_service.create_plan_line("Task Alias Plan")
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     runner = CliRunner()
     created = runner.invoke(app, ["task", "create", "--title", "Read lesson", "--date", "2026-09-28", "--plan-line", plan.id, "--kind", "READING", "--format", "json"])
     assert created.exit_code == 0, created.output
@@ -57,7 +57,7 @@ def test_agent_queue_and_explicit_review_decision(monkeypatch, app_service):
 
     seeded = app_service.seed_demo()
     submission = app_service.submit_answer(seeded["exercise_id"], "答案")
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     runner = CliRunner()
     queued = runner.invoke(app, ["assignment", "queue", "--full", "--format", "json"])
     assert queued.exit_code == 0, queued.output
@@ -73,7 +73,7 @@ def test_agent_queue_json_preserves_chinese_text(monkeypatch, app_service):
 
     seeded = app_service.seed_demo()
     app_service.submit_answer(seeded["exercise_id"], "测试答案")
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     result = CliRunner().invoke(app, ["assignment", "queue", "--full", "--format", "json"])
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
@@ -124,7 +124,7 @@ def test_today_and_status_share_dashboard_contract(monkeypatch, app_service):
     import studyflow.cli as cli
 
     app_service.seed_demo()
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     runner = CliRunner()
     today = runner.invoke(app, ["today", "--format", "json"])
     status = runner.invoke(app, ["status", "--format", "json"])
@@ -147,7 +147,7 @@ def test_cli_reads_engine_submission_and_learning_progress(monkeypatch, app_serv
     seeded = app_service.seed_demo()
     monkeypatch.setattr(engine_module, "init_db", lambda engine: None)
     monkeypatch.setattr(engine_module, "build_engine", lambda settings: app_service.session_factory.kw["bind"])
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     engine = StudyFlowEngine(app_service.settings)
     try:
         submitted = engine.handle({
@@ -191,7 +191,7 @@ def test_cli_followup_writes_agent_source(monkeypatch, app_service, tmp_path):
     app_service.write_review(first.id, "需要修正", decision="REVISION_REQUIRED")
     answer = tmp_path / "revision.md"
     answer.write_text("Agent 修正版", encoding="utf-8")
-    monkeypatch.setattr(cli, "service", lambda: app_service)
+    monkeypatch.setattr(cli, "service", lambda **kwargs: app_service)
     result = CliRunner().invoke(app, ["submission", "revise", "--parent", first.id, "--file", str(answer), "--format", "json"])
     assert result.exit_code == 0, result.output
     child_id = json.loads(result.stdout)["submission_id"]

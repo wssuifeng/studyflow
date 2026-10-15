@@ -80,6 +80,7 @@ class ReviewRequest(Request):
 class RestartPreviewRequest(Request):
     study_session_id:str=Field(min_length=1)
 class RestartRequest(RestartPreviewRequest):
+    expected_training_version:int|None=Field(default=None,ge=0)
     expected_version:int=Field(ge=1)
     expected_content_hash:str=Field(pattern="^[a-f0-9]{64}$")
     idempotency_key:str=Field(min_length=1,max_length=160)

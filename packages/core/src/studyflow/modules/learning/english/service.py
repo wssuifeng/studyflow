@@ -33,6 +33,16 @@ def latest(db,study_id,exercise_id):
     return db.scalar(select(Submission).where(Submission.study_session_id==study_id,Submission.exercise_id==exercise_id,Submission.retest_task_id.is_(None)).order_by(Submission.attempt_number.desc(),Submission.created_at.desc(),Submission.id.desc()))
 
 
+def consecutive_errors(db,study_id,exercise_id):
+    count=0
+    attempts=db.scalars(select(EnglishCheckAttempt).where(EnglishCheckAttempt.study_session_id==study_id,EnglishCheckAttempt.exercise_id==exercise_id,EnglishCheckAttempt.retest_task_id.is_(None)).order_by(EnglishCheckAttempt.created_at.desc(),EnglishCheckAttempt.id.desc()))
+    for attempt in attempts:
+        matched=json.loads(attempt.result_json).get("matched")
+        if matched:break
+        if matched is False:count+=1
+    return count
+
+
 def get_view(db,study_id):
     study,frozen,items=context(db,study_id)
     session=state(db,study,frozen)
@@ -42,7 +52,7 @@ def get_view(db,study_id):
         detail=db.get(EnglishSubmissionDetail,row.id) if row else None
         attempt=db.get(EnglishCheckAttempt,detail.last_attempt_id) if detail and detail.last_attempt_id else None
         checked=json.loads(attempt.result_json) if attempt else {}
-        result.append({"exercise_id":ex["id"],"lesson_id":ex["lesson_id"],"title":ex["title"],"prompt":ex["prompt"],"group_title":ex["group_title"],"progression":ex["english"].get("progression"),"token_count":len(tokenize(ex["english"]["target"])),"evaluation_mode":ex["english"].get("evaluation_mode","local_exact"),"objective_ids":ex["english"].get("objective_ids",[]),"answer_text":row.answer_text if row else "","answer_version":row.version if row else 0,"submission_id":row.id if row else None,"status":row.status if row else "NOT_STARTED","matched":checked.get("matched",False),"differences":checked.get("differences",[]),"assisted":bool(detail and detail.assisted),"skipped":bool(detail and detail.skipped)})
+        result.append({"exercise_id":ex["id"],"lesson_id":ex["lesson_id"],"title":ex["title"],"prompt":ex["prompt"],"group_title":ex["group_title"],"progression":ex["english"].get("progression"),"token_count":len(tokenize(ex["english"]["target"])),"min_token_count":min(len(tokenize(x)) for x in [ex["english"]["target"],*ex["english"].get("accepted_answers",[])]),"max_token_count":max(len(tokenize(x)) for x in [ex["english"]["target"],*ex["english"].get("accepted_answers",[])]),"error_count":checked.get("error_count",0),"evaluation_mode":ex["english"].get("evaluation_mode","local_exact"),"objective_ids":ex["english"].get("objective_ids",[]),"answer_text":row.answer_text if row else "","answer_version":row.version if row else 0,"submission_id":row.id if row else None,"status":row.status if row else "NOT_STARTED","matched":checked.get("matched",False),"differences":checked.get("differences",[]),"assisted":bool(detail and detail.assisted),"skipped":bool(detail and detail.skipped)})
     course=dict(frozen["course"])
     from studyflow.modules.courses.models import Course
     live=db.get(Course,study.course_id)
@@ -84,8 +94,8 @@ def check(db,study_id,exercise_id,expected_version):
     if not row or row.status!="DRAFT" or row.version!=expected_version:raise DomainError("VERSION_CONFLICT","需要当前可编辑答案版本才能检查。")
     if not row.answer_text.strip():raise DomainError("ANSWER_EMPTY","先输入答案；跳过不算答错。")
     detail=db.get(EnglishSubmissionDetail,row.id)
-    if detail.evaluation_mode=="agent":result={"matched":None,"differences":[],"requires_agent":True,"checker_version":"agent"}
-    else:result=check_answer(item["english"],row.answer_text)
+    result=check_answer(item["english"],row.answer_text)
+    result["error_count"]=0 if result["matched"] else consecutive_errors(db,study_id,exercise_id)+1
     attempt=EnglishCheckAttempt(id=new_id(),study_session_id=study_id,exercise_id=exercise_id,submission_id=row.id,answer_text=row.answer_text,answer_version=row.version,rule_hash=rule_hash(item["english"],item["prompt"]),result_json=json.dumps(result,ensure_ascii=False),assisted=detail.assisted)
     db.add(attempt);db.flush();detail.last_attempt_id=attempt.id;detail.skipped=False
     session=state(db,study,frozen,True);session.version+=1
@@ -103,7 +113,7 @@ def reveal(db,study_id,exercise_id):
         row=latest(db,study_id,exercise_id);db.get(EnglishSubmissionDetail,row.id).assisted=True
     session=state(db,study,frozen,True);session.version+=1
     spec=item["english"]
-    return {"target":spec["target"],"tokens":tokenize(spec["target"]),"phonetic":spec.get("phonetic",""),"gloss":spec.get("gloss",""),"explanation":spec.get("explanation",""),"assisted":True,"answer_version":row.version,"state_version":session.version}
+    return {"target":spec["target"],"tokens":tokenize(spec["target"]),"phonetic":spec.get("phonetic",""),"gloss":spec.get("gloss",""),"explanation":spec.get("explanation",""),"sentence_parts":spec.get("sentence_parts",[]),"assisted":True,"answer_version":row.version,"state_version":session.version}
 
 
 def answer_view(db,study_id,exercise_id):
@@ -114,7 +124,7 @@ def answer_view(db,study_id,exercise_id):
     if not (row and row.status in {"PASSED","RECHECKED","REVIEWED"}) and not (detail and detail.assisted) and not (attempt and json.loads(attempt.result_json).get("matched")):
         raise DomainError("REFERENCE_HIDDEN","请先检查通过或显式查看答案。")
     spec=item["english"]
-    return {"target":spec["target"],"tokens":tokenize(spec["target"]),"phonetic":spec.get("phonetic",""),"gloss":spec.get("gloss",""),"explanation":spec.get("explanation","")}
+    return {"target":spec["target"],"tokens":tokenize(spec["target"]),"phonetic":spec.get("phonetic",""),"gloss":spec.get("gloss",""),"explanation":spec.get("explanation",""),"sentence_parts":spec.get("sentence_parts",[])}
 
 
 def submit(db,study_id,expected_versions=None):
@@ -128,7 +138,7 @@ def submit(db,study_id,expected_versions=None):
         detail=db.get(EnglishSubmissionDetail,row.id) if row else None
         attempt=db.get(EnglishCheckAttempt,detail.last_attempt_id) if detail and detail.last_attempt_id else None
         matched=bool(attempt and json.loads(attempt.result_json).get("matched"))
-        agent=bool(detail and detail.evaluation_mode=="agent")
+        agent=False
         if not row or detail.skipped or not row.answer_text.strip() or not (matched or agent):missing.append(item["id"])
         else:rows.append((row,agent))
     if missing:raise DomainError("COURSE_INCOMPLETE","还有未完成或未有效检查的训练项。","返回这些项："+",".join(missing))

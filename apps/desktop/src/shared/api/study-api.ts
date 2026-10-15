@@ -5,7 +5,7 @@ export type ExerciseReference={available:boolean;reason?:string;content_revision
 export const studyApi = {
   viewReference:(params:{study_session_id?:string;exercise_id?:string;submission_id?:string})=>engineCall<ExerciseReference>('exercise.reference.view',params),
   previewStudyRestart:(studyId:string)=>engineCall<StudyRestartPreview>('course.study.restart.preview',{study_session_id:studyId}),
-  restartStudy:(params:{study_session_id:string;expected_version:number;expected_content_hash:string;idempotency_key:string})=>engineCall<CourseStudyDetailData>('course.study.restart',params),
+  restartStudy:(params:{expected_training_version?:number;study_session_id:string;expected_version:number;expected_content_hash:string;idempotency_key:string})=>engineCall<CourseStudyDetailData>('course.study.restart',params),
   readPlanNotebook: (planId:string,filters:{offset?:number;limit?:number;expected_version?:number;course_id?:string;lesson_id?:string;entry_ids?:string[]}={}) => engineCall<NotebookReadResult>('plan.notebook.read',{plan_line_id:planId,...filters}),
   applyPlanNotebook: (params:NotebookApplyParams) => engineCall<NotebookApplyResult>('plan.notebook.apply',{...params}),
   planNotebook: (planId:string) => engineCall<PlanNotebookData>('plan.notebook.get', {plan_line_id:planId}),

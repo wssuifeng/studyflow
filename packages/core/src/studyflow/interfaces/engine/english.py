@@ -48,6 +48,9 @@ class DictionaryRequest(EnglishItemRequest):
     word_index:int|None=Field(default=None,ge=0,le=79)
     accent:Literal["en-US","en-GB"]="en-US"
 
+class EnglishMetadataRequest(EnglishItemRequest):
+    accent:Literal["en-US","en-GB"]="en-US"
+
 class RetestGetRequest(Request):
     task_id:str=Field(min_length=1)
 class RetestCheckRequest(RetestGetRequest):
@@ -64,7 +67,7 @@ class ArchiveApplyRequest(ScopeRequest):
     idempotency_key:str=Field(min_length=1,max_length=160)
     preview_hash:str=Field(pattern="^[a-f0-9]{64}$")
 
-SCHEMAS={"course.english.get":EnglishStudyRequest,"course.english.save":EnglishSaveRequest,"course.english.check":EnglishCheckRequest,"course.english.reveal":EnglishRevealRequest,"course.english.answer":EnglishItemRequest,"course.english.submit":EnglishSubmitRequest,"course.english.navigate":EnglishMoveRequest,"course.english.request-review":EnglishCheckRequest,"mistakes.notebooks":Request,"mistakes.summary":ScopeRequest,"mistakes.list":MistakeListRequest,"mistakes.context":MistakeContextRequest,"mistakes.english.review.select":MistakeSelectRequest,"audio.dictionary.lookup":DictionaryRequest}
+SCHEMAS={"course.english.get":EnglishStudyRequest,"course.english.save":EnglishSaveRequest,"course.english.check":EnglishCheckRequest,"course.english.reveal":EnglishRevealRequest,"course.english.answer":EnglishItemRequest,"course.english.submit":EnglishSubmitRequest,"course.english.navigate":EnglishMoveRequest,"course.english.request-review":EnglishCheckRequest,"mistakes.notebooks":Request,"mistakes.summary":ScopeRequest,"mistakes.list":MistakeListRequest,"mistakes.context":MistakeContextRequest,"mistakes.english.review.select":MistakeSelectRequest,"audio.dictionary.lookup":DictionaryRequest,"audio.dictionary.metadata":EnglishMetadataRequest}
 SCHEMAS.update({"course.english.retest-get":RetestGetRequest,"course.english.retest-save":RetestSaveRequest,"course.english.retest-check":RetestCheckRequest,"mistakes.retest.request":MistakeRetestRequest,"mistakes.archive.preview":ScopeRequest,"mistakes.archive.apply":ArchiveApplyRequest})
 WRITES={"course.english.save","course.english.check","course.english.reveal","course.english.submit","course.english.navigate","course.english.request-review","mistakes.english.review.select"}
 WRITES.update({"course.english.retest-save","course.english.retest-check","mistakes.retest.request","mistakes.archive.apply"})
@@ -77,4 +80,4 @@ def dispatch(engine,method,params):
     if method.startswith("mistakes."):
         action={"mistakes.english.review.select":"select_review","mistakes.retest.request":"retest_request","mistakes.archive.preview":"archive_preview","mistakes.archive.apply":"archive_apply"}.get(method,method.removeprefix("mistakes."))
         return getattr(engine.service.mistakes,action)(**params)
-    return engine.service.audio.lookup(**params)
+    return getattr(engine.service.audio,"metadata" if method=="audio.dictionary.metadata" else "lookup")(**params)

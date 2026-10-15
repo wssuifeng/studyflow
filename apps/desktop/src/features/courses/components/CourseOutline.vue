@@ -18,6 +18,6 @@ const steps=computed(()=>props.lessons.map((lesson,i)=>({lesson,state:knowledgeP
    <template v-if="mode==='course'"><button v-for="({lesson,state},i) in steps" :key="lesson.id" :class="['sequence-outline-item','state-'+state.kind,{current:i===index}]" :disabled="busy" :aria-current="i===index?'step':undefined" :aria-label="lesson.title+'，'+state.label" @click="emit('select',i)"><KnowledgeStatusIcon :kind="state.kind"/><span class="sequence-outline-copy"><strong>{{lesson.title.replace(/^\d+[｜|·.、\s]+/,'')}}</strong><small>{{state.label}}</small></span><small class="sequence-outline-index">{{String(i+1).padStart(2,'0')}}</small></button></template>
    <template v-else><button v-for="heading in headings" :key="heading.id" class="sequence-outline-item section-link" :class="{current:activeHeading===heading.id}" :style="{paddingLeft:12+Math.max(0,heading.level-2)*12+'px'}" :aria-current="activeHeading===heading.id?'location':undefined" @click="emit('heading',heading.id)"><i/><span>{{heading.title}}</span></button><p v-if="!headings.length" class="sequence-outline-empty">本节暂无分级标题</p></template>
   </nav>
-  <button class="sequence-return" @click="emit('back')"><span>←</span> 返回课程目录</button>
+  <button type="button" class="sequence-return course-navigation-action" @click="emit('back')"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>返回课程目录</span></button>
  </section>
 </template>

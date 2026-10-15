@@ -33,10 +33,10 @@ def _dashboard_command(date_value: str | None, plan_line_id: str | None, task_ki
     try:
         target_date = date.fromisoformat(date_value) if date_value else date.today()
         settings = Settings.from_env()
-        data = runtime.service().dashboard(target_date, plan_line_id=plan_line_id, task_kind=task_kind)
+        data = runtime.service(read_only=True).dashboard(target_date, plan_line_id=plan_line_id, task_kind=task_kind)
         output(_dashboard_payload(data, target_date, settings), format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 @app.command()
 def status(date_value: str = typer.Option(None, "--date"), plan_line_id: str | None = typer.Option(None, "--plan-line"), task_kind: str | None = typer.Option(None, "--kind"), format: str = typer.Option("text", "--format")) -> None:
@@ -95,4 +95,4 @@ def doctor(format: str = typer.Option("text", "--format")) -> None:
             "next_action": ("当前进程不可写；核对工作区授权和Python完整性级别，不切换工作区或改ACL。" if not workspace["writable"] or database.get("writable") is False else database.get("next_action") or ("运行 studyflow today --format json 查看今日学习。" if healthy else "检查工作区路径和环境变量。")),
         }, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)

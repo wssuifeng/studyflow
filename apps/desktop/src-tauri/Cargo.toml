@@ -1,6 +1,6 @@
 [package]
 name = "studyflow-desktop"
-version = "1.8.0"
+version = "1.8.5"
 edition = "2021"
 
 [build-dependencies]

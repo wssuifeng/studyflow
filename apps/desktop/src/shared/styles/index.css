@@ -42,3 +42,5 @@
 @import "../../features/courses/styles/document-template.css";
 
 @import "../../features/notes/styles/notebook-v2.css";
+
+@import "../../features/courses/styles/navigation-actions.css";

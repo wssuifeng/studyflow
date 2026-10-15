@@ -1,0 +1,162 @@
+{
+  "schema": "studyflow.course-package/6",
+  "package_id": "english-training-v6-sample",
+  "plan_line": "合成英语训练示例",
+  "course": {
+    "title": "合成 · 完整片段到句子",
+    "learning_mode": "english",
+    "summary": "供作者查看数据形状与开发隔离测试，不是学习者真实计划。"
+  },
+  "lessons": [
+    {
+      "id": "building",
+      "title": "从词义到完整句子",
+      "blocks": [
+        {
+          "id": "concept",
+          "type": "concept",
+          "title": "组合关系",
+          "body": "先确认必要词义，再组合完整成分，最后用整句表达同一个意思。"
+        }
+      ],
+      "exercises": [
+        {
+          "id": "i",
+          "title": "我",
+          "prompt": "我",
+          "english": {
+            "target": "I",
+            "objective_ids": [
+              "synthetic-expression"
+            ]
+          }
+        },
+        {
+          "id": "like",
+          "title": "喜欢",
+          "prompt": "喜欢",
+          "english": {
+            "target": "like",
+            "objective_ids": [
+              "synthetic-expression"
+            ]
+          }
+        },
+        {
+          "id": "subject-predicate",
+          "title": "我喜欢",
+          "prompt": "我喜欢",
+          "english": {
+            "target": "I like",
+            "objective_ids": [
+              "synthetic-expression"
+            ]
+          }
+        },
+        {
+          "id": "food",
+          "title": "这个食物",
+          "prompt": "这个食物",
+          "english": {
+            "target": "the food",
+            "objective_ids": [
+              "synthetic-expression"
+            ]
+          }
+        },
+        {
+          "id": "sentence",
+          "title": "我喜欢这个食物",
+          "prompt": "我喜欢这个食物",
+          "english": {
+            "target": "I like the food.",
+            "objective_ids": [
+              "synthetic-expression"
+            ],
+            "sentence_parts": [
+              {
+                "role": "subject",
+                "start": 0,
+                "end": 1,
+                "words": [
+                  {
+                    "phonetic": "/aɪ/",
+                    "gloss": "我",
+                    "pos": "代词"
+                  }
+                ]
+              },
+              {
+                "role": "predicate",
+                "start": 1,
+                "end": 2,
+                "words": [
+                  {
+                    "phonetic": "/laɪk/",
+                    "gloss": "喜欢",
+                    "pos": "动词"
+                  }
+                ]
+              },
+              {
+                "role": "object",
+                "start": 2,
+                "end": 4,
+                "words": [
+                  {
+                    "phonetic": "/ðə/",
+                    "gloss": "这个",
+                    "pos": "限定词"
+                  },
+                  {
+                    "phonetic": "/fuːd/",
+                    "gloss": "食物",
+                    "pos": "名词"
+                  }
+                ]
+              }
+            ],
+            "explanation": "I 是主语；like 是谓语；the food 一起作宾语。"
+          }
+        },
+        {
+          "id": "negation",
+          "title": "他没有一个计划",
+          "prompt": "他没有一个计划",
+          "english": {
+            "target": "He does not have a plan.",
+            "objective_ids": [
+              "synthetic-expression"
+            ],
+            "accepted_answers": [
+              "He doesn't have a plan."
+            ],
+            "explanation": "does not 与 doesn't 都是否定形式，均预录为完整可接受答案。"
+          }
+        },
+        {
+          "id": "write",
+          "title": "写代码",
+          "prompt": "写代码",
+          "english": {
+            "target": "write code",
+            "objective_ids": [
+              "synthetic-expression"
+            ]
+          }
+        },
+        {
+          "id": "code",
+          "title": "我每天写代码",
+          "prompt": "我每天写代码",
+          "english": {
+            "target": "I write code every day.",
+            "objective_ids": [
+              "synthetic-expression"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import {isTauri, studyApi} from '../../../shared/api'
 import type {CourseStudyDetailData,StudyRestartPreview} from '../../../shared/api/contracts'
 import {makeRequestKey, navigate, notify, reportError, statusLabel, windowStorageKey} from '../../../shared/ui'
 import KnowledgePointPager from './KnowledgePointPager.vue'
+import {createProgressSaveQueue} from '../progressSaveQueue'
 import CourseOutline from './CourseOutline.vue'
 import {activeTheme} from '../../../shared/themes'
 import {soundEnabled,setSoundEnabled} from '../../../shared/ui/interaction'
@@ -85,6 +86,14 @@ watch(sidebarOpen,async(open,previous)=>{
  else if(previous)toolsToggle.value?.focus({preventScroll:true})
 })
 let readingRestoreTimer: ReturnType<typeof setTimeout> | undefined
+let readingRestoreGeneration=0, explicitReadingNavigation=false
+function cancelReadingScrollRestore() {
+ readingRestoreGeneration++
+ if(readingRestoreTimer)clearTimeout(readingRestoreTimer)
+ readingRestoreTimer=undefined
+ pendingReadingScroll.value=null
+ restoringReadingScroll.value=false
+}
 function applyPendingReadingScroll(target:number): boolean {
  const current=body.value?.isConnected ? body.value : document.querySelector<HTMLElement>('[data-reading-scroll-container]')
  if(!current?.getClientRects().length)return false
@@ -93,29 +102,34 @@ function applyPendingReadingScroll(target:number): boolean {
  return true
 }
 async function restoreReadingScrollAfterLayout(saved:number) {
+ const generation=++readingRestoreGeneration
  const target=Math.max(0,Math.round(saved))
  restoringReadingScroll.value=true
  pendingReadingScroll.value=target
  readingScrollTop.value=target
- const apply=()=>applyPendingReadingScroll(target)
+ const apply=()=>generation===readingRestoreGeneration&&applyPendingReadingScroll(target)
  try {
   // Theme shells can replace the reading container after the Vue update. Apply to
   // the current connected container, not only the pre-switch template ref.
   await nextTick()
+  if(generation!==readingRestoreGeneration)return
   apply()
   for (let i=0;i<4;i++) {
    await new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()))
+   if(generation!==readingRestoreGeneration)return
    apply()
    await nextTick()
   }
+  if(generation!==readingRestoreGeneration)return
   if(readingRestoreTimer)clearTimeout(readingRestoreTimer)
   readingRestoreTimer=setTimeout(()=>{
+   if(generation!==readingRestoreGeneration)return
    apply()
    pendingReadingScroll.value=null
    readingRestoreTimer=undefined
   },180)
  } finally {
-  restoringReadingScroll.value=false
+  if(generation===readingRestoreGeneration)restoringReadingScroll.value=false
  }
 }
 watch(()=>activeTheme.value.id,async()=>{
@@ -215,15 +229,20 @@ function updateActiveHeading() {
  activeHeading.value=current?.id||documentHeadings.value[0]?.id||''
 }
 async function jumpToHeading(id:string) {
- if(shellPanel?.geometry.value.compact||dock.value.full)sidebarOpen.value=false
- await nextTick()
- const node=document.getElementById(id)
- if(node&&body.value?.contains(node)){revealTeachingTarget(node);await nextTick();node.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});activeHeading.value=id}
+ // Explicit navigation must win over a pending theme/dock position restoration.
+ explicitReadingNavigation=true
+ cancelReadingScrollRestore()
+ try {
+  if(shellPanel?.geometry.value.compact||dock.value.full)sidebarOpen.value=false
+  await nextTick()
+  const node=document.getElementById(id)
+  if(node&&body.value?.contains(node)){revealTeachingTarget(node);await nextTick();node.scrollIntoView({block:'start',behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});activeHeading.value=id}
+ } finally {explicitReadingNavigation=false}
 }
 function toggleSound(){setSoundEnabled(!soundEnabled.value);if(soundEnabled.value)interactionFeedback('preview')}
 watch(()=>[renderedLesson.value,lesson.value?.id,lesson.value?.content_blocks],async()=>{await nextTick();collectDocumentHeadings()},{flush:'post'})
 let timer: ReturnType<typeof setTimeout> | undefined
-let progressFlight: Promise<boolean> | null = null
+const enqueueProgressSave=createProgressSaveQueue()
 
 async function load(newVersion = false,reviewRound=false) {
   loading.value = true
@@ -273,30 +292,27 @@ async function restorePosition() {
   }
   fitStudyLayout(); collectDocumentHeadings(); ready.value = true
 }
-async function savePosition(complete = false): Promise<boolean> {
-  if(restartPending.value)return false
-  if (safeExit.leaving.value) return true
+function savePosition(complete = false): Promise<boolean> {
   clearTimeout(timer)
-  if (progressFlight && !await progressFlight) return false
-  if (!data.value || !lesson.value) return true
-  const current = lesson.value
-  const scrollTop = body.value?.getClientRects().length ? body.value.scrollTop : readingScrollTop.value
-  const max = Math.max(0,(body.value?.scrollHeight || 0)-(body.value?.clientHeight || 0))
-  const traversed = max > 30 ? Math.min(95,Math.round(95*scrollTop/max)) : 0
-  const percent = complete ? 100 : Math.max(current.progress.progress_percent,traversed)
-  progressSaving.value = true
-  progressFlight = (async()=>{
-    try {
-      const saved = await studyApi.saveStudyProgress({study_session_id:data.value!.study.id,lesson_id:current.id,
-        progress_percent:percent,last_position:JSON.stringify({scrollTop}),expected_version:data.value!.study.progress_version})
-      data.value!.study.progress_version = saved.version
-      current.progress = saved; progressFailed.value = false
+  return enqueueProgressSave(async()=>{
+    if(disposed||restartPending.value)return false
+    if(safeExit.leaving.value)return true
+    if(!data.value||!lesson.value)return true
+    const current=lesson.value
+    const scrollTop=body.value?.getClientRects().length?body.value.scrollTop:readingScrollTop.value
+    const max=Math.max(0,(body.value?.scrollHeight||0)-(body.value?.clientHeight||0))
+    const traversed=max>30?Math.min(95,Math.round(95*scrollTop/max)):0
+    const percent=complete?100:Math.max(current.progress.progress_percent,traversed)
+    progressSaving.value=true
+    try{
+      const saved=await studyApi.saveStudyProgress({study_session_id:data.value.study.id,lesson_id:current.id,progress_percent:percent,last_position:JSON.stringify({scrollTop}),expected_version:data.value.study.progress_version})
+      data.value.study.progress_version=saved.version;current.progress=saved;progressFailed.value=false
       return true
-    } catch (cause) {if (safeExit.leaving.value) return false; progressFailed.value = true; reportError(cause); return false}
-    finally {progressSaving.value = false}
-  })()
-  try {return await progressFlight} finally {progressFlight = null}
+    }catch(cause){if(safeExit.leaving.value||disposed)return false;progressFailed.value=true;reportError(cause);return false}
+    finally{progressSaving.value=false}
+  })
 }
+
 function onScroll() {updateActiveHeading();if(restoringReadingScroll.value)return;if(ready.value&&body.value?.getClientRects().length){readingScrollTop.value=body.value.scrollTop;clearTimeout(timer); timer=setTimeout(()=>savePosition(),750)}}
 async function flushCurrent() {
   if (loading.value || !data.value) return true
@@ -503,7 +519,7 @@ onUpdated(()=>{
 })
 watch(()=>[sidebarOpen.value,dock.value.full,shellPanel?.geometry.value.compact],async()=>{
  await nextTick()
- if(!restoringReadingScroll.value) await restoreReadingScrollAfterLayout(readingScrollTop.value)
+ if(!explicitReadingNavigation&&!restoringReadingScroll.value) await restoreReadingScrollAfterLayout(readingScrollTop.value)
 })
 let layoutObserver:ResizeObserver|undefined
 onMounted(async()=>{window.addEventListener('resize', fitStudyLayout); await listenTools(); await load();if(studyLayout.value){layoutObserver=new ResizeObserver(fitStudyLayout);layoutObserver.observe(studyLayout.value)}})
@@ -522,7 +538,7 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
   <div v-else-if="!data" class="error-state"><p>课程暂时无法打开，没有覆盖学习记录。</p><button class="secondary-button" @click="load()">重新打开</button></div>
   <div v-else :class="['study-workspace', {'layout-overflow': layoutOverflow}]">
     <Teleport v-if="shellPanel?.navigationVisible?.value" defer to="#course-sidebar-content"><CourseOutline :plan-title="data.course.plan_line || '我的计划'" :course-title="data.course.title" :position="planPosition.current" :total="planPosition.total" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :headings="documentHeadings" :active-heading="activeHeading" :busy="blocked" :reading-percent="readingPercent" @select="selectLesson" @heading="jumpToHeading" @back="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"/></Teleport>
-    <div class="sequence-reader-bar" v-if="sequenceTheme"><button class="sequence-exit" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')" aria-label="退出课程详情，返回课程目录"><span>←</span> 课程目录</button><span class="sequence-breadcrumb" :title="data.course.title">{{data.course.title}}</span><div class="sequence-reader-controls"><button class="sequence-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button class="text-button" :disabled="blocked" @click="syncFeedback" aria-label="同步反馈">↻</button><button class="tools-toggle" :aria-expanded="sidebarOpen" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" aria-controls="workspace-tool-panel" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
+    <div class="sequence-reader-bar" v-if="sequenceTheme"><button type="button" class="sequence-exit course-navigation-action" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')" aria-label="退出课程详情，返回课程目录"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>课程目录</span></button><span class="sequence-breadcrumb" :title="data.course.title">{{data.course.title}}</span><div class="sequence-reader-controls"><button class="sequence-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button class="text-button" :disabled="blocked" @click="syncFeedback" aria-label="同步反馈">↻</button><button class="tools-toggle" :aria-expanded="sidebarOpen" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" aria-controls="workspace-tool-panel" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
     <div v-if="!sequenceTheme" class="reader-toolbar"><button class="back-link" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')">← {{data.course.plan_line || '我的计划'}}</button>
     <header class="reader-heading">
       <div class="reader-heading-copy">

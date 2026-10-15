@@ -26,3 +26,16 @@ test('sequence-light viewport geometry is limited to course and detached tool sh
  assert.ok(!/\.app-shell\s*\{[^}]*height:100dvh/.test(css))
  assert.ok(!/body\s*\{\s*overflow:hidden/.test(css))
 })
+
+test('course return actions share explicit themed normal/hover/focus styling',()=>{
+ const css=read('features/courses/styles/navigation-actions.css')
+ assert.ok(css.includes('background:transparent'))
+ assert.ok(css.includes(':hover:not(:disabled)'))
+ assert.ok(css.includes(':focus-visible'))
+ assert.ok(css.includes('prefers-reduced-motion'))
+ assert.ok(css.includes('min-height:32px'))
+ assert.ok(read('shared/styles/index.css').includes('navigation-actions.css'))
+ for(const file of ['features/courses/components/CourseReader.vue','features/courses/components/CourseOutline.vue']) {
+  const source=read(file);assert.ok(source.includes('course-navigation-action'));assert.ok(source.includes('viewBox="0 0 20 20"'))
+ }
+})

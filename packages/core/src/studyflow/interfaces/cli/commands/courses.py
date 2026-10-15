@@ -10,18 +10,18 @@ from ..registry import course_app, course_answers_app
 @course_app.command("list")
 def course_list(plan_line_id: str | None = typer.Option(None, "--plan-line"), format: str = typer.Option("text", "--format")) -> None:
     try:
-        rows = runtime.service().list_courses(plan_line_id)
+        rows = runtime.service(read_only=True).list_courses(plan_line_id)
         output({"ok": True, "courses": [{"id": row.id, "title": row.title, "summary": row.summary, "subject": row.subject, "content_type": row.content_type, "difficulty": row.difficulty, "source_type": row.source_type, "plan_line": row.plan_line.name if row.plan_line else None} for row in rows]}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 @course_app.command("detail")
 def course_detail(course_id: str = typer.Option(..., "--id"), format: str = typer.Option("text", "--format")) -> None:
     """读取课程、多知识点、阅读进度及作答状态。"""
     try:
-        output({"ok": True, **runtime.service().course_detail(course_id)}, format)
+        output({"ok": True, **runtime.service(read_only=True).course_detail(course_id)}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 @course_app.command("import")
 def course_import(file_path: Path = typer.Option(..., "--file", exists=True, readable=True), format: str = typer.Option("text", "--format")) -> None:
@@ -35,9 +35,9 @@ def course_import(file_path: Path = typer.Option(..., "--file", exists=True, rea
 def course_answers_get(course_id: str = typer.Option(..., "--id"), format: str = typer.Option("text", "--format")) -> None:
     """读取本课原答案、草稿、批改和后续行动。"""
     try:
-        output({"ok": True, **runtime.service().course_answer_sheet(course_id)}, format)
+        output({"ok": True, **runtime.service(read_only=True).course_answer_sheet(course_id)}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 def _write_course_answers_file(course_id: str, file: Path, key: str, operation: str, format: str) -> None:
     try:
@@ -82,15 +82,15 @@ def course_study_detail(study_session_id: str = typer.Option(..., "--study-id"),
                         format: str = typer.Option("text", "--format")) -> None:
     """只读冻结材料、阅读位置与本轮状态，不开启新学习。"""
     try:
-        output({"ok": True, **runtime.service().course_study_detail(study_session_id)}, format)
+        output({"ok": True, **runtime.service(read_only=True).course_study_detail(study_session_id)}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 
 @course_app.command("notes-get")
 def notes_get(study_id: str = typer.Option(...,"--study-id"), format: str = typer.Option("text","--format")):
-    try: output({"ok":True,**runtime.service().study_notes(study_id)},format)
-    except Exception as exc: fail(exc)
+    try: output({"ok":True,**runtime.service(read_only=True).study_notes(study_id)},format)
+    except Exception as exc: fail(exc, read_only=True)
 
 @course_app.command("notes-save")
 def notes_save(study_id: str = typer.Option(...,"--study-id"), lesson_id: str = typer.Option(...,"--lesson-id"), file: str = typer.Option(...,"--file"), expected_version: int = typer.Option(...,"--expected-version"), idempotency_key: str = typer.Option(...,"--idempotency-key"), format: str = typer.Option("text","--format")):
@@ -124,7 +124,7 @@ def course_validate_package(file_path: Path = typer.Option(..., "--file", exists
         from studyflow.modules.courses.packages import inspect_package
         output({"ok": True, **inspect_package(file_path)[1]}, format)
     except Exception as exc:
-        fail(exc)
+        fail(exc, read_only=True)
 
 
 @course_app.command("import-package")

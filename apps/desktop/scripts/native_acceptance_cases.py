@@ -1,18 +1,25 @@
 """Disposable current-release acceptance cases; no installed workspace writes."""
 from __future__ import annotations
-import asyncio,json,time,ctypes,hashlib
+import asyncio,json,time,ctypes,hashlib,copy
 from pathlib import Path
 from playwright.async_api import expect
 from studyflow.modules.learning.notebook.document import plain
 
 
 def seed(service,plan,workspace):
-    english={'schema':'studyflow.course-package/2','package_id':'native-en-acceptance','plan_line':plan.name,'course':{'title':'原生英语验收 · 喜好表达','learning_mode':'english'},'lessons':[{'id':'likes','title':'表达喜好','blocks':[{'id':'concept','type':'concept','title':'I like','body':'I like 表达喜好。'}],'exercises':[{'id':'tea','title':'我喜欢茶','prompt':'我喜欢茶。','english':{'target':'I like tea.','objective_ids':['likes']}},{'id':'coffee','title':'我喜欢咖啡','prompt':'我喜欢咖啡。','english':{'target':'I like coffee.','objective_ids':['likes']}}]}]}
+    english={'schema':'studyflow.course-package/6','package_id':'native-en-acceptance','plan_line':plan.name,'course':{'title':'原生英语验收 · 喜好表达','learning_mode':'english'},'lessons':[{'id':'likes','title':'表达喜好','blocks':[{'id':'concept','type':'concept','title':'I like','body':'I like 表达喜好。'}],'exercises':[{'id':'tea','title':'我喜欢茶','prompt':'我喜欢茶。','english':{'target':'I like tea.','objective_ids':['likes']}},{'id':'coffee','title':'我喜欢咖啡','prompt':'我喜欢咖啡。','english':{'target':'I like coffee.','objective_ids':['likes']}}]}]}
+    english['lessons'][0]['exercises'][1]['english'].update(gloss='我喜欢咖啡。',explanation='I 是说话者，like 表示喜欢，coffee 是所喜欢的对象。')
+    english['lessons'][0]['exercises'][0]['english']['sentence_parts']=[
+        {'role':'subject','start':0,'end':1,'words':[{'gloss':'我','pos':'代词'}]},
+        {'role':'predicate','start':1,'end':2,'words':[{'gloss':'喜欢','pos':'动词'}]},
+        {'role':'object','start':2,'end':3,'words':[{'gloss':'茶','pos':'名词'}]}]
     teaching={'schema':'studyflow.course-package/5','package_id':'native-content-acceptance','plan_line':plan.name,'course':{'title':'原生教学验收 · 位权','learning_mode':'general'},'lessons':[{'id':'binary','title':'位权与进位','blocks':[{'id':'first','type':'concept','title':'先理解位权','body':'位权是该位一个单位代表的数值。'},{'id':'second','type':'concept','title':'再理解进位','body':'先定义，再计算。'},{'id':'detail','type':'details','title':'为什么相差两倍','summary':'低位的两个单位合成高位的一个单位。','body':'### 深入推导\n每位只有 0 和 1；单位变化来自基数。'},{'id':'compare','type':'comparison','title':'数制对照','columns':['数制','基数'],'rows':[['二进制','2'],['十进制','10']]}],'exercises':[{'id':'ex','title':'解释位权','prompt':'解释位权。'}]}]}
     teaching['lessons'][0]['blocks'].insert(2,{'id':'sections','type':'concept','title':'理解地址','sections':[{'id':'main','title':'地址定义','role':'main','body':'地址表示位置。'},{'id':'more','title':'地址补充','role':'supplement','summary':'位置与内容不相同。','body':'地址用于定位内容。','children':[{'id':'nested','title':'定位边界','role':'main','body':'先确定位置，再读取内容。'}]}]})
     teaching['lessons'][0]['exercises'][0]['review_reference']={'answer':'位权由位置与基数决定。','explanation':'相邻位代表的单位按基数变化。','criteria':['解释位置和单位的关系'],'source':'合成原生验收'}
+    empty=copy.deepcopy(english);empty["package_id"]="native-empty-english";empty["course"]["title"]="空轮次重开验收"
+    empty["lessons"][0]["exercises"][0]["english"]["sentence_parts"][2]["words"][0]["phonetic"]="/tiː/"
     result={}
-    for name,package in [('english',english),('teaching',teaching)]:
+    for name,package in [('english',english),('teaching',teaching),('empty',empty),('empty-white',{**copy.deepcopy(empty),'package_id':'native-empty-white','course':{**empty['course'],'title':'白紫空轮次重开验收'}})]:
         file=workspace/f'native-{name}.json';file.write_text(json.dumps(package,ensure_ascii=False),encoding='utf-8');result[name]=service.import_course_package(file)
     return result
 
@@ -30,6 +37,11 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
         return data
     async def theme(name):
         await main.get_by_role('button',name='工作区',exact=True).first.click()
+        # Previous case may still hold a pending course draft after window handoff.
+        # Honor the real leave guard rather than changing location.hash around it.
+        leave = main.get_by_role('button', name='重试保存后离开', exact=True)
+        if await leave.count():
+            await leave.click()
         await main.locator('.theme-option').filter(has_text=name).click()
     async def go_course(cid):
         await main.evaluate('(id)=>location.hash="/course/"+id',cid)
@@ -147,16 +159,47 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
         if not focused:
             checks.append("UNVERIFIED A1 physical system clipboard: foreground activation denied by Windows")
         if focused:
-            await main.locator('.card-prose').first.click()
-            await main.evaluate("""()=>{const root=document.querySelector('.card-prose');const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);const text=walker.nextNode();const range=document.createRange();range.setStart(text,0);range.setEnd(text,Math.min(8,text.length));const s=getSelection();s.removeAllRanges();s.addRange(range)}""")
+            clipboard_before=await invoke(main,'plan.notebook.read',{'plan_line_id':plan.id,'limit':100})
+            marker_before=sum(plain(e['content']).count('原生计划笔记') for e in clipboard_before['entries'])
+            await main.locator('.card-prose').filter(has_text='原生计划笔记').first.click()
+            await main.evaluate("""()=>{const marker='原生计划笔记';const root=[...document.querySelectorAll('.card-prose')].find(el=>el.textContent.includes(marker));if(!root)throw Error('controlled clipboard marker is missing');const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let text;while(text=walker.nextNode()){const start=text.textContent.indexOf(marker);if(start<0)continue;const range=document.createRange();range.setStart(text,start);range.setEnd(text,start+marker.length);const selected=getSelection();selected.removeAllRanges();selected.addRange(range);if(selected.toString()!==marker)throw Error('controlled clipboard selection is wrong');return}throw Error('marker text node is missing')}""")
             def system_key(letter):
                 user=ctypes.windll.user32
                 user.keybd_event(0x11,0,0,0);user.keybd_event(ord(letter),0,0,0);user.keybd_event(ord(letter),0,2,0);user.keybd_event(0x11,0,2,0)
+            # Prove that physical Ctrl+C reached this WebView before physical paste.
+            # Never paste unverified user clipboard content into the synthetic notebook.
+            def has_controlled_clipboard():
+                from ctypes import wintypes
+                user=ctypes.windll.user32;kernel=ctypes.windll.kernel32
+                user.GetClipboardData.argtypes=[wintypes.UINT];user.GetClipboardData.restype=wintypes.HANDLE
+                kernel.GlobalLock.argtypes=[wintypes.HANDLE];kernel.GlobalLock.restype=ctypes.c_void_p
+                kernel.GlobalUnlock.argtypes=[wintypes.HANDLE]
+                if not user.OpenClipboard(None):return False
+                try:
+                    handle=user.GetClipboardData(13)
+                    if not handle:return False
+                    pointer=kernel.GlobalLock(handle)
+                    if not pointer:return False
+                    try:return ctypes.wstring_at(pointer)=='原生计划笔记'
+                    finally:kernel.GlobalUnlock(handle)
+                finally:user.CloseClipboard()
             system_key('C');await asyncio.sleep(.2)
-            await main.keyboard.press('Control+End');await main.keyboard.press('Enter');system_key('V');await asyncio.sleep(.2);await main.keyboard.press('Control+s')
-            pasted=await stable(lambda:invoke(main,'plan.notebook.read',{'plan_line_id':plan.id,'limit':100}),lambda r:any(plain(e['content']).count('原生计划笔记')>=2 for e in r['entries']))
-            assert pasted['version']>before['version']
-            checks.append('A1 actual system copy/paste roundtrip; original clipboard formats restored after test')
+            copied=has_controlled_clipboard()
+            clipboard_evidence={'controlled_copy_received':copied,'webview_focus':await main.evaluate('document.hasFocus()')}
+            if not copied:
+                checks.append('UNVERIFIED A1 physical clipboard: controlled OS copy did not arrive; paste not attempted')
+            else:
+                await main.evaluate("()=>{window.__nativePasteCount=0;document.addEventListener('paste',()=>window.__nativePasteCount++,{capture:true})}")
+                await main.keyboard.press('Control+End');await main.keyboard.press('Enter');system_key('V');await asyncio.sleep(.2)
+                clipboard_evidence['paste_events']=await main.evaluate('window.__nativePasteCount')
+                if not clipboard_evidence['paste_events']:
+                    checks.append('UNVERIFIED A1 physical clipboard: OS paste event did not arrive in WebView')
+                else:
+                    await main.keyboard.press('Control+s')
+                    pasted=await stable(lambda:invoke(main,'plan.notebook.read',{'plan_line_id':plan.id,'limit':100}),lambda r:sum(plain(e['content']).count('原生计划笔记') for e in r['entries'])>=marker_before+1)
+                    assert pasted['version']>clipboard_before['version']
+                    checks.append('A1 actual system copy/paste roundtrip; original clipboard formats restored after test')
+            (workspace/'native-clipboard-evidence.json').write_text(json.dumps(clipboard_evidence,ensure_ascii=False,indent=2),encoding='utf-8')
     # Native failure UI: injected bridge rejection, never make the user database read-only.
     fault_file=workspace/'fault-notebook-save';fault_file.write_text('inject',encoding='ascii')
     await main.locator('.card-prose').first.click();await main.keyboard.press('Control+End');await main.keyboard.insert_text('尚未写入的失败内容。');await main.keyboard.press('Control+s')
@@ -178,27 +221,50 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     await main.evaluate("localStorage.setItem('studyflow:english-speech:v1',JSON.stringify({volume:20,muted:false,auto:false,accent:'en-US'}))")
     await main.reload();await expect(main.get_by_role('heading',name='我喜欢茶。',exact=True)).to_be_visible()
     w1=main.get_by_role('textbox',name='第 1 个单词');w2=main.get_by_role('textbox',name='第 2 个单词');w3=main.get_by_role('textbox',name='第 3 个单词')
+    await w2.focus();await w2.press('Control+Semicolon')
+    await expect(main.locator('.english-breakdown')).to_be_visible();await expect(main.locator('.part-role')).to_have_text(['主语','谓语','宾语'])
+    await expect(w2).to_be_focused();await expect(w2).to_be_enabled()
+    assert await main.locator('.english-answer').count()==0
+    await main.screenshot(path=str(workspace/'native-english-analysis.png'))
+    study_id=(await main.evaluate('location.hash')).split('/english/')[1].split('?')[0]
+    view=await invoke(main,'course.english.get',{'study_session_id':study_id})
+    assert view['items'][0]['assisted']
+    lookup_started=time.monotonic()
+    metadata=await invoke(main,'audio.dictionary.lookup',{'study_session_id':study_id,'exercise_id':view['items'][0]['exercise_id'],'word_index':1,'accent':'en-US'})
+    metadata_ms=(time.monotonic()-lookup_started)*1000
+    assert metadata_ms<600,metadata_ms
+    (workspace/'native-dictionary-latency.json').write_text(json.dumps({'ms':metadata_ms,'status':metadata['metadata_status'],'scope':'synthetic-only'}),encoding='utf-8')
+    await w2.press('Control+Semicolon');await expect(main.locator('.english-breakdown')).to_have_count(0)
+    checks.append('A3 native explicit analysis retains input/focus and tracks text assistance')
+    checks.append('A3 frozen dictionary lookup returns without holding native Engine')
     await w1.fill('I');await w1.press('Space');await expect(w2).to_be_focused();await w2.fill('lik');await w2.press('Space');await expect(w3).to_be_focused();await w3.fill('tea');await w3.press('Enter')
     await expect(main.get_by_text('原输入：lik',exact=True)).to_be_visible();await expect(w2).to_be_focused()
     await main.screenshot(path=str(workspace/'native-english-correction.png'))
-    await w2.press('l');await w2.type('ike');await w3.press('Enter');await expect(main.locator('.english-target')).to_have_text('I like tea.')
+    await w2.press('l');await w2.type('ike');await w2.press('Enter');await expect(main.locator('.english-target')).to_have_text('I like tea');assert await main.locator('.english-breakdown').count()==0
     checks.append('A3 native space/enter navigation, exact wrong-word focus, retained original and first-key replacement')
-    await main.evaluate("()=>{const NativeAudio=window.Audio;window.__nativeAudio=[];window.Audio=class extends NativeAudio{constructor(url){super(url);window.__nativeAudio.push(this)}}}")
+    await main.evaluate("()=>{const NativeAudio=window.Audio;window.__nativeAudio=[];window.Audio=class extends NativeAudio{constructor(url){super(url);this.__requestedUrl=url;window.__nativeAudio.push(this)}};window.__nativeSpeechEvents=[];if(window.speechSynthesis){const speak=window.speechSynthesis.speak.bind(window.speechSynthesis);window.speechSynthesis.speak=utterance=>{for(const type of [\"start\",\"end\",\"error\"])utterance.addEventListener(type,event=>window.__nativeSpeechEvents.push({type,error:event.error||null}));speak(utterance)}}}")
     audio_evidence=[]
-    await main.get_by_role('button',name='发音设置',exact=True).click()
+    await main.get_by_role('button',name='训练设置',exact=True).click()
     for accent,voice_type in [('en-US','2'),('en-GB','1')]:
         await main.get_by_label('口音请求').select_option(accent)
-        await main.get_by_role('button',name='▷ 朗读本句',exact=True).click()
+        previous_audio_count=await main.evaluate('window.__nativeAudio.length')
+        await main.get_by_role('button',name="Ctrl ' 整句朗读",exact=True).click()
+        await main.wait_for_function('(count)=>window.__nativeAudio.length>count',arg=previous_audio_count)
         played=False
         try:
             await main.wait_for_function("()=>window.__nativeAudio.at(-1)?.currentTime>0",timeout=8000)
+            await main.wait_for_function("()=>window.__nativeAudio.at(-1)?.ended===true",timeout=12000)
             played=True
         except Exception:pass
-        actual=await main.evaluate("()=>{const a=window.__nativeAudio.at(-1);return a?{src:a.src,readyState:a.readyState,currentTime:a.currentTime,duration:Number.isFinite(a.duration)?a.duration:null,paused:a.paused,error:a.error?.code||null}:null}")
-        if actual:assert 'type='+voice_type in actual['src']
-        audio_evidence.append({'accent':accent,'played':played,'actual':actual})
+        actual=await main.evaluate("()=>{const a=window.__nativeAudio.at(-1);return a?{src:a.__requestedUrl,activeSrc:a.src,readyState:a.readyState,currentTime:a.currentTime,duration:Number.isFinite(a.duration)?a.duration:null,paused:a.paused,ended:a.ended,error:a.error?.code||null}:null}")
+        attempts=await main.evaluate('(start)=>window.__nativeAudio.slice(start).map(a=>({src:a.__requestedUrl,currentTime:a.currentTime,error:a.error?.code||null}))',previous_audio_count)
+        if attempts:assert 'type='+voice_type in attempts[0]['src']
+        notice=await main.locator('.english-assistance').inner_text() if await main.locator('.english-assistance').count() else ''
+        audio_evidence.append({'requested_accent':accent,'played':played,'actual':actual,'attempts':attempts,'notice':notice})
     (workspace/'native-audio-playback.json').write_text(json.dumps(audio_evidence,ensure_ascii=False,indent=2),encoding='utf-8')
-    checks.append('A3 actual dictionary audio decode/play US+UK' if all(e['played'] for e in audio_evidence) else 'UNVERIFIED A3 dictionary playback unavailable on this host; evidence retained')
+    voices=await main.evaluate("()=>({available:!!window.speechSynthesis,voices:window.speechSynthesis?.getVoices().map(v=>({lang:v.lang,name:v.name}))||[],speaking:window.speechSynthesis?.speaking,events:window.__nativeSpeechEvents||[],notice:document.querySelector('.english-assistance')?.textContent||''})")
+    (workspace/'native-system-voice.json').write_text(json.dumps(voices,ensure_ascii=False,indent=2),encoding='utf-8')
+    checks.append('A3 actual sentence playback for both accent requests (announced alternate voice when unavailable)' if all(e['played'] for e in audio_evidence) else 'UNVERIFIED A3 online dictionary voice; local fallback evidence retained')
     await main.get_by_role('button',name='笔记',exact=True).click()
     assert await main.get_by_role('tab',name='练习',exact=True).count()==0
     pending_retry=main.get_by_role('button',name='原键重试／读取冲突',exact=True)
@@ -215,8 +281,19 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     await main.reload();await expect(main.get_by_role('heading',name='我喜欢咖啡。',exact=True)).to_be_visible()
     await main.screenshot(path=str(workspace/'native-english-resume.png'))
     checks.append('A3 English only-notes real detach/put-back and last position resumes after reload')
+    await main.get_by_role('textbox',name='第 1 个单词').press('Control+Semicolon')
+    await expect(main.locator('.fallback-meaning')).to_have_text('我喜欢咖啡。')
+    await expect(main.get_by_role('button',name='朗读单词 coffee',exact=True)).to_be_visible()
+    assert await main.locator('.part-role').count()==0
+    await main.screenshot(path=str(workspace/'native-fallback-sequence.png'))
+    await main.get_by_role('textbox',name='第 1 个单词').press('Control+Semicolon')
+    checks.append('A3 sequence native missing annotation uses real meaning without inferred grammar')
     await main.get_by_role('button',name='← 返回课程',exact=True).click()
     await theme('白紫');await go_course(fixture['english']['course_id']);await main.get_by_role('button',name='开始 / 继续训练 →',exact=True).click();await expect(main.get_by_role('heading',name='我喜欢咖啡。',exact=True)).to_be_visible()
+    await main.get_by_role('textbox',name='第 1 个单词').press('Control+Semicolon')
+    await expect(main.locator('.fallback-meaning')).to_have_text('我喜欢咖啡。')
+    assert await main.locator('.part-role').count()==0
+    checks.append('A3 white-violet native missing annotation keeps the same semantic fallback')
     # Resize only our isolated OS window; do not expand the application's capability ACL for tests.
     from ctypes import wintypes
     user=ctypes.windll.user32;handles=[]
@@ -227,15 +304,30 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
         if pid.value==process_id and title.value.startswith('StudyFlow') and not ('笔记' in title.value or '练习' in title.value):handles.append(hwnd)
         return True
     user.EnumWindows(collect_main,0);assert len(handles)==1
+    if await main.evaluate('window.__TAURI_INTERNALS__.invoke("plugin:window|is_maximized",{label:"main"})'):
+        await main.evaluate('window.__TAURI_INTERNALS__.invoke("plugin:window|toggle_maximize",{label:"main"})')
+    # GetWindowRect/SetWindowPos must share the application's per-monitor coordinate space.
+    # This changes only the harness thread's context, never Windows display settings.
+    user.SetThreadDpiAwarenessContext.argtypes=[ctypes.c_void_p]
+    user.SetThreadDpiAwarenessContext.restype=ctypes.c_void_p
+    previous_dpi=user.SetThreadDpiAwarenessContext(ctypes.c_void_p(-4))
+    if user.IsIconic(handles[0]):
+        user.ShowWindow(handles[0],9)
+        await stable(lambda:asyncio.to_thread(lambda:not user.IsIconic(handles[0])))
     original_rect=wintypes.RECT();user.GetWindowRect(handles[0],ctypes.byref(original_rect))
     current_size=await main.evaluate('({width:innerWidth,height:innerHeight})')
     user.SetWindowPos.argtypes=[wintypes.HWND,wintypes.HWND,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_int,ctypes.c_uint]
     assert user.SetWindowPos(handles[0],None,0,0,round((original_rect.right-original_rect.left)*960/current_size['width']),round((original_rect.bottom-original_rect.top)*720/current_size['height']),0x16)
+    resized=await main.evaluate('({width:innerWidth,height:innerHeight,dpr:devicePixelRatio})')
+    (workspace/'native-resize-evidence.json').write_text(json.dumps({'before':current_size,'after_request':resized,'rect':[original_rect.left,original_rect.top,original_rect.right,original_rect.bottom]},indent=2),encoding='utf-8')
     await main.wait_for_function('()=>innerWidth<=970')
     assert await main.evaluate('document.documentElement.scrollWidth<=innerWidth+2')
+    frame=await main.evaluate('''()=>{const footer=document.querySelector('.english-training-footer');return {footerBottom:footer.getBoundingClientRect().bottom,viewport:innerHeight,documentHeight:document.documentElement.scrollHeight}}''')
+    assert frame['footerBottom']<=frame['viewport']+2 and frame['documentHeight']<=frame['viewport']+2,frame
     await expect(main.get_by_role('textbox',name='第 1 个单词')).to_be_visible()
     await main.screenshot(path=str(workspace/'native-english-white.png'))
     assert user.SetWindowPos(handles[0],None,0,0,original_rect.right-original_rect.left,original_rect.bottom-original_rect.top,0x16)
+    if previous_dpi:user.SetThreadDpiAwarenessContext(previous_dpi)
     checks.append('A3 white-violet shares complete English training flow')
 
     # A5: generated connection text is captured at the real Copy action. System clipboard separately guarded.
@@ -254,3 +346,35 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     (workspace/'native-agent-connection.json').write_text(json.dumps({'installation':installation,'prompt':prompt,'clipboard_mode':'actual settings copy handler with capture; no user clipboard overwrite'},ensure_ascii=False,indent=2),encoding='utf-8')
     await main.screenshot(path=str(workspace/'native-agent-settings-paths.png'))
     checks.append('A5 actual release settings generate confirmed CLI/Skill/workspace paths from installed resources')
+
+    # 1.8.5: actual native restart UI, guarded evidence, silent metadata.
+    for theme_name in ['序光','白紫轻学']:
+        await theme(theme_name)
+        cid=fixture['empty' if theme_name=='序光' else 'empty-white']['course_id']
+        old=await invoke(main,'course.study.open',{'course_id':cid,'idempotency_key':'empty-open-'+theme_name})
+        old_id=old['study']['id']
+        await go_course(cid)
+        await main.get_by_role('button',name='放弃空轮次，用最新材料重新开始',exact=True).click()
+        await expect(main.get_by_role('heading',name='用最新材料重新开始？',exact=True)).to_be_visible()
+        await main.get_by_role('button',name='确认重新开始',exact=True).click()
+        await expect(main.get_by_role('textbox',name='第 1 个单词',exact=True)).to_be_visible()
+        sid=await main.evaluate('location.hash.split("/english/")[1]')
+        assert sid and sid!=old_id
+        previous=await invoke(main,'course.study.get',{'study_session_id':old_id})
+        assert previous['course']['study_status']=='ABANDONED'
+        await main.get_by_role('textbox',name='第 1 个单词',exact=True).press('Control+Semicolon')
+        await expect(main.locator('.english-breakdown')).to_be_visible()
+        await expect(main.locator('.part-word small').filter(has_text='/tiː/')).to_be_visible()
+        await expect(main.locator('.english-metadata-status')).to_be_visible()
+        current=await invoke(main,'course.english.get',{'study_session_id':sid})
+        start=time.monotonic()
+        metadata=await invoke(main,'audio.dictionary.metadata',{'study_session_id':sid,'exercise_id':current['items'][0]['exercise_id'],'accent':'en-GB'})
+        assert time.monotonic()-start<1.5
+        assert metadata['sentence_transcription'] is False and len(metadata['words'])==3
+        await main.screenshot(path=str(workspace/('native-185-'+theme_name+'.png')))
+        await main.get_by_role('button',name='← 返回课程',exact=True).click()
+        await main.get_by_role('button',name='放弃空轮次，用最新材料重新开始',exact=True).click()
+        await expect(main.locator('.study-restart-dialog')).to_be_visible()
+        assert await main.get_by_role('button',name='确认重新开始',exact=True).count()==0
+        await main.get_by_role('button',name='保留当前轮次',exact=True).click()
+        checks.append('1.8.5 '+theme_name+' actual empty restart, abandoned snapshot retained, hint blocks restart, author phonetic visible and metadata nonblocking')

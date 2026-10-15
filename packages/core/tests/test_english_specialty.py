@@ -119,13 +119,13 @@ def test_reveal_and_offline_dictionary_are_nonblocking(app_service,tmp_path):
     from studyflow.modules.audio.dictionary.provider import DictionaryProvider
     _,opened=install(app_service,tmp_path);sid=opened["study"]["id"]
     ex=app_service.english.get(sid)["items"][0]
-    with pytest.raises(DomainError):app_service.audio.lookup(sid,ex["exercise_id"])
+    assert app_service.audio.lookup(sid,ex["exercise_id"])["whole_sentence"]
     app_service.english.reveal(sid,ex["exercise_id"],"reveal")
     assert app_service.english.get(sid)["items"][0]["assisted"]
     def unavailable(url):raise OSError("offline")
     app_service.audio.provider=DictionaryProvider(fetch=unavailable)
     info=app_service.audio.lookup(sid,ex["exercise_id"],word_index=1)
-    assert "notice" in info and not info["definition_available"]
+    assert info["metadata_status"] in {"loading","unavailable"} and not info["definition_available"]
     assert "lik" not in info["pronunciation_url"].split("audio=")[0]
 
 
@@ -315,3 +315,147 @@ def test_english_purge_obeys_enforced_foreign_keys_and_preserves_other_plans(app
         assert connection.execute(text("PRAGMA foreign_key_check")).all() == []
         assert connection.execute(text("select count(*) from english_error_evidence")).scalar() == 0
         assert connection.execute(text("select count(*) from plan_lines where id=:id"), {"id": preserved.id}).scalar() == 1
+
+
+def test_v6_complete_variants_and_sentence_parts(app_service,tmp_path):
+    p=english_package();p["schema"]="studyflow.course-package/6"
+    spec=p["lessons"][0]["exercises"][0]["english"]
+    spec.update(target="He does not have a plan.",accepted_answers=["He doesn't have a plan."],sentence_parts=[
+        {"role":"subject","start":0,"end":1,"words":[{"gloss":"他","pos":"代词"}]},
+        {"role":"predicate","start":1,"end":4,"words":[{}, {}, {}]},
+        {"role":"object","start":4,"end":6,"words":[{}, {"gloss":"计划","pos":"名词"}]}])
+    assert validate_package(p)
+    assert check_answer(spec,"He doesn't have a plan")["matched"]
+    assert not check_answer(spec,"He doesn't not have a plan")["matched"]
+    spec["sentence_parts"][1]["start"]=2
+    with pytest.raises(DomainError):validate_package(p)
+    spec["sentence_parts"][1]["start"]=1;spec["evaluation_mode"]="agent"
+    with pytest.raises(DomainError):validate_package(p)
+
+
+def test_legacy_open_item_has_local_exact_result(app_service,tmp_path):
+    _,opened=install(app_service,tmp_path,"agent");sid=opened["study"]["id"]
+    ex=app_service.english.get(sid)["items"][0]["exercise_id"]
+    saved=app_service.english.save(sid,ex,"I like tea",0,"legacy-save")
+    result=app_service.english.check(sid,ex,saved["answer_version"],"legacy-check")
+    assert result["matched"] is True and not result.get("requires_agent")
+
+
+def test_audio_can_read_frozen_target_before_answer_without_revealing_text(app_service,tmp_path):
+    _,opened=install(app_service,tmp_path);sid=opened["study"]["id"]
+    ex=app_service.english.get(sid)["items"][0]["exercise_id"]
+    voice=app_service.audio.lookup(sid,ex)
+    assert voice["whole_sentence"] and voice["target"]=="I like tea."
+    assert not app_service.english.get(sid)["items"][0]["assisted"]
+    with pytest.raises(DomainError):app_service.english.answer(sid,ex)
+
+
+def test_consecutive_errors_replay_and_correct_then_submit(app_service,tmp_path):
+    _,opened=install(app_service,tmp_path);sid=opened["study"]["id"]
+    ex=app_service.english.get(sid)["items"][0]["exercise_id"]
+    saved=app_service.english.save(sid,ex,"I lik tea",0,"wrong-save")
+    assert app_service.english.check(sid,ex,saved["answer_version"],"wrong-check1")["error_count"]==1
+    assert app_service.english.check(sid,ex,saved["answer_version"],"wrong-check2")["error_count"]==2
+    assert app_service.english.check(sid,ex,saved["answer_version"],"wrong-check2")["error_count"]==2
+    saved=app_service.english.save(sid,ex,"I like tea",saved["answer_version"],"correct-save")
+    assert app_service.english.check(sid,ex,saved["answer_version"],"correct-check")["error_count"]==0
+    assert app_service.english.get(sid)["items"][0]["error_count"]==0
+    with pytest.raises(DomainError,match="未完成"):app_service.english.submit(sid,"has-gap")
+
+
+def test_legacy_queued_last_answer_does_not_block_whole_training_or_become_a_fabricated_pass(app_service, tmp_path):
+    _, opened = install(app_service, tmp_path, mode="agent")
+    sid = opened["study"]["id"]
+    view = app_service.english.get(sid)
+    queued, exact = [item["exercise_id"] for item in view["items"]]
+    saved = app_service.english.save(sid, queued, "My own sentence", 0, "legacy-save")
+    review = app_service.english.request_review(sid, queued, saved["answer_version"], "legacy-queue")
+    saved_exact = app_service.english.save(sid, exact, "I like coffee", 0, "exact-save")
+    app_service.english.check(sid, exact, saved_exact["answer_version"], "exact-check")
+    before = app_service.english.get(sid)
+    versions = {row["exercise_id"]: row["answer_version"] for row in before["items"]}
+    result = app_service.english.submit(sid, "finish-legacy", versions)
+    assert result["completed"] is True
+    assert result["waiting_review"] == 1
+    after = app_service.english.get(sid)
+    pending = next(row for row in after["items"] if row["exercise_id"] == queued)
+    assert pending["status"] == "WAITING_REVIEW"
+    assert pending["matched"] is False
+    assert pending["answer_text"] == "My own sentence"
+    assert pending["answer_version"] == review["answer_version"]
+    assert pending["submission_id"] == review["submission_id"]
+    assert after["completed"] is True
+    assert app_service.english.submit(sid, "finish-legacy", versions) == result
+
+
+@pytest.mark.parametrize("opening", [{"new_version": True}, {"review_round": True}])
+def test_submitted_legacy_english_round_can_open_updated_material_without_resolving_pending_history(app_service, tmp_path, opening):
+    from studyflow.modules.courses.revisions import preview, apply
+    course, opened = install(app_service, tmp_path, mode="agent")
+    sid = opened["study"]["id"]
+    queued, exact = [row["exercise_id"] for row in app_service.english.get(sid)["items"]]
+    a = app_service.english.save(sid, queued, "My own sentence", 0, "queue-answer")
+    pending = app_service.english.request_review(sid, queued, a["answer_version"], "queue-answer-review")
+    b = app_service.english.save(sid, exact, "I like coffee", 0, "exact-answer")
+    app_service.english.check(sid, exact, b["answer_version"], "exact-answer-check")
+    app_service.english.submit(sid, "submit-before-update")
+    old = app_service.english.get(sid)
+    assert old["completed"] is True
+    assert app_service.course_study_detail(sid)["course"]["study_status"] == "PARTIAL_FEEDBACK"
+    updated = english_package()
+    updated["schema"] = "studyflow.course-package/6"
+    updated["lessons"][0]["exercises"][0]["english"]["target"] = "I enjoy tea."
+    path = tmp_path / "updated-local.json"
+    path.write_text(json.dumps(updated, ensure_ascii=False), encoding="utf-8")
+    proposal = preview(app_service.courses, course["course_id"], path, 1)
+    apply(app_service.courses, course["course_id"], path, 1, proposal["preview_hash"], "publish-new-local")
+    overview = app_service.course_detail(course["course_id"])["course"]
+    assert overview["can_start_new_round"] is True
+    assert overview["source_changed"] is True and overview["study_content_revision"] == 1
+    new = app_service.open_course_study(course["course_id"], "explicit-new", **opening)
+    assert new["study"]["id"] != sid
+    assert new["course"]["content_revision"] == 2
+    assert app_service.open_course_study(course["course_id"], "explicit-new", **opening)["study"]["id"] == new["study"]["id"]
+    fresh = app_service.english.get(new["study"]["id"])
+    assert fresh["completed"] is False
+    assert all(row["answer_text"] == "" and row["answer_version"] == 0 for row in fresh["items"])
+    preserved = app_service.english.get(sid)["items"][0]
+    assert preserved["status"] == "WAITING_REVIEW"
+    assert preserved["matched"] is False
+    assert preserved["answer_text"] == old["items"][0]["answer_text"]
+    assert preserved["answer_version"] == pending["answer_version"]
+    assert preserved["submission_id"] == pending["submission_id"]
+    assert app_service.submission_detail(pending["submission_id"])["status"] == "WAITING_REVIEW"
+    saved = app_service.english.save(fresh["study_session_id"], queued, "I enjoy tea", 0, "new-answer")
+    assert app_service.english.check(fresh["study_session_id"], queued, saved["answer_version"], "new-answer-check")["matched"] is True
+
+
+@pytest.mark.parametrize("opening", [{"new_version": True}, {"review_round": True}])
+def test_unsubmitted_english_round_with_queued_answer_cannot_be_discarded_by_new_round(app_service, tmp_path, opening):
+    course, opened = install(app_service, tmp_path, mode="agent")
+    sid = opened["study"]["id"]
+    queued = app_service.english.get(sid)["items"][0]["exercise_id"]
+    saved = app_service.english.save(sid, queued, "My own sentence", 0, "unsubmitted-save")
+    app_service.english.request_review(sid, queued, saved["answer_version"], "unsubmitted-review")
+    with pytest.raises(DomainError) as exc:
+        app_service.open_course_study(course["course_id"], "do-not-discard", **opening)
+    assert exc.value.code == "COURSE_STUDY_IN_PROGRESS"
+    assert app_service.english.get(sid)["completed"] is False
+    assert app_service.course_detail(course["course_id"])["course"]["study_session_id"] == sid
+
+
+def test_completed_english_with_revision_required_still_cannot_start_another_round(app_service, tmp_path):
+    course, opened = install(app_service, tmp_path, mode="agent")
+    sid = opened["study"]["id"]
+    first, second = [row["exercise_id"] for row in app_service.english.get(sid)["items"]]
+    a = app_service.english.save(sid, first, "My own sentence", 0, "needs-fix-save")
+    pending = app_service.english.request_review(sid, first, a["answer_version"], "needs-fix-review")
+    b = app_service.english.save(sid, second, "I like coffee", 0, "needs-fix-exact")
+    app_service.english.check(sid, second, b["answer_version"], "needs-fix-check")
+    app_service.english.submit(sid, "finish-then-feedback")
+    app_service.write_review(pending["submission_id"], "请修正", decision="REVISION_REQUIRED", idempotency_key="needs-fix-feedback")
+    assert app_service.english.get(sid)["completed"] is True
+    assert app_service.course_detail(course["course_id"])["course"]["can_start_new_round"] is False
+    with pytest.raises(DomainError) as exc:
+        app_service.open_course_study(course["course_id"], "blocked-feedback", review_round=True)
+    assert exc.value.code == "COURSE_STUDY_IN_PROGRESS"

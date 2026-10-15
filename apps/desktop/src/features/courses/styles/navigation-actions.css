@@ -1,0 +1,8 @@
+/* Shared navigation actions override only the two return controls, not primary tasks. */
+:root[data-theme-id] button.course-navigation-action{display:inline-flex;align-items:center;justify-content:flex-start;gap:8px;min-height:32px;max-width:100%;padding:6px 10px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--theme-text-secondary);font-size:12px;font-weight:500;line-height:1.45;text-align:left;flex:none;box-shadow:none;transition:background .14s,color .14s,border-color .14s,transform .14s}
+:root[data-theme-id] button.course-navigation-action:hover:not(:disabled){background:var(--theme-surface-hover);border-color:var(--theme-border-subtle);color:var(--theme-accent-primary)}
+:root[data-theme-id] button.course-navigation-action:focus-visible{outline:2px solid var(--theme-focus-ring);outline-offset:2px;background:var(--theme-accent-soft)}
+:root[data-theme-id] button.course-navigation-action .navigation-arrow{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+:root[data-theme-id] button.course-navigation-action>span{font-size:inherit}
+:root[data-theme-id] button.sequence-return.course-navigation-action{margin:10px 10px 0;width:calc(100% - 20px);min-height:36px}
+@media(prefers-reduced-motion:reduce){:root[data-theme-id] button.course-navigation-action{transition:none;transform:none}}

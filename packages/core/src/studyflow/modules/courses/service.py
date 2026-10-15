@@ -126,7 +126,13 @@ class CoursesService(Service):
                     for exercise in lesson.exercises:
                         exercise.latest_submission = latest.get(exercise.id)
                         exercise.draft = drafts_by_exercise.get(exercise.id)
-            return course_detail(course) if as_detail and course else course
+            if as_detail and course:
+                result = course_detail(course)
+                from studyflow.modules.learning.study_sessions import current_study
+                from studyflow.modules.learning.round_policy import round_start_info
+                result["course"].update(round_start_info(db, current_study(db, course.id), course.version))
+                return result
+            return course
 
     def preview_course_purge(self, course_ids: list[str] | None = None) -> dict:
         """Return a safe, read-only inventory for deleting all course-owned data.

@@ -10,6 +10,9 @@ class FakeSession:
         self.rollbacks = 0
         self.closed = 0
 
+    def expunge_all(self):
+        pass
+
     def commit(self):
         self.commits += 1
 
@@ -69,3 +72,12 @@ def test_write_session_still_requires_lease(monkeypatch, tmp_path: Path):
     assert fake.commits == 1
     assert fake.rollbacks == 0
     assert fake.closed == 1
+
+
+def test_readonly_runtime_cannot_be_downgraded_by_nested_caller(tmp_path):
+    fake = FakeSession()
+    runtime = Runtime(Settings(workspace_root=tmp_path, database_url="sqlite:///:memory:"), lambda: fake, read_only=True)
+    with runtime.session(read_only=False):
+        pass
+    assert fake.commits == 0
+    assert fake.rollbacks == 1

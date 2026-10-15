@@ -162,7 +162,7 @@ def test_cli_discovers_and_reads_frozen_study(app_service, study_course, monkeyp
     import json
     import studyflow.cli as cli
     from typer.testing import CliRunner
-    monkeypatch.setattr(cli,"service",lambda:app_service)
+    monkeypatch.setattr(cli,"service",lambda **kwargs:app_service)
     runner=CliRunner()
     result=runner.invoke(cli.app,["course","study-open","--id",study_course[0],"--idempotency-key","cli-study","--format","json"])
     assert result.exit_code==0,result.output
@@ -242,3 +242,14 @@ def test_single_cli_adapters_keep_same_snapshot_round(app_service, study_course)
     revised=app_service.revise_submission(formal.id,"单题合成修正",idempotency_key="single-revised")
     assert revised.study_session_id==sid
     assert app_service.course_answer_sheet(cid,sid)["answers"][0]["submission"]["id"]==revised.id
+
+
+def test_general_submitted_pending_review_does_not_use_english_next_round_exception(app_service, study_course):
+    cid, _, ids = study_course
+    opened = app_service.open_course_study(cid, "general-before-next")
+    submit(app_service, cid, ids, opened["study"]["id"], "general-submit-pending")
+    assert app_service.course_detail(cid)["course"]["learning_submitted"] is True
+    assert app_service.course_detail(cid)["course"]["can_start_new_round"] is False
+    with pytest.raises(DomainError) as error:
+        app_service.open_course_study(cid, "general-next-blocked", review_round=True)
+    assert error.value.code == "COURSE_STUDY_IN_PROGRESS"
