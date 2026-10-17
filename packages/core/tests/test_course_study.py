@@ -227,7 +227,7 @@ def test_old_round_cannot_write_into_new_study(app_service, study_course):
     new=app_service.open_course_study(cid,"new-round-open",new_version=True)
     with pytest.raises(DomainError) as exc:
         app_service.write_course_answers(cid,[{"exercise_id":ids[0],"answer_text":"旧窗口尝试修改"}],"DRAFT_SAVE","old-write",study_session_id=sid)
-    assert exc.value.code=="VERSION_CONFLICT"
+    assert exc.value.code=="STUDY_ROUND_SUPERSEDED"
     assert not app_service.course_answer_sheet(cid,new["study"]["id"])["answers"][0]["draft"]
 
 

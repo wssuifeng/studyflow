@@ -15,6 +15,7 @@
 .english-header-title strong{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .english-header-title span{font-size:12px;color:var(--muted)}
 .english-header-tools,.english-audio-actions,.english-main-actions{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
+/* 页内次要动作统一走本规则（§8.4）：英语页同级次要按钮不混挂 text-button，disabled/focus 由下方规则统一。 */
 .english-learning button:not(.primary-button):not(.secondary-button),.mistake-workspace button:not(.primary-button):not(.secondary-button){border:0;background:transparent;color:inherit;padding:8px 12px;border-radius:8px;cursor:pointer}
 .english-learning button:hover:not(:disabled),.mistake-workspace button:hover{background:var(--theme-surface-hover)}
 .english-learning button:disabled{opacity:.42;cursor:default}
@@ -53,8 +54,8 @@
 .english-speech-settings{display:flex;gap:18px;padding:15px 3%;flex-wrap:wrap;align-items:center;font-size:12px;background:var(--theme-surface-raised)}
 .english-speech-settings label{display:flex;align-items:center;gap:6px}
 .english-speech-settings small{width:100%;color:var(--muted)}
-.english-recovery,.english-error{padding:12px 3%;font-size:13px;background:var(--theme-status-warning-soft);flex-shrink:0}
-.english-error{background:var(--theme-status-danger-soft)}
+.english-recovery{padding:12px 3%;font-size:13px;background:var(--theme-status-warning-soft);flex-shrink:0}
+
 .mistake-controls{display:flex;flex-wrap:wrap;gap:14px;align-items:center;margin:22px 0}
 .mistake-controls label{display:flex;gap:8px;align-items:center;font-size:13px}
 .mistake-controls select,.english-speech-settings select{border:1px solid var(--line);border-radius:7px;padding:7px;background:transparent;color:inherit}
@@ -125,7 +126,8 @@
 .english-learning .english-shortcuts button{display:flex;align-items:center;gap:4px;font-size:11px;padding:5px 6px;color:var(--theme-text-secondary)}
 .english-shortcuts kbd{padding:2px 5px;border:1px solid var(--theme-border-subtle);border-radius:5px;background:var(--theme-surface-panel);font-size:10px;line-height:1.5;white-space:nowrap}
 .english-save-status{font-size:10px;color:var(--theme-text-muted);min-width:40px}
-.english-breakdown{max-width:min(900px,100%);margin:0 0 18px;padding:16px 20px;border:1px solid var(--theme-border-subtle);border-radius:18px;background:var(--theme-surface-raised);box-shadow:0 8px 24px color-mix(in srgb,var(--theme-shadow-ink) 6%,transparent)}
+/* 解析卡有界（§7.2）：correction 展开时输入行/动作区保持可达，长解析在卡内滚动。 */
+.english-breakdown{max-width:min(900px,100%);max-height:42vh;overflow:auto;margin:0 0 18px;padding:16px 20px;border:1px solid var(--theme-border-subtle);border-radius:18px;background:var(--theme-surface-raised);box-shadow:0 8px 24px color-mix(in srgb,var(--theme-shadow-ink) 6%,transparent)}
 .sentence-parts{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 .sentence-part{position:relative;display:flex;align-items:stretch;border:1px solid var(--part-color,var(--theme-border-strong));border-radius:13px;padding:14px 8px 8px;gap:6px}
 .role-subject{--part-color:color-mix(in srgb,var(--theme-status-warning) 70%,var(--theme-text-primary))}.role-predicate{--part-color:var(--theme-status-danger)}.role-object{--part-color:var(--theme-accent-primary)}.role-complement{--part-color:var(--theme-accent-strong)}.role-modifier{--part-color:var(--theme-status-success)}
@@ -155,10 +157,33 @@
 :root .app-shell.focus-shell .english-learning{height:100%;min-height:0}
 .english-stage{min-height:0;justify-content:safe center}
 
-.english-metadata-status{font-size:11px;line-height:1.5;color:var(--theme-text-muted);margin:6px 0 12px;max-width:70ch}
 .english-restart-control{margin:8px 0 16px;font-size:12px;color:var(--theme-text-muted)}
 .english-restart-control [role=alert]{color:var(--theme-status-danger);margin-top:8px}
 .study-restart-dialog{max-width:min(520px,calc(100vw - 32px));color:var(--theme-text-primary);background:var(--theme-surface-panel);border:1px solid var(--theme-border-subtle);border-radius:14px;padding:24px;line-height:1.75}
 .study-restart-dialog::backdrop{background:color-mix(in srgb,var(--theme-text-primary) 25%,transparent)}
 .study-restart-dialog .dialog-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:20px;flex-wrap:wrap}
-.english-breakdown .part-word small:empty,.english-breakdown .part-word em:empty{display:none}
+/* Authored rows share a baseline even when only some words have phonetics. */
+.english-breakdown{--analysis-phonetic-row:0px;--analysis-gloss-row:0px}
+.english-breakdown.has-word-phonetics{--analysis-phonetic-row:20px}
+.english-breakdown.has-word-gloss{--analysis-gloss-row:35px}
+.english-breakdown .sentence-part{max-width:100%;flex-wrap:wrap;justify-content:center;align-items:flex-start;row-gap:10px}
+.english-learning .english-breakdown button.part-word{display:grid;grid-template-rows:var(--analysis-phonetic-row) auto var(--analysis-gloss-row) auto;align-content:start;justify-items:center;align-self:start;min-width:0;max-width:180px;gap:5px}
+.english-breakdown .part-word small{grid-row:1;min-height:0;line-height:20px;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.english-breakdown .part-word small:empty{visibility:hidden}
+.english-breakdown .part-word strong{grid-row:2;overflow-wrap:anywhere;max-width:100%}
+.english-breakdown .part-word span{grid-row:3;line-height:1.55;max-width:14ch;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
+.english-breakdown .part-word em{grid-row:4;line-height:1.5}
+.english-breakdown .part-neutral{border-color:var(--theme-border-subtle);background:var(--theme-surface-panel);padding-top:10px}
+.authored-pronunciation{margin:0 0 12px;text-align:center;font-size:13px;color:var(--theme-text-muted);overflow-wrap:anywhere}
+
+/* Keep the bounded analysis examples and their action visible in short windows.
+   Longer material still scrolls inside the stage, never under the footer. */
+.english-stage>*{flex-shrink:0}
+@media(max-height:800px){
+ .english-stage{padding-block:16px;gap:8px}
+ .english-breakdown{margin-bottom:8px}
+ .english-question h1{margin:6px 0 10px}
+ .english-token-row{margin:18px 0 12px}
+}
+
+button.english-save-status.is-problem{border:0;background:none;padding:0;color:var(--theme-text-muted);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}

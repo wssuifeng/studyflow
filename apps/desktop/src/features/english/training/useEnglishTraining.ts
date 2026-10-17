@@ -9,7 +9,9 @@ const writeMethods = new Set(['course.english.save','course.english.check','cour
 
 export function useEnglishTraining(studyId: string) {
   const data = ref<EnglishStudy | null>(null), tokens = ref<string[]>([]), position = ref(0), busy = ref(false), failed = ref('')
+  const superseded = ref(false)
   const hintMode = ref<'word'|'sentence'|null>(null), navigationNotice=ref('')
+  const validationNotice = ref('')
   const reference = ref<EnglishReference | null>(null), phase = ref<'input'|'correction'|'answer'|'result'>('input')
   const pending = ref<Pending | null>(null), recovery = ref<{exerciseId: string; text: string} | null>(null), baseline = ref('')
   const item = computed(() => data.value?.items[position.value]), text = computed(() => tokens.value.join(' ').trim())
@@ -36,7 +38,7 @@ export function useEnglishTraining(studyId: string) {
     const current = item.value; if (!current) return
     baseline.value = current.answer_text
     tokens.value = current.answer_text ? current.answer_text.split(/\s+/) : Array(current.token_count).fill('')
-    reference.value = null; hintMode.value = null
+    reference.value = null; hintMode.value = null; validationNotice.value = ''
     phase.value = current.matched || ['PASSED','RECHECKED','REVIEWED'].includes(current.status) ? 'answer' : 'input'
   }
   async function load() {
@@ -57,8 +59,9 @@ export function useEnglishTraining(studyId: string) {
     if (phase.value !== 'correction') phase.value = 'input'
     if (item.value) item.value.matched = false
     if (!hintMode.value) reference.value = null
+    validationNotice.value = ''
     cache(); clearTimeout(timer)
-    if (!failed.value && !pending.value && !recovery.value) timer = setTimeout(() => {void save()}, 750)
+    if (!failed.value && !pending.value && !recovery.value && !superseded.value) timer = setTimeout(() => {void save()}, 750)
   }
   async function performPending() {
     if (!pending.value) return true
@@ -87,7 +90,7 @@ export function useEnglishTraining(studyId: string) {
       } else if (request.method === 'course.english.submit' && data.value) {
         data.value.completed = result.completed === true; phase.value = 'result'
       } else if (request.method === 'course.english.request-review' && row) row.status = result.status || row.status
-      pending.value = null; failed.value = ''; cache()
+      pending.value = null; failed.value = ''; validationNotice.value = ''; cache()
       if (request.method === 'course.english.check' && result.matched && current && text.value === request.text) {
         // The write is already confirmed. A failed reference read must never replay the check.
         try {reference.value = await engineCall<EnglishReference>('course.english.answer', {study_session_id: studyId, exercise_id: request.exerciseId})}
@@ -98,11 +101,19 @@ export function useEnglishTraining(studyId: string) {
       if (request.method==='course.english.submit' && (cause as {code?:string}).code==='COURSE_INCOMPLETE') {
         pending.value=null;failed.value='';navigationNotice.value='还有未完成项，请继续训练。';cache();return false
       }
+      if ((cause as {code?:string}).code==='STUDY_ROUND_SUPERSEDED') {
+        // The round was sealed by a course revision reset; further writes can never land.
+        superseded.value = true; pending.value = null; cache(); return false
+      }
+      if (request.method==='course.english.check' && (cause as {code?:string}).code==='ANSWER_EMPTY') {
+        // 空输入是校验提示（§7.1）：不进保存失败横幅、不清自动保存，焦点交回输入行。
+        pending.value = null; validationNotice.value = (cause as Error).message; cache(); return false
+      }
       failed.value = (cause as Error).message; cache(); return false
     }
     finally {
       busy.value = false
-      if (!disposed && !suspended && dirty.value && !failed.value && !pending.value && !recovery.value && !actionInFlight.value) {
+      if (!disposed && !suspended && dirty.value && !failed.value && !pending.value && !recovery.value && !superseded.value && !actionInFlight.value) {
         clearTimeout(timer); timer = setTimeout(() => {void save()}, 750)
       }
     }
@@ -122,7 +133,7 @@ export function useEnglishTraining(studyId: string) {
     cache(); return retryPending()
   }
   async function saveLatest(skipped: boolean) {
-    if (suspended || disposed || recovery.value) return false
+    if (suspended || disposed || recovery.value || superseded.value) return false
     if (requestFlight && !await requestFlight) return false
     if (pending.value && !await retryPending()) return false
     if (!item.value) return false
@@ -145,6 +156,12 @@ export function useEnglishTraining(studyId: string) {
     if (pending.value?.method === 'course.english.check') {
       if (!await retryPending() || !item.value) return null
       return {matched: item.value.matched, differences: item.value.differences}
+    }
+    // §7.1：空输入是本地校验提示，不触发引擎（避免Core对无草稿项抛VERSION_CONFLICT或ANSWER_EMPTY落到保存失败横幅）。
+    // 只提示、不动 pending/failed：此处 pending 可能是尚未确认的 save/reveal 写入，清掉会丢掉重试路径。
+    if (!text.value.trim()) {
+      validationNotice.value = '先输入答案；跳过不算答错。'
+      return null
     }
     if (!await save() || !item.value) return null
     if (!await write('course.english.check', {exercise_id: item.value.exercise_id, expected_version: item.value.answer_version}, 'english-check')) return null
@@ -212,5 +229,5 @@ export function useEnglishTraining(studyId: string) {
   function resumeInput() {reference.value = null; hintMode.value = null; phase.value = 'input'}
   function suspend() {suspended = true; clearTimeout(timer); cache()}
   onBeforeUnmount(() => {disposed = true; clearTimeout(timer); cache()})
-  return {data, item, tokens, position, navigationNotice, busy: actionBusy, actionRunning: actionInFlight, inputLocked: computed(() => actionInFlight.value && actionIntent.value !== 'reveal'), saving: busy, failed, reference, hintMode, phase, pending, recovery, dirty, load, edited, save, check: exclusive(check, 'check'), reveal: exclusive(reveal, 'reveal'), move: exclusive(move, 'move'), submit: exclusive(submit, 'submit'), requestReview: exclusive(requestReview, 'review'), retryPending, restore, discardRecovery, exportInput, resumeInput, hideHint, suspend}
+  return {data, item, tokens, position, navigationNotice, validationNotice, busy: actionBusy, actionRunning: actionInFlight, inputLocked: computed(() => actionInFlight.value && actionIntent.value !== 'reveal'), saving: busy, failed, superseded, reference, hintMode, phase, pending, recovery, dirty, load, edited, save, check: exclusive(check, 'check'), reveal: exclusive(reveal, 'reveal'), move: exclusive(move, 'move'), submit: exclusive(submit, 'submit'), requestReview: exclusive(requestReview, 'review'), retryPending, restore, discardRecovery, exportInput, resumeInput, hideHint, suspend}
 }

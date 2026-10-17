@@ -1,6 +1,5 @@
 /* SF-11: one visual vocabulary, compact controls and readable content. */
 :root{--accent:var(--theme-accent-primary);--accent-dark:var(--theme-accent-strong);--accent-soft:var(--theme-accent-soft);--sf-brand:var(--theme-accent-primary);--sf-active:var(--theme-text-muted);--sf-focus-ring:var(--theme-focus-ring);--reading-font:15px;--reading-line-height:1.85;--reading-width:850px}
-:focus-visible{outline:2px solid var(--sf-focus-ring);outline-offset:3px}
 .page-intro{margin:0 0 20px}.page-intro h2,.console-intro h2{font-size:24px;line-height:1.4;letter-spacing:-.4px}.page-intro .eyebrow,.console-intro .eyebrow{display:none}.page-intro p{margin:8px 0 0}
 .plan-card,.today-plan-card,.course-feedback-card{border-color:var(--sf-border-l1)}.plan-icon,.course-sequence,.path-marker{color:var(--sf-brand);background:var(--sf-active)}
 .plan-list-filters,.management-controls,.notebook-review-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:12px 0}
@@ -13,4 +12,4 @@
 @media(max-width:850px){.path-list li{flex-wrap:wrap}.course-management{width:100%}.feedback-row{gap:10px}.reading-preferences label{grid-template-columns:1fr}.notebook-review-tools{gap:6px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
 
-button.primary-button:hover:not(:disabled){background:var(--accent-dark);box-shadow:0 6px 18px color-mix(in srgb,var(--theme-shadow-ink) 12.55%,transparent)}.today-plan-card.current-plan,.path-list li.current{border-color:var(--theme-accent-primary);box-shadow:0 5px 18px color-mix(in srgb,var(--theme-shadow-ink) 2.75%,transparent)}.course-sequence{background:transparent}.current-course-label{color:var(--sf-brand);background:var(--sf-active)}
+.today-plan-card.current-plan,.path-list li.current{border-color:var(--theme-accent-primary);box-shadow:0 5px 18px color-mix(in srgb,var(--theme-shadow-ink) 2.75%,transparent)}.course-sequence{background:transparent}.current-course-label{color:var(--sf-brand);background:var(--sf-active)}

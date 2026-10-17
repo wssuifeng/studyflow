@@ -8,7 +8,8 @@ SUBMITTED_STATES = frozenset({"WAITING_REVIEW", "PASSED", "RECHECKED", "REVIEWED
 def next_round_allowed(db, study):
     from .study_sessions import exercise_ids, outcome, study_attempts
     if study.abandoned_at is not None:
-        return False
+        # A sealed round (course revision reset or explicit restart) is closed; nothing is in progress.
+        return True
     if outcome(db, study)["study_status"] in {"PASSED", "READ_COMPLETED"}:
         return True
     frozen = json.loads(study.snapshot_json)

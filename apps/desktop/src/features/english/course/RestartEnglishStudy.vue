@@ -28,7 +28,7 @@ async function confirm(){
  if(busy.value)return
  if(!pending.value){
   if(!info.value?.can_restart||!info.value.expected_content_hash)return
-  pending.value={study_session_id:info.value.study_session_id,expected_version:info.value.expected_version,expected_training_version:info.value.expected_training_version,expected_content_hash:info.value.expected_content_hash,idempotency_key:makeRequestKey('english-restart')}
+  pending.value={expected_state_hash:info.value.expected_state_hash,reset_current_state:info.value.reset_current_state,study_session_id:info.value.study_session_id,expected_version:info.value.expected_version,expected_training_version:info.value.expected_training_version,expected_content_hash:info.value.expected_content_hash,idempotency_key:makeRequestKey('english-restart')}
   if(!storeRestartRequest(storage(),key,props.workspaceKey,pending.value)){pending.value=null;error.value='无法持久保存重开请求，未发送。请检查本机存储。';return}
  }
  busy.value=true;error.value=''
@@ -48,10 +48,10 @@ onMounted(()=>{pending.value=readRestartRequest(storage(),key,props.workspaceKey
 onBeforeUnmount(()=>{disposed=true;void release()})
 </script>
 <template>
- <div class="english-restart-control"><button class="text-button" :disabled="busy" @click="inspect">{{pending?'重试待确认的重开请求':'放弃空轮次，用最新材料重新开始'}}</button><p v-if="error" role="alert">{{error}}</p></div>
+ <div class="english-restart-control"><button class="text-button" :disabled="busy" @click="inspect">{{pending?'重试待确认的重开请求':'用最新材料重新开始'}}</button><p v-if="error" role="alert">{{error}}</p></div>
  <dialog ref="dialog" class="study-restart-dialog" aria-labelledby="english-restart-title" @cancel.prevent="close">
   <h3 id="english-restart-title">用最新材料重新开始？</h3>
-  <p>仅允许没有保存答案、检查、文本提示或提交记录的轮次。旧轮次与笔记保留，阅读位置不转移，不把旧记录算作已学会。</p>
+  <p>将重置本课当前训练位置与作答状态，从最新材料重新开始。历史作答、错误记录和笔记保留，不影响其他课程。</p>
   <ul v-if="info&&!info.can_restart"><li v-for="reason in info.blocked_reasons" :key="reason.code">{{reason.message}}</li></ul>
   <p v-if="error" role="alert">{{error}}</p>
   <div class="dialog-actions"><button :disabled="busy" @click="close">保留当前轮次</button><button v-if="info?.can_restart" class="primary-button" :disabled="busy" @click="confirm">{{busy?'正在重新开始…':'确认重新开始'}}</button></div>

@@ -6,6 +6,8 @@ import PlanNotebook from '../../notes/components/PlanNotebook.vue'
 import KnowledgeExercises from '../../learning/components/KnowledgeExercises.vue'
 import type {ToolTab} from '../dock/state'
 
+// Native editor events must never fall through as course navigation.
+defineOptions({inheritAttrs:false})
 defineProps<{tool:ToolTab|string;lessons:LessonDetail[];index:number;rows:AnswerRow[];blocked:boolean;notebook:PlanNotebookController;planTitle?:string;courseId?:string}>()
 </script>
 <template>

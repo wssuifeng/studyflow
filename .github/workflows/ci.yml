@@ -39,6 +39,8 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
       - run: npm ci
         working-directory: apps/desktop
+      - run: npm run theme:lint
+        working-directory: apps/desktop
       - run: npm run test:learning
         working-directory: apps/desktop
       - run: npm run test:themes && npm run test:english
@@ -65,9 +67,11 @@ jobs:
       - run: npm ci && npm run build
         working-directory: apps/desktop
       - run: python apps/desktop/scripts/smoke-iteration.py
+      - run: python apps/desktop/scripts/test_ui_contract.py
       - run: python apps/desktop/scripts/smoke-english-cli.py
       - run: python apps/desktop/scripts/smoke-english.py
       - run: python apps/desktop/scripts/smoke-english-light.py
+      - run: python apps/desktop/scripts/smoke-english-annotation.py
   windows-engine-regression:
     name: windows-engine-regression
     if: github.event_name == 'workflow_dispatch'

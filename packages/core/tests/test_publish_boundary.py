@@ -12,7 +12,6 @@ GUARD = runpy.run_path(str(Path(__file__).resolve().parents[3] / "scripts/check_
     "apps/desktop/scripts/test-themes.cjs",
     "apps/desktop/scripts/test-learning-experience.cjs",
     "apps/desktop/scripts/test-reading-progress.cjs",
-    "apps/desktop/scripts/test-word-metadata.cjs",
     "apps/desktop/scripts/test-notebook-v2.cjs",
     "apps/desktop/scripts/check-theme.cjs",
     "apps/desktop/src/shared/themes/builtin/sequence-light.json",

@@ -1,9 +1,10 @@
 import { reactive } from 'vue'
 import { EngineError } from '../api/engine'
 
-export const notice = reactive({ message: '', tone: 'success', action: '' })
+export type FeedbackTone = 'success' | 'error' | 'info'
+export const notice = reactive<{ message: string; tone: FeedbackTone; action: string }>({ message: '', tone: 'success', action: '' })
 let timer: ReturnType<typeof setTimeout>
-export function notify(message: string, tone = 'success', action = '') {
+export function notify(message: string, tone: FeedbackTone = 'success', action = '') {
   clearTimeout(timer)
   Object.assign(notice, { message, tone, action })
   if (tone === 'success' || tone === 'info') timer = setTimeout(() => { notice.message = '' }, 4500)

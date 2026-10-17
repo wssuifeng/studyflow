@@ -1,4 +1,5 @@
 mod commands;
+mod diagnostics;
 mod engine;
 mod tools;
 mod workspace;
@@ -18,6 +19,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             commands::engine_call,
             commands::engine_status,
+            diagnostics::record_ui_diagnostic,
             commands::switch_workspace,
             tools::open_tool_window,
             tools::tool_windows,

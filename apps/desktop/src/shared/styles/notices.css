@@ -1,3 +1,8 @@
 .status-banner { position:fixed; z-index:100; right:28px; top:65px; max-width:min(620px,75vw); box-shadow:0 9px 34px color-mix(in srgb,var(--theme-shadow-ink) 7.45%,transparent); }
 
+/* §7.1反馈语义桶：普通提示（role=status）走accent；写入失败/需确认（role=alert）走warning。
+   此处为recovery-note唯一语义定义，功能层与主题层只改值不改语义桶。 */
+.recovery-note{display:flex;align-items:center;flex-wrap:wrap;gap:12px;font-size:12px;padding:14px 17px;margin:15px 0;border-radius:9px;background:var(--theme-accent-soft);color:var(--theme-accent-primary)}
+.recovery-note[role='alert']{background:var(--theme-status-warning-soft);color:var(--theme-text-secondary);border:1px solid color-mix(in srgb,var(--theme-status-warning) 24%,var(--theme-border-subtle))}
+
 /* Tool windows have a compact top strip: notices must not cover dock-back controls. */

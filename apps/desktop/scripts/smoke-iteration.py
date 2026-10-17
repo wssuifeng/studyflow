@@ -19,7 +19,7 @@ def main():
             page.set_default_timeout(12000)
             page.on("pageerror",lambda error:errors.append(str(error)))
             page.goto(url+"/#/course/"+courses[0]);page.wait_for_load_state("networkidle")
-            expect(page.get_by_role("heading",name="合成课程1",exact=True)).to_be_visible()
+            expect(page.locator(".reader-context")).to_have_text("合成课程1")
             page.get_by_role("button",name="打开答题与笔记",exact=True).click()
             study=service.open_course_study(courses[0],"browser-existing")
             ids=[lesson["exercises"][0]["id"] for lesson in study["lessons"]]

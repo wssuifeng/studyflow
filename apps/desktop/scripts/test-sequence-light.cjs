@@ -13,10 +13,29 @@ test('sequence-light ships actual layout, outline and local assets, not just a p
 
 test('sequence-light adapts the real tool dock into the approved right-rail hierarchy',()=>{
  const reader=read('features/courses/components/CourseReader.vue'),panel=read('features/courses/components/CourseToolsSidebar.vue'),css=read('features/courses/styles/sequence-light.css')
- assert.ok(reader.includes(':sequence=\"sequenceTheme\"'));assert.ok(reader.includes(':course-progress=\"courseProgressPercent\"'))
+ assert.ok(!reader.includes(':sequence='));assert.ok(reader.includes(':course-progress="courseProgressPercent"'))
  for(const marker of ['当前知识点','答案草稿','学习进度','下一知识点','窗口协作','保存保护','CourseToolContent'])assert.ok(panel.includes(marker),marker)
  assert.ok(panel.includes('completedLessons'));assert.ok(panel.includes('safeCourseProgress'));assert.ok(css.includes('.sequence-tools-panel'));assert.ok(css.includes('.sequence-progress-card'))
  assert.ok(!panel.includes('模拟保存失败'));assert.ok(!panel.includes('模拟批改'))
+})
+
+test('阅读骨架统一：主题ID不再分支顶栏与导航，双主题共用一套结构',()=>{
+ const reader=read('features/courses/components/CourseReader.vue'),panel=read('features/courses/components/CourseToolsSidebar.vue')
+ assert.ok(!reader.includes('sequenceTheme'),'CourseReader不得再用主题ID做功能分支')
+ assert.ok(!reader.includes("activeTheme.value.id==='sequence-light'"))
+ assert.equal((reader.match(/class="reader-toolbar"/g)||[]).length,1,'顶栏只保留一个reader-toolbar')
+ assert.ok(!reader.includes('reader-navigation'),'顶部不再铺全量知识点导航')
+ assert.ok(!reader.includes('KnowledgePointPager'),'全量导航只留左栏CourseOutline')
+ // 统一顶栏：返回、课程上下文、音效/同步/工具开关在同一集合
+ for(const marker of ['course-navigation-action','reader-context','reader-actions','toggleSound','syncFeedback','ref="toolsToggle"'])assert.ok(reader.includes(marker),marker)
+ assert.ok(reader.includes('ThemeReadingArtwork'),'装饰插画不再由主题ID条件渲染')
+ assert.ok(reader.includes('sequence-page-turn'));assert.ok(reader.includes('sequence-practice-entry'))
+ // 焦点契约：侧栏tab是真实存在的dock-tab元素，面板打开后焦点可进入
+ assert.ok(reader.includes("getElementById('dock-tab-'+tab.value)"))
+ assert.ok(panel.includes('id="dock-tab-exercises"'));assert.ok(panel.includes('id="dock-tab-notes"'))
+ assert.ok(!panel.includes('sequence-tools-tab'));assert.ok(!panel.includes('sequence-notes-tab'))
+ assert.ok(panel.includes(':aria-expanded="!!menu"'),'···菜单暴露展开状态')
+ for(const trigger of ['其他工具操作','重新打开工具'])assert.ok(panel.includes(trigger))
 })
 
 test('sequence-light viewport geometry is limited to course and detached tool shells',()=>{

@@ -1,12 +1,13 @@
 """Immutable course revisions with explicit, content-bound preview/apply."""
 import json
+from datetime import datetime, timezone
 from pathlib import Path
 import yaml
 from sqlalchemy import select, update, func
 from studyflow.shared.domain import DomainError
 from studyflow.shared.ids import new_id
 from studyflow.modules.learning.write_contract import digest
-from studyflow.modules.learning.models import CourseStudySession
+from studyflow.modules.learning.models import CourseStudySession, CourseWriteReceipt
 from studyflow.modules.documents.models import Document
 from studyflow.infrastructure.markdown import safe_resolve, parse_front_matter, inspect_document
 from .models import Course, Lesson, Exercise, CourseRevision
@@ -38,6 +39,10 @@ def existing_content(service,db,course):
     if PROGRESSION_SCHEMA in schemas_seen:package["schema"]=PROGRESSION_SCHEMA
     return package,mapping
 
+def material_unchanged(old, data):
+    return all((data["course"].get(key) or "") == (old["course"].get(key) or "")
+               for key in ("title", "summary", "subject", "difficulty")) and old["plan_line"] == data["plan_line"] and old["lessons"] == data["lessons"]
+
 def preview(service,course_id,path,expected_revision):
     data,info=inspect_package(path)
     with service.session() as db:
@@ -60,6 +65,9 @@ def preview(service,course_id,path,expected_revision):
         old_keys={l["id"] for l in old["lessons"]};new_keys={l["id"] for l in data["lessons"]}
         old_ex={l["id"]+":"+e["id"] for l in old["lessons"] for e in l.get("exercises",[])};new_ex={l["id"]+":"+e["id"] for l in data["lessons"] for e in l.get("exercises",[])}
         result={"course_id":course_id,"expected_revision":expected_revision,"new_revision":expected_revision+1,"content_hash":info["content_hash"],"added_lessons":sorted(new_keys-old_keys),"removed_lessons":sorted(old_keys-new_keys),"added_exercises":sorted(new_ex-old_ex),"removed_exercises":sorted(old_ex-new_ex),"changed_lessons":[l["id"] for l in data["lessons"] if l["id"] in old_keys and l!=next(o for o in old["lessons"] if o["id"]==l["id"])],"order_changed":[l["id"] for l in old["lessons"]]!=[l["id"] for l in data["lessons"]],"affected_study_rounds":db.scalar(select(func.count(CourseStudySession.id)).where(CourseStudySession.course_id==course_id)),"historical_entities_retained":True}
+        result["material_changed"]=not material_unchanged(old,data)
+        result["new_revision"]=expected_revision+int(result["material_changed"])
+        result["reset_current_learning"]=result["material_changed"]
         result["preview_hash"]=digest({"old":old,"new":data,"mapping":mapping,"course_id":course_id,"expected_revision":expected_revision})
         return result
 
@@ -69,6 +77,11 @@ def apply(service,course_id,path,expected_revision,preview_hash,idempotency_key)
     request_hash=digest({"course_id":course_id,"data":data,"expected_revision":expected_revision,"preview_hash":preview_hash})
     with package_lock(service.settings.workspace_root):
         with service.session() as db:
+            noop=db.scalar(select(CourseWriteReceipt).where(CourseWriteReceipt.idempotency_key==idempotency_key))
+            if noop:
+                if noop.operation!="COURSE_UPDATE_NOOP" or noop.payload_hash!=request_hash:
+                    raise DomainError("IDEMPOTENCY_KEY_CONFLICT","幂等键已用于其他请求。")
+                return json.loads(noop.result_json)
             replay=db.scalar(select(CourseRevision).where(CourseRevision.idempotency_key==idempotency_key))
             if replay:
                 if replay.request_hash!=request_hash:raise DomainError("IDEMPOTENCY_KEY_CONFLICT","幂等键用于不同课程修订。")
@@ -79,6 +92,16 @@ def apply(service,course_id,path,expected_revision,preview_hash,idempotency_key)
             course=db.get(Course,course_id)
             old,mapping=existing_content(service,db,course)
             if digest({"old":old,"new":data,"mapping":mapping,"course_id":course_id,"expected_revision":expected_revision})!=preview_hash:raise DomainError("PREVIEW_CHANGED","源内容发生变化。")
+            if material_unchanged(old,data):
+                result={"ok":True,"course_id":course_id,"revision":expected_revision,
+                    "content_hash":info["content_hash"],"unchanged":True,
+                    "historical_rounds_unchanged":True,"learning_state_reset":False,"reset_study_sessions":[]}
+                db.add(CourseWriteReceipt(id=new_id(),idempotency_key=idempotency_key,course_id=course_id,
+                    operation="COURSE_UPDATE_NOOP",payload_hash=request_hash,result_json=json.dumps(result)))
+                db.flush()
+                return result
+            from studyflow.modules.learning.reset import preserve_legacy_round
+            preserve_legacy_round(db,service,course_id,idempotency_key)
             changed=db.execute(update(Course).where(Course.id==course_id,Course.version==expected_revision).values(version=expected_revision+1).execution_options(synchronize_session=False))
             if changed.rowcount!=1:raise DomainError("VERSION_CONFLICT","另一个Agent已发布，未写入。")
             if not db.scalar(select(CourseRevision.id).where(CourseRevision.course_id==course_id,CourseRevision.number==expected_revision)):
@@ -112,7 +135,9 @@ def apply(service,course_id,path,expected_revision,preview_hash,idempotency_key)
                 inspection=inspect_document(service.settings.workspace_root,path_relative)
                 if not db.scalar(select(Document.id).where(Document.relative_path==path_relative)):
                     db.add(Document(id=new_id(),relative_path=path_relative,document_type="LESSON",status=inspection.status,file_size=inspection.file_size,modified_at=inspection.modified_at,content_hash=inspection.content_hash))
-            result={"ok":True,"course_id":course_id,"revision":expected_revision+1,"content_hash":info["content_hash"],"historical_rounds_unchanged":True}
+            from studyflow.modules.learning.reset import seal_current
+            reset_rounds,_=seal_current(db,service,course_id,f"课程修订{expected_revision+1}发布，按用户决定重置学习状态")
+            result={"ok":True,"course_id":course_id,"revision":expected_revision+1,"content_hash":info["content_hash"],"historical_rounds_unchanged":not reset_rounds,"learning_state_reset":bool(reset_rounds),"reset_study_sessions":reset_rounds}
             db.add(CourseRevision(id=new_id(),course_id=course_id,number=expected_revision+1,package_json=json.dumps(data,ensure_ascii=False),mapping_json=json.dumps(mapping),content_hash=info["content_hash"],idempotency_key=idempotency_key,request_hash=request_hash,result_json=json.dumps(result)))
-            service._event(db,"AGENT_CLI","course",course_id,"PUBLISH_REVISION",f"发布课程修订{expected_revision+1}，活动轮次不变")
+            service._event(db,"AGENT_CLI","course",course_id,"PUBLISH_REVISION",f"发布课程修订{expected_revision+1}，学习状态{'已重置' if reset_rounds else '不变'}")
             db.flush();return result

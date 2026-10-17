@@ -56,7 +56,19 @@ def latest_content(service, study):
     return result
 
 
-def preview(service, study_session_id):
+def preview(service, study_session_id, reset_current_state=False):
+    if reset_current_state:
+        from .reset import preview as reset_preview
+        with service.session(read_only=True) as db:
+            row=require_study(db,study_session_id,active=True)
+            course_id,version,revision,frozen_hash=row.course_id,row.version,row.revision,row.content_hash
+        info=reset_preview(service,course_id)
+        return {"study_session_id":study_session_id,"course_id":course_id,"revision":revision,
+            "expected_version":version,"expected_content_hash":info["content_hash"],
+            "expected_state_hash":info["state_hash"],"reset_current_state":True,
+            "frozen_content_hash":frozen_hash,"can_restart":True,"blocked_reasons":[],
+            "history_retained":True,"notes_retained":True,"reading_position_transferred":False}
+
     with service.session(read_only=True) as db:
         row=require_study(db,study_session_id,active=True)
         reasons=blockers(db,row)
@@ -73,7 +85,15 @@ def preview(service, study_session_id):
             "history_retained":True,"notes_retained":True,"reading_position_transferred":False}
 
 
-def restart(service, study_session_id, expected_version, expected_content_hash, idempotency_key, expected_training_version=None):
+def restart(service, study_session_id, expected_version, expected_content_hash, idempotency_key, expected_training_version=None, expected_state_hash=None, reset_current_state=False):
+    if reset_current_state:
+        from .reset import apply as reset_apply
+        with service.session(read_only=True) as db:
+            row=require_study(db,study_session_id)
+            course_id=row.course_id
+        result=reset_apply(service,course_id,expected_state_hash,expected_content_hash,idempotency_key,confirm=True)
+        return detail(service,result["study_session_id"])
+
     if isinstance(expected_version,bool) or not isinstance(expected_version,int) or expected_version<1 or not isinstance(expected_content_hash,str) or len(expected_content_hash)!=64 or not isinstance(idempotency_key,str) or (not idempotency_key.strip() or not 1<=len(idempotency_key)<=160):
         raise DomainError("INVALID_ARGUMENT","重开需要预检查版本、内容哈希与稳定幂等键。")
     payload={"study_session_id":study_session_id,"expected_version":expected_version,"expected_content_hash":expected_content_hash,**({"expected_training_version":expected_training_version} if expected_training_version is not None else {})}

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {computed,ref,watch,onMounted,onBeforeUnmount,nextTick} from 'vue'
 import {studyApi} from '../../../shared/api'
-import {navigate,notify,reportError} from '../../../shared/ui'
+import {navigate,reportError,notify} from '../../../shared/ui'
 import type {PlanNotebookController} from '../composables/usePlanNotebook'
 import {applyProjection,classifyText,clone,isBlank,visibleEntries,type Scope,type Entry,type Course,textOf} from '../editor/model'
 import {removeOccurrence,restoreOccurrence,textFromOccurrence} from '../editor/extensions'
@@ -39,11 +39,11 @@ watch([scope,collapsed],()=>rememberView(),{deep:true});watch(editorView,async v
 function changed(next:Entry[],beforeIds:string[],typingGroup?:string){if(readonly.value||readMode.value||search.value)return;try{props.notebook.commit(applyProjection(all.value,beforeIds,next),typingGroup)}catch(cause){reportError(cause)}}
 function fold(key:string){defer(()=>{const next=new Set(collapsed.value);next.has(key)?next.delete(key):next.add(key);collapsed.value=next})}
 function showSource(sourceId:string,occurrenceId:string,rect:{x:number;y:number}){if(!sources.value[sourceId])return;source.value={sourceId,occurrenceId,x:Math.max(8,Math.min(window.innerWidth-330,rect.x)),y:Math.max(8,Math.min(window.innerHeight-300,rect.y+8))};pinned.value=false}
-function sourceAction(kind:'remove'|'restore'){const s=source.value,e=editorView.value?.editor;if(!s||!e||readonly.value||!selectedSource.value)return;if(kind==='remove')removeOccurrence(e,s.sourceId,s.occurrenceId);else restoreOccurrence(e,s.sourceId,s.occurrenceId,selectedSource.value.original);source.value=null;notify(kind==='remove'?'文字已保留，来源标记已去除。':'已恢复这一处引用的原文。')}
+function sourceAction(kind:'remove'|'restore'){const s=source.value,e=editorView.value?.editor;if(!s||!e||readonly.value||!selectedSource.value)return;if(kind==='remove')removeOccurrence(e,s.sourceId,s.occurrenceId);else restoreOccurrence(e,s.sourceId,s.occurrenceId,selectedSource.value.original);source.value=null}
 function viewSource(){const s=selectedSource.value;if(!s?.studyId||!s.lessonId)return;const q=new URLSearchParams({lesson:s.lessonId});if(s.blockId)q.set('block',s.blockId);if(s.sectionId)q.set('section',s.sectionId);navigate('/source/'+s.studyId+'?'+q)}
 function openMenu(id:string,x:number,y:number){menu.value={id,x:Math.max(8,Math.min(window.innerWidth-240,x)),y:Math.max(8,Math.min(window.innerHeight-190,y))}}
 function move(){if(!menu.value)return;const e=all.value.find(e=>e.id===menu.value!.id);if(e)moving.value={id:e.id,courseId:e.courseId||'__plan',lessonId:e.lessonId||'__course'};menu.value=null}
-function confirmMove(){if(!moving.value)return;const m=moving.value;const target=m.courseId==='__plan'?{scope:'PLAN' as const,courseId:null,lessonId:null}:m.lessonId==='__course'?{scope:'COURSE' as const,courseId:m.courseId,lessonId:null}:{scope:'LESSON' as const,courseId:m.courseId,lessonId:m.lessonId};props.notebook.commit(all.value.map(e=>e.id===m.id?{...e,...target}:e));moving.value=null;notify('已移动记录，出处不变；可以撤销。')}
+function confirmMove(){if(!moving.value)return;const m=moving.value;const target=m.courseId==='__plan'?{scope:'PLAN' as const,courseId:null,lessonId:null}:m.lessonId==='__course'?{scope:'COURSE' as const,courseId:m.courseId,lessonId:null}:{scope:'LESSON' as const,courseId:m.courseId,lessonId:m.lessonId};props.notebook.commit(all.value.map(e=>e.id===m.id?{...e,...target}:e));moving.value=null}
 function remove(){if(menu.value)props.notebook.removeBlock(menu.value.id);menu.value=null}
 function keydown(e:KeyboardEvent){if(e.key==='Escape'){source.value=null;menu.value=null;moving.value=null;editorView.value?.editor?.commands.focus()}}
 function outside(e:MouseEvent){const t=e.target as HTMLElement;if(!pinned.value&&!t.closest('.source-popover')&&!t.closest('[data-note-source]'))source.value=null;if(!t.closest('.entry-menu')&&!t.closest('[data-entry-menu]'))menu.value=null}

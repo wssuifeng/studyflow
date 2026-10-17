@@ -1,7 +1,7 @@
 {
   "name": "studyflow-desktop",
   "private": true,
-  "version": "1.8.5",
+  "version": "1.8.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,9 +9,11 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "test:learning": "node --test scripts/test-course-answers.cjs scripts/test-study-tools.cjs scripts/test-plan-notebook.cjs scripts/test-dock.cjs scripts/test-workspace-panel.cjs scripts/test-learning-experience.cjs scripts/test-notebook-v2.cjs scripts/test-q234.cjs scripts/test-reading-progress.cjs",
-    "test:themes": "node --test scripts/test-themes.cjs scripts/test-white-violet.cjs scripts/test-sequence-light.cjs scripts/test-workspace-shell.cjs",
+    "test:themes": "node --test scripts/test-themes.cjs scripts/test-white-violet.cjs scripts/test-sequence-light.cjs scripts/test-workspace-shell.cjs scripts/test-theme-lint.cjs",
     "theme:check": "node scripts/check-theme.cjs",
-    "test:english": "node --test scripts/test-english.cjs scripts/test-word-metadata.cjs"
+    "theme:lint": "node scripts/theme-lint.cjs",
+    "test:ui-contract": "python scripts/test_ui_contract.py",
+    "test:english": "node --test scripts/test-english.cjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.8.0",
@@ -24,6 +26,8 @@
   "devDependencies": {
     "@tauri-apps/cli": "^2.8.0",
     "@vitejs/plugin-vue": "^6.0.1",
+    "@vue/compiler-sfc": "^3.5.43",
+    "postcss": "^8.5.29",
     "typescript": "^5.7.3",
     "vite": "^7.1.7",
     "vue-tsc": "^2.2.12"

@@ -41,9 +41,9 @@ ENGINE_TIMEOUT/ENGINE_UNCONFIRMED/CONNECTION_FAILED means a write may have commi
 For current-source English capabilities read [English operations](english-operations.md), including exercise extensions, frozen training, original-item retests and plan/domain-scoped mistakes. Installed app1.7.0 artifacts built before this work do not acquire English support by updating a Skill file. Discover the executable's capabilities. New-sentence English migration retests, TTS registration and English detached answer editors remain unsupported; do not apply the ordinary retest editor instructions to an English task by assumption.
 
 
-## Explicit safe restart of a general round
+## Legacy evidence-free restart (compatibility only)
 
-Not a publishing workflow and not course deletion. Only with learner authorization:
+For current replacement/reset use [course maintenance](course-maintenance.md), which permits existing answers with explicit authorization. The following is only the old call shape without reset_current_state, retained for compatibility; its empty-round guard must not be used to deny authorized maintenance.
 
 1. `course.study.restart.preview` with study_session_id. Read can_restart, blocked_reasons, expected_version and expected_content_hash. It does not acquire a writer lease or close the round.
 2. The desktop coordinates all editors; do not use CLI to bypass unsaved/uncertain input in open windows. A CLI actor cannot inspect unsubmitted editor memory, so request desktop confirmation rather than inferring safety from low reading percent.

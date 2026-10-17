@@ -10,13 +10,6 @@ const props=defineProps<{rows: AnswerRow[]; blocked: boolean}>()
 const answeredCount=computed(()=>props.rows.filter(row=>row.answer.trim()).length)
 const submittedCount=computed(()=>props.rows.filter(row=>!!row.submission).length)
 const feedbackCount=computed(()=>props.rows.filter(row=>(row.submission?.reviews?.length||0)>0).length)
-function answerHint(row: AnswerRow) {
- if (row.action==='WAITING_RETEST_TASK') return '等待新的复测题'
- if (row.action==='RETEST') return '正在完成复测'
- if (row.action==='REVISION') return '正在完成修正版'
- if (row.submission) return '本题已有提交记录'
- return row.answer.trim() ? '草稿会自动保存' : '可以暂时跳过'
-}
 function submissionHint(row: AnswerRow) {
  const status=row.submission?.status||''
  if (status==='PASSED') return '本题已通过，历史答案与批改记录仍可查看。'
@@ -39,12 +32,8 @@ async function openHistory(id:string) {
       <div><span class="eyebrow accent">学以致用</span><h3>把理解写下来</h3><p class="muted small">可以暂时跳过，最后统一提交本课答案。</p></div>
       <div class="practice-summary" aria-label="本知识点作答摘要"><span><strong>{{rows.length}}</strong> 道题</span><span><strong>{{answeredCount}}</strong> 已填写</span><span><strong>{{submittedCount}}</strong> 已提交</span><span v-if="feedbackCount"><strong>{{feedbackCount}}</strong> 有反馈</span></div>
     </header>
-    <article v-for="(row,i) in rows" :key="row.exercise_id" class="knowledge-question" :data-exercise="row.exercise_id">
-      <header class="question-heading">
-        <div class="question-index-block"><span class="question-index">{{String(i+1).padStart(2,'0')}}</span><span class="question-type">练习题</span></div>
-        <div class="question-title"><h4>{{row.title}}</h4><span class="question-meta">{{answerHint(row)}}</span></div>
-      </header>
-      <div class="exercise-prompt-wrap"><span class="exercise-prompt-label">题目</span><p class="exercise-prompt">{{row.prompt}}</p></div>
+    <article v-for="(row,i) in rows" :key="row.exercise_id" class="knowledge-question" :data-exercise="row.exercise_id" :aria-label="`第 ${i+1} 题`">
+      <div class="exercise-prompt-wrap"><span class="exercise-prompt-index" aria-hidden="true">{{String(i+1).padStart(2,'0')}}</span><p class="exercise-prompt">{{row.prompt}}</p></div>
       <div v-if="row.requirements" class="question-requirements-box"><strong>作答要求</strong><p>{{row.requirements}}</p></div>
       <p v-if="row.action==='WAITING_RETEST_TASK'" class="waiting-note exercise-action-note">等待 Agent 发布复测题；不用猜评语里的题面。</p>
       <p v-if="row.retest_task" class="retest-objective">复测目标：{{row.retest_task.objective}} · 题面已冻结</p>

@@ -26,7 +26,15 @@ class Proxy {
    var request=json.Deserialize<Dictionary<string,object>>(line);
    if(File.Exists(Environment.GetEnvironmentVariable("STUDYFLOW_FAULT_FILE")) && (string)request["method"]=="plan.notebook.apply") {
     Console.WriteLine(json.Serialize(new {id=request["id"],ok=false,error=new {code="DATABASE_READ_ONLY",message="隔离原生验收：模拟保存失败",next_action="重试原请求或不保存离开"}}));
-   } else {writer.WriteLine(line);writer.Flush();Console.WriteLine(real.StandardOutput.ReadLine());}
+   } else {
+    writer.WriteLine(line);writer.Flush();var response=real.StandardOutput.ReadLine();
+    var marker=Environment.GetEnvironmentVariable("STUDYFLOW_FAULT_FILE")+".english-check";
+    if(File.Exists(marker) && (string)request["method"]=="course.english.check") {
+     // Test-only lost correlation after a real committed check; must replay the original idempotency key.
+     File.Delete(marker);var data=json.Deserialize<Dictionary<string,object>>(response);data["id"]="synthetic-wrong-id";response=json.Serialize(data);
+    }
+    Console.WriteLine(response);
+   }
    Console.Out.Flush();
   }} finally {writer.Close();if(!real.WaitForExit(3000))real.Kill();}
   return 0;

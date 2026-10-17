@@ -1,7 +1,7 @@
 """New transport routes: delegate to domain owners, never implement business here."""
 from studyflow.shared.domain import DomainError
 
-METHODS={"plan.notebook.read":"read","plan.notebook.apply":"write","course.study.restart.preview":"read","course.study.restart":"write","assignment.summary":"read","assignment.context":"read","review.retest.publish":"write","submission.resolve-branch":"write","system.changes":"read","system.schema":"read","course.update.preview":"read","course.update.apply":"write","workspace.export":"write","workspace.validate":"read","workspace.restore":"write","system.installation":"read","plan.edit":"write","plan.schedule.list":"read","plan.notebook.search":"read","plan.notebook.export":"read","course.source.read":"read"}
+METHODS={"course.learning.reset.preview":"read","course.learning.reset.apply":"write","plan.notebook.read":"read","plan.notebook.apply":"write","course.study.restart.preview":"read","course.study.restart":"write","assignment.summary":"read","assignment.context":"read","review.retest.publish":"write","submission.resolve-branch":"write","system.changes":"read","system.schema":"read","course.update.preview":"read","course.update.apply":"write","workspace.export":"write","workspace.validate":"read","workspace.restore":"write","system.installation":"read","plan.edit":"write","plan.schedule.list":"read","plan.notebook.search":"read","plan.notebook.export":"read","course.source.read":"read"}
 
 METHODS.update({"exercise.reference.read":"read","exercise.reference.view":"write","learning.evidence":"read"})
 
@@ -35,6 +35,9 @@ def dispatch(engine,method,params):
     if method in {"plan.notebook.search","plan.notebook.export","course.source.read"}:
         from studyflow.modules.learning.notebook_queries import search, export, source
         return {"plan.notebook.search":search,"plan.notebook.export":export,"course.source.read":source}[method](service.learning,**params)
+    if method in {"course.learning.reset.preview", "course.learning.reset.apply"}:
+        from studyflow.modules.learning.reset import preview, apply
+        return (preview if method.endswith("preview") else apply)(service.learning, **params)
     if method in {"course.study.restart.preview","course.study.restart"}:
         from studyflow.modules.learning.restart import preview, restart
         from .protocol import PROTOCOL_VERSION

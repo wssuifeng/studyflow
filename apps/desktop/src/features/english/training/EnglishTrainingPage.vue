@@ -1,16 +1,16 @@
 <script setup lang="ts">
 import {computed,nextTick,onBeforeUnmount,onMounted,ref,watch} from 'vue'
-import {navigate,notify,reportError} from '../../../shared/ui'
+import {navigate,notify} from '../../../shared/ui'
 import {interactionFeedback} from '../../../shared/ui/interaction'
 import {useEnglishTraining} from './useEnglishTraining'
 import TokenEditor from './TokenEditor.vue'
 import {englishShortcut} from './shortcuts'
 import {keyboardEnabled,keyboardVolume,keyboardAudioName,saveKeyboardPreferences,importKeyboardAudio,resetKeyboardAudio} from '../../../shared/audio/keyboard'
 import SentenceBreakdown from './SentenceBreakdown.vue'
-import {useWordMetadata} from './useWordMetadata'
 import PlanNotebook from '../../notes/components/PlanNotebook.vue'
 import {usePlanNotebook} from '../../notes/composables/usePlanNotebook'
 import {useSafeStudyExit} from '../../learning/composables/useSafeStudyExit'
+import RequestProblemDialog from '../../../shared/components/RequestProblemDialog.vue'
 import LeaveStudyDialog from '../../courses/components/LeaveStudyDialog.vue'
 import {playDictionary,stopSpeech,speechAccent,speechAuto,speechMuted,speechVolume,saveSpeechPreferences} from '../../../shared/audio/dictionary'
 import {isTauri} from '../../../shared/api'
@@ -29,22 +29,31 @@ const drawer=ref<'notes'|null>(null),directoryOpen=ref(false),lessonOpen=ref(fal
 const directoryDialog=ref<HTMLDialogElement|null>(null)
 watch(directoryOpen,async open=>{await nextTick();if(open&&directoryDialog.value&&!directoryDialog.value.open)directoryDialog.value.showModal();else directoryDialog.value?.close()})
 const settings=ref(false),loading=ref(true),speechNotice=ref(''),dictionary=ref<DictionaryInfo|null>(null),analysisOpen=ref(false)
-const wordMetadata=useWordMetadata(computed(()=>data.value?.workspace_key||''),computed(()=>props.id),computed(()=>item.value?.exercise_id||''),reference,analysisOpen)
 let audioGeneration=0
 const keyboardFile=ref<HTMLInputElement|null>(null)
 const audioImportNotice=ref('')
+const problemDialog=ref<InstanceType<typeof RequestProblemDialog>|null>(null)
 const editor=ref<InstanceType<typeof TokenEditor>|null>(null),actions=ref<HTMLElement|null>(null)
 const locked=computed(()=>['WAITING_REVIEW','PASSED','RECHECKED','REVIEWED'].includes(item.value?.status||''))
 const completed=computed(()=>data.value?.items.filter(i=>i.matched||['PASSED','RECHECKED','REVIEWED'].includes(i.status)).length||0)
 const pendingReviews=computed(()=>data.value?.items.filter(i=>i.status==='WAITING_REVIEW').length||0)
-const exit=useSafeStudyExit({busy:()=>busy.value||notes.busy.value,hasProblem:()=>!!(failed.value||training.pending.value||recovery.value||notes.saveFailed.value||notes.pending.value||notes.recovery.value),flush:async()=>await training.save()&&await notes.save(),retry:async()=>{await training.retryPending();await notes.retry()},suspend:()=>{training.suspend();notes.suspendAutosave();stopSpeech();if(exit.dialog.value?.path==='close-window')window.dispatchEvent(new CustomEvent('studyflow-discard-close'))}})
+const exit=useSafeStudyExit({busy:()=>busy.value||notes.busy.value,hasProblem:()=>!!(failed.value||training.pending.value||recovery.value||notes.saveFailed.value||notes.pending.value||notes.recovery.value),flush:async()=>await (training.superseded.value?true:training.save())&&await notes.save(),retry:async()=>{await training.retryPending();await notes.retry()},suspend:()=>{training.suspend();notes.suspendAutosave();stopSpeech();if(exit.dialog.value?.path==='close-window')window.dispatchEvent(new CustomEvent('studyflow-discard-close'))}})
 async function check(){
  const checkedId=item.value?.exercise_id
  const result=await training.check()
- if(!result||item.value?.exercise_id!==checkedId)return
+ if(item.value?.exercise_id!==checkedId)return
+ if(!result){
+  // 空输入等校验提示只落在输入附近，焦点交回第一个空词，不出失败横幅。
+  if(training.validationNotice.value){await nextTick();focusFirstEmpty()}
+  return
+ }
  if(speechAuto.value)void play()
  if(result.matched){analysisOpen.value=false;training.hideHint();interactionFeedback('complete');await nextTick();if(drawer.value!=='notes')actions.value?.querySelector<HTMLButtonElement>('.primary-button')?.focus()}
  else{await nextTick();editor.value?.focusWord(result.differences[0]?.index||0);if((item.value?.error_count||0)>=2)await openAnalysis()}
+}
+function focusFirstEmpty(){
+ const firstEmpty=tokens.value.findIndex(t=>!t.trim())
+ editor.value?.focusWord(firstEmpty<0?0:firstEmpty)
 }
 async function move(index:number){
  stopSpeech();audioGeneration++;dictionary.value=null;speechNotice.value='';analysisOpen.value=false;directoryOpen.value=false;lessonOpen.value=false
@@ -84,27 +93,27 @@ async function importKeySound(event:Event) {
 }
 watch([keyboardEnabled,keyboardVolume],saveKeyboardPreferences)
 watch([speechAccent,speechVolume,speechMuted,speechAuto],()=>{stopSpeech();saveSpeechPreferences()})
-onMounted(async()=>{try{await training.load()}catch(e){reportError(e);failed.value=(e as Error).message}finally{loading.value=false};await nextTick();editor.value?.focusWord(0);if(item.value&&speechAuto.value)void play()})
+onMounted(async()=>{try{await training.load()}catch(e){failed.value=(e as Error).message}finally{loading.value=false};await nextTick();editor.value?.focusWord(0);if(item.value&&speechAuto.value)void play()})
 onBeforeUnmount(()=>{audioGeneration++;stopSpeech()})
 </script>
 <template>
+ <RequestProblemDialog ref="problemDialog" :error="failed" :request-key="String(training.pending.value?.params.idempotency_key||'')" context="english-training" :retrying="training.actionRunning.value" :can-retry="!!training.pending.value" @retry="training.retryPending" @export="training.exportInput"/>
  <LeaveStudyDialog v-if="exit.dialog.value" :closing="exit.dialog.value.path==='close-window'" :reason="exit.dialog.value.reason" :retrying="exit.dialog.value.retrying" @retry="exit.retry" @discard="exit.finish(true,true)" @cancel="exit.finish(false)" @export="training.exportInput"/>
  <div v-if="loading" class="loading-state">正在恢复英语训练…</div>
  <section v-else-if="data&&item" class="english-learning" aria-label="英语专注训练" @keydown="keydown">
-  <header class="english-training-header"><button class="text-button" @click="navigate('/course/'+data.course.id)">← 返回课程</button><div class="english-header-title"><strong>{{data.course.title}}</strong><span>{{position+1}} / {{data.items.length}}<template v-if="item.progression"> · {{stageLabels[item.progression.stage]}}</template> · 已检查通过 {{completed}}<template v-if="pendingReviews"> · 待审核 {{pendingReviews}}</template></span></div><div class="english-header-tools"><button :aria-expanded="settings" @click="settings=!settings">训练设置</button><button :aria-expanded="drawer==='notes'" @click="drawer=drawer==='notes'?null:'notes'">笔记</button></div></header>
-  <div v-if="settings" class="english-speech-settings"><label>口音请求 <select v-model="speechAccent"><option value="en-US">美式</option><option value="en-GB">英式</option></select></label><label>语音音量 {{speechVolume}}% <input v-model.number="speechVolume" type="range" min="0" max="100"/></label><label><input v-model="speechMuted" type="checkbox"/>静音</label><label><input v-model="speechAuto" type="checkbox"/>检查通过后朗读</label><label><input v-model="keyboardEnabled" type="checkbox"/>输入键音</label><label>键音音量 {{keyboardVolume}}% <input v-model.number="keyboardVolume" type="range" min="0" max="100"/></label><div class="english-keyboard-asset"><span>{{keyboardAudioName}}</span><button @click="keyboardFile?.click()">导入键音</button><button @click="resetKeyboardAudio">恢复内置</button><input ref="keyboardFile" class="sr-only" type="file" accept=".mp3,.wav,.ogg" @change="importKeySound"/></div><p v-if="audioImportNotice" role="status">{{audioImportNotice}}</p><small>Ctrl+'：当前词提示 · Ctrl+;：本句提示 · Ctrl+.：暂跳 · Ctrl+,：上一项。提示就在输入位置显示，不切换页面。网络发音失败不阻塞训练。</small></div>
-  <p v-if="data.course.source_changed" class="english-assistance">课程已有新修订，本轮保留原材料与答案。{{data.completed?'本轮训练已提交，可返回课程概览学习修订后的课程。':'请先完成并提交本轮训练，再从课程概览学习修订后的课程。'}}</p>
+  <header class="english-training-header"><button @click="navigate('/course/'+data.course.id)">← 返回课程</button><div class="english-header-title"><strong>{{data.course.title}}</strong><span>{{position+1}} / {{data.items.length}}<template v-if="item.progression"> · {{stageLabels[item.progression.stage]}}</template> · 已检查通过 {{completed}}<template v-if="pendingReviews"> · 待审核 {{pendingReviews}}</template></span></div><div class="english-header-tools"><button :aria-expanded="settings" @click="settings=!settings">训练设置</button><button :aria-expanded="drawer==='notes'" @click="drawer=drawer==='notes'?null:'notes'">笔记</button></div></header>
+  <div v-if="settings" class="english-speech-settings"><label>口音请求 <select v-model="speechAccent"><option value="en-US">美式</option><option value="en-GB">英式</option></select></label><label>语音音量 {{speechVolume}}% <input v-model.number="speechVolume" type="range" min="0" max="100"/></label><label><input v-model="speechMuted" type="checkbox"/>静音</label><label><input v-model="speechAuto" type="checkbox"/>检查通过后朗读</label><label><input v-model="keyboardEnabled" type="checkbox"/>输入键音</label><label>键音音量 {{keyboardVolume}}% <input v-model.number="keyboardVolume" type="range" min="0" max="100"/></label><div class="english-keyboard-asset"><span>{{keyboardAudioName}}</span><button @click="keyboardFile?.click()">导入键音</button><button @click="resetKeyboardAudio">恢复内置</button><input ref="keyboardFile" class="sr-only" type="file" accept=".mp3,.wav,.ogg" @change="importKeySound"/></div><p v-if="audioImportNotice" role="status">{{audioImportNotice}}</p><small>Ctrl+'：整句朗读 · Ctrl+Shift+'：单词朗读 · Ctrl+;：解析 · Ctrl+.：暂跳 · Ctrl+,：上一项。网络发音失败不阻塞训练。</small></div>
+  <div v-if="training.superseded.value" class="english-recovery" role="status">课程内容已更新，本轮已收口保留为历史，学习进度已重置。{{training.dirty.value?'本机未提交输入已保留，可先导出。':''}}<button @click="navigate('/course/'+data.course.id)">重新打开课程</button><button v-if="training.dirty.value" @click="training.exportInput">导出输入</button></div>
   <div v-if="recovery" class="english-recovery" role="status">发现此轮的本机未保存输入。<button @click="training.restore">恢复输入</button><button @click="training.discardRecovery">保留工作区版本</button><button @click="training.exportInput">导出</button></div>
-  <div v-if="failed" class="english-error" role="alert">{{failed}}<button :disabled="training.actionRunning.value" @click="training.retryPending">重试原请求</button><button @click="training.exportInput">导出输入</button><button @click="navigate('/course/'+data.course.id)">离开训练…</button></div>
   <div class="english-work-surface" :class="{'has-drawer':drawer}">
    <main class="english-stage">
     <template v-if="phase!=='result'">
-     <SentenceBreakdown v-if="analysisOpen&&reference&&phase!=='answer'" :reference="reference" :metadata="wordMetadata.words.value" @word="play"/>
-     <p v-if="analysisOpen&&wordMetadata.notice.value" class="english-metadata-status" role="status">{{wordMetadata.notice.value}} <button v-if="['deferred','unavailable'].includes(wordMetadata.status.value)" class="text-button" @click="wordMetadata.refresh">重试辅助信息</button></p>
+     <SentenceBreakdown v-if="analysisOpen&&reference&&phase!=='answer'" :reference="reference" :show-roles="!item.progression||!['vocabulary','chunk'].includes(item.progression.stage)" @word="play"/>
      <div class="english-question"><h1>{{item.prompt}}</h1></div>
      <p v-if="item.status==='WAITING_REVIEW'" class="english-assistance" role="status">此项已有待审核记录，答案保持不变。无需重复作答，可继续训练或完成本课；待审核不计为检查通过。</p>
      <TokenEditor v-if="phase!=='answer'" ref="editor" v-model="tokens" :minimum="item.min_token_count||item.token_count" :maximum="item.max_token_count||item.token_count" :disabled="training.inputLocked.value||locked" :differences="phase==='correction'?item.differences:[]" @edited="training.edited" @check="check"/>
      <div v-else class="english-answer"><p class="english-target">{{item.answer_text}}</p></div>
+     <p v-if="training.validationNotice.value" class="english-assistance" role="status">{{training.validationNotice.value}}</p>
      <div ref="actions" class="english-main-actions">
       <button v-if="phase!=='answer'&&!locked" class="primary-button" :disabled="training.actionRunning.value" @click="check">检查答案 <kbd>Enter</kbd></button>
       <button v-else-if="position<data.items.length-1" class="primary-button" :disabled="training.actionRunning.value" @click="move(position+1)">下一项 →</button>
@@ -126,7 +135,7 @@ onBeforeUnmount(()=>{audioGeneration++;stopSpeech()})
     <button :disabled="phase==='answer'||locked" @click="toggleAnalysis"><kbd>Ctrl</kbd><kbd>;</kbd>解析</button>
     <button :disabled="position>=data.items.length-1||training.actionRunning.value" @click="phase==='answer'||locked?move(position+1):skip()"><kbd>Ctrl</kbd><kbd>.</kbd>{{phase==='answer'||locked?'下一项':'暂跳'}}</button>
    </div>
-   <span class="english-save-status" role="status">{{training.saving.value?'保存中':training.dirty.value?'待保存':failed?'保存未确认':'已保存'}}</span>
+   <button v-if="failed" type="button" class="english-save-status is-problem" @click="problemDialog?.open()">保存待确认</button><span v-else class="english-save-status" role="status">{{training.saving.value?'保存中':training.superseded.value?'本轮已收口':training.dirty.value?'待保存':training.pending.value?'保存待确认':'已保存'}}</span>
   </footer>
   <dialog v-if="directoryOpen" ref="directoryDialog" class="english-directory-overlay" aria-labelledby="english-directory-title" @cancel.prevent="directoryOpen=false"><section class="english-directory-dialog"><header><h2 id="english-directory-title">课程目录</h2><button autofocus @click="directoryOpen=false" aria-label="关闭课程目录">×</button></header><ol class="english-directory"><li v-for="(entry,i) in data.items" :key="entry.exercise_id"><button :aria-current="position===i?'step':undefined" @click="move(i)"><span>{{i+1}}</span><strong>{{entry.title}}</strong><i>{{entry.matched?'✓':entry.skipped?'暂跳':''}}</i></button></li></ol></section></dialog>
  </section>

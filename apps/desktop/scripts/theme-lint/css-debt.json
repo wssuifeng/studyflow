@@ -1,0 +1,631 @@
+{
+  "meta": {
+    "migrated": "2026-10-17",
+    "migratedFrom": "scripts/theme-lint-baseline.json（2026-10-16 计数基线：grid5/5、fixed0、overflow15/6、viewport0、displayNone8/4、layoutImportant1/0、absoluteWithoutPointerEvents9/1）",
+    "basis": "由旧计数基线迁移为精确清单：postcss AST 解析全部 src CSS 与 Vue <style>，仅判定带值主题身份作用域规则。类别语义与旧正则一致（overflow 仅 prop=overflow；viewport 仅 100vh/dvh 字面量）。差异：①旧 layoutImportant=1 为 \"max-width:...!important\" 被 width 子串误匹配的假阳性，精确清单不含；②新增装饰槽（nav-icon-glyph 等5项）放行后与旧计数持平（displayNone 8/4、unguarded absolute 9/1、grid 5/5、overflow 15/6）；③旧 THEME_CSS_NOT_BASELINED 计数门禁废止，改为未登记违规即失败。",
+    "counts": {
+      "sequence": {
+        "overflow": 15,
+        "unguardedAbsolute": 9,
+        "displayNone": 8,
+        "grid": 5
+      },
+      "whiteViolet": {
+        "overflow": 6,
+        "unguardedAbsolute": 1,
+        "displayNone": 4,
+        "grid": 5
+      }
+    },
+    "lastUpdated": "2026-10-17"
+  },
+  "decorative": [
+    {
+      "selectorClasses": [
+        "nav-icon-svg"
+      ],
+      "reason": "导航图标线变体装饰槽（主题经自身作用域切换可见性）"
+    },
+    {
+      "selectorClasses": [
+        "nav-icon-glyph"
+      ],
+      "reason": "导航图标字形变体装饰槽（共享默认显示，主题可切换）"
+    },
+    {
+      "selectorClasses": [
+        "sidebar-signature"
+      ],
+      "reason": "侧栏签名装饰槽（::after content 由主题CSS提供，共享层默认隐藏）"
+    },
+    {
+      "selectorClasses": [
+        "sidebar"
+      ],
+      "selectorPseudos": [
+        "after"
+      ],
+      "reason": "侧栏折纸装饰伪元素槽（pointer-events:none 已具备）"
+    },
+    {
+      "selectorClasses": [
+        "theme-reading-artwork"
+      ],
+      "reason": "阅读面装饰插画槽（pointer-events:none + user-select:none）"
+    }
+  ],
+  "debt": [
+    {
+      "id": "f20f71aa18",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .window-mark,:root[data-theme-id=\"sequence-light\"] .brand-mark",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 9,
+      "reason": "主题作用域内 overflow:hidden（裁切或滚动所有权覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "d351d402c2",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .window-mark::before,:root[data-theme-id=\"sequence-light\"] .brand-mark::before",
+      "prop": "position",
+      "value": "absolute",
+      "line": 10,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "6f8be4da5b",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .window-mark::after,:root[data-theme-id=\"sequence-light\"] .brand-mark::after",
+      "prop": "position",
+      "value": "absolute",
+      "line": 11,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "700162feae",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sidebar .brand span",
+      "prop": "display",
+      "value": "none",
+      "line": 22,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "4c672f7c23",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sidebar .sidebar-bottom .small",
+      "prop": "display",
+      "value": "none",
+      "line": 33,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "ea43a83731",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .course-sidebar-slot:empty",
+      "prop": "display",
+      "value": "none",
+      "line": 40,
+      "reason": "主题作用域内 display:none（空态占位收起，属状态驱动但由主题层实现）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "51f2682528",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-plan-row>strong",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 45,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "32aa2bb215",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-mini-progress [role=progressbar]",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 49,
+      "reason": "主题作用域内 overflow:hidden（裁切或滚动所有权覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "4d8422327c",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-course-meta",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 51,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "0c3a1d0a10",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-outline-switch>span",
+      "prop": "position",
+      "value": "absolute",
+      "line": 53,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "9b75ec2c7f",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .app-shell.learning-shell .main-content,:root[data-theme-id=\"sequence-light\"] .app-shell.focus-shell .main-content",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 70,
+      "reason": "主题作用域内 overflow:hidden（滚动所有权/主区裁切在主题层覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "314e968ef8",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .learning-shell>.main-content",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 71,
+      "reason": "主题作用域内 overflow:hidden（滚动所有权/主区裁切在主题层覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "e96d80ff88",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .learning-shell .study-unit-layout",
+      "prop": "grid-template-columns",
+      "value": "minmax(0,1fr)",
+      "line": 83,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "403518c807",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .teaching-group.is-concept-pair",
+      "prop": "grid-template-columns",
+      "value": "repeat(2,minmax(0,1fr))",
+      "line": 95,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "6f24670062",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .teaching-block-heading h4::before",
+      "prop": "position",
+      "value": "absolute",
+      "line": 99,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "1da77f5701",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-page-turn button>span",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 140,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "907fd65ff8",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .teaching-group.is-concept-pair",
+      "prop": "grid-template-columns",
+      "value": "1fr",
+      "line": 170,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "edb67a5a83",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sidebar .nav-caption,:root[data-theme-id=\"sequence-light\"] .sidebar .brand,:root[data-theme-id=\"sequence-light\"] .sidebar .sidebar-bottom,:root[data-theme-id=\"sequence-light\"] .sidebar .sidebar-signature,:root[data-theme-id=\"sequence-light\"] .course-sidebar-slot",
+      "prop": "display",
+      "value": "none",
+      "line": 177,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "b75ea71e10",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sidebar .nav-badge",
+      "prop": "position",
+      "value": "absolute",
+      "line": 179,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "2a1e4a8372",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .learning-shell .reader-context",
+      "prop": "display",
+      "value": "none",
+      "line": 180,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "cd8543bbcb",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-tools-panel",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 193,
+      "reason": "主题作用域内 overflow:hidden（滚动所有权/主区裁切在主题层覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "fcdd662cf8",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-tool-heading-copy>strong",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 199,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "39fcb9cfaf",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-tool-tabs>button[role=\"tab\"].active::after",
+      "prop": "position",
+      "value": "absolute",
+      "line": 207,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "93aa65be69",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-tool-menu",
+      "prop": "position",
+      "value": "absolute",
+      "line": 211,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "91266db769",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-tool-caption",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 220,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "2d4fd92de5",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-answer-section .practice-heading",
+      "prop": "display",
+      "value": "none",
+      "line": 222,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "9d52b9aa83",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-progress-ring::before",
+      "prop": "position",
+      "value": "absolute",
+      "line": 234,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "2307d55a58",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-next-card strong",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 241,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "25179e0025",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-recovery:empty",
+      "prop": "display",
+      "value": "none",
+      "line": 255,
+      "reason": "主题作用域内 display:none（空态占位收起，属状态驱动但由主题层实现）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "3634b55eea",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-tool-footer strong",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 259,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "4e7097cea0",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-tools-panel .dock-panes.has-split",
+      "prop": "grid-template-columns",
+      "value": "minmax(0,1fr)",
+      "line": 261,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "453ac4994f",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .learning-shell .teaching-block-heading::before",
+      "prop": "position",
+      "value": "absolute",
+      "line": 404,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "055cd170ba",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .learning-shell .teaching-block-heading h4::before",
+      "prop": "display",
+      "value": "none",
+      "line": 421,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "9ccf6744c7",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .learning-shell .teaching-steps li",
+      "prop": "grid-template-columns",
+      "value": "30px minmax(0, 1fr)",
+      "line": 473,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "8df31be526",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-outline-copy",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 555,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "b2a34a0184",
+      "file": "src/features/courses/styles/sequence-light.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": ":root[data-theme-id=\"sequence-light\"] .sequence-outline-copy strong",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 558,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "c410e7b099",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": "[data-theme-display=\"white-violet\"] .step-title,[data-theme-display=\"white-violet\"] .teaching-kind-icon",
+      "prop": "display",
+      "value": "none",
+      "line": 4,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "938025ff4c",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": "[data-theme-display=\"white-violet\"] .learning-shell>.main-content",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 26,
+      "reason": "主题作用域内 overflow:hidden（滚动所有权/主区裁切在主题层覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "0358410706",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": "[data-theme-display=\"white-violet\"] .learning-shell .teaching-group.is-concept-pair",
+      "prop": "grid-template-columns",
+      "value": "repeat(2, minmax(0, 1fr))",
+      "line": 58,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "f374f670e4",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": "[data-theme-display=\"white-violet\"] .learning-shell .teaching-group.is-concept-pair",
+      "prop": "grid-template-columns",
+      "value": "minmax(0, 1fr)",
+      "line": 131,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "a763a2b1f6",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": "[data-theme-display=\"white-violet\"] .learning-shell .study-unit-layout",
+      "prop": "grid-template-columns",
+      "value": "minmax(0, 1fr)",
+      "line": 148,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "14f52d4540",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": "[data-theme-display=\"white-violet\"] .learning-shell .study-unit-layout.tools-visible",
+      "prop": "grid-template-columns",
+      "value": "minmax(0, 1fr)",
+      "line": 152,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    },
+    {
+      "id": "4e3b3289cc",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": "[data-theme-display=\"white-violet\"] .learning-shell .sequence-page-turn button>span",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 202,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "185bc3017c",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": "[data-theme-display=\"white-violet\"] .course-sidebar-slot:empty",
+      "prop": "display",
+      "value": "none",
+      "line": 212,
+      "reason": "主题作用域内 display:none（空态占位收起，属状态驱动但由主题层实现）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "24b771288a",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": "[data-theme-display=\"white-violet\"] .sequence-course-outline",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 213,
+      "reason": "主题作用域内 overflow:hidden（滚动所有权/主区裁切在主题层覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "2ab6954845",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": "[data-theme-display=\"white-violet\"] .sequence-plan-row>strong",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 217,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "f8641b13cc",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": "[data-theme-display=\"white-violet\"] .sequence-mini-progress [role=progressbar]",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 221,
+      "reason": "主题作用域内 overflow:hidden（裁切或滚动所有权覆盖）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "8089beb70b",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_OVERFLOW_HIDDEN",
+      "selector": "[data-theme-display=\"white-violet\"] .sequence-course-meta",
+      "prop": "overflow",
+      "value": "hidden",
+      "line": 223,
+      "reason": "主题作用域内 overflow:hidden（文本截断 ellipsis 所需裁切）",
+      "closure": "收口任务：滚动所有权归共享运行时契约；文本截断上移共享工具类（主设计§8.2）"
+    },
+    {
+      "id": "804618b937",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_ABSOLUTE_UNGUARDED",
+      "selector": "[data-theme-display=\"white-violet\"] .sequence-outline-switch>span",
+      "prop": "position",
+      "value": "absolute",
+      "line": 225,
+      "reason": "主题作用域内 position:absolute（功能性定位或未带 pointer-events:none 的装饰）",
+      "closure": "收口任务：功能定位上移共享层；装饰迁移至登记装饰槽并补 pointer-events:none（主设计§8.4）"
+    },
+    {
+      "id": "a745a43d2c",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": "[data-theme-display=\"white-violet\"] .sidebar .brand,[data-theme-display=\"white-violet\"] .sidebar .nav-caption,[data-theme-display=\"white-violet\"] .sidebar .course-sidebar-slot,[data-theme-display=\"white-violet\"] .sidebar .sidebar-bottom",
+      "prop": "display",
+      "value": "none",
+      "line": 251,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "0cbbf0dfe2",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_DISPLAY_NONE",
+      "selector": "[data-theme-display=\"white-violet\"] .sidebar .nav-badge",
+      "prop": "display",
+      "value": "none",
+      "line": 255,
+      "reason": "主题作用域内 display:none（主题决定区域可见性）",
+      "closure": "收口任务：可见性/折叠决策上移共享层或由数据状态驱动（主设计§8.1）"
+    },
+    {
+      "id": "98f1e5cc7f",
+      "file": "src/features/courses/styles/white-violet.css",
+      "rule": "THEME_CSS_GRID",
+      "selector": "[data-theme-display=\"white-violet\"] .learning-shell.panel-open .study-unit-layout.tools-visible",
+      "prop": "grid-template-columns",
+      "value": "minmax(0, 1fr)",
+      "line": 260,
+      "reason": "主题作用域内定义 grid-template 布局结构（主题重定义正文/工具布局）",
+      "closure": "收口任务：布局结构迁移至共享布局计算或 runtime.css 契约映射（主设计§8.2/§8.4）"
+    }
+  ]
+}

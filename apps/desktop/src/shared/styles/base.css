@@ -5,7 +5,7 @@ button,input,textarea{font:inherit}
 button{cursor:pointer;border:0;transition:background .18s,transform .18s,box-shadow .18s;color:inherit}
 button:active:not(:disabled){transform:scale(.975)}
 button:disabled{cursor:not-allowed;opacity:.48}
-button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible{outline:3px solid var(--theme-focus-ring);outline-offset:3px}
+button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--theme-focus-ring);outline-offset:3px}
 a{color:var(--accent)}
 h1,h2,h3,p{margin:0}
 h1{font-size:27px;font-weight:650;letter-spacing:-.9px}
@@ -14,11 +14,22 @@ h3{font-size:17px;line-height:1.5}
 p{line-height:1.8}
 pre,code{font-family:"Cascadia Code",Consolas,monospace}
 pre{white-space:pre-wrap;overflow-wrap:anywhere}
-button.primary-button,button.secondary-button{display:inline-flex;justify-content:center;align-items:center;gap:14px;padding:12px 20px;border-radius:11px;line-height:1.35;font-size:14px;font-weight:600}
-button.primary-button{background:var(--accent);color:var(--theme-text-inverse);box-shadow:0 7px 18px color-mix(in srgb,var(--theme-shadow-ink) 16.08%,transparent)}
-button.primary-button:hover:not(:disabled){background:var(--theme-accent-primary);box-shadow:0 9px 22px color-mix(in srgb,var(--theme-shadow-ink) 25.1%,transparent)}
+/* §8.4四语义按钮契约：主/次/危险的几何、状态与hover只在此一处定义，主题层仅调整颜色/圆角/阴影值。
+   text-button为行内文本语义，不设min-height以免破坏行内排版；危险色只用于危险语义。 */
+button.primary-button,button.secondary-button,button.danger-button{display:inline-flex;justify-content:center;align-items:center;gap:14px;min-height:36px;padding:12px 20px;border-radius:11px;line-height:1.35;font-size:14px;font-weight:600}
+button.primary-button{background:var(--accent);color:var(--theme-text-inverse);box-shadow:0 3px 8px color-mix(in srgb,var(--theme-shadow-ink) 6.27%,transparent)}
+button.primary-button:hover:not(:disabled){background:var(--theme-accent-strong);box-shadow:0 6px 18px color-mix(in srgb,var(--theme-shadow-ink) 12.55%,transparent)}
 button.secondary-button{background:var(--theme-surface-panel);border:1px solid var(--line);color:var(--theme-text-secondary)}
 button.secondary-button:hover:not(:disabled){background:var(--theme-accent-soft);border-color:var(--theme-border-subtle)}
+button.danger-button{background:var(--theme-status-danger-soft);border:1px solid var(--theme-status-danger);color:var(--theme-status-danger)}
+button.danger-button:hover:not(:disabled){background:color-mix(in srgb,var(--theme-status-danger) 22%,var(--theme-status-danger-soft))}
+/* 紧凑variant（§8.2密度契约）：局部紧凑与compact密度profile共用同一映射。 */
+button.primary-button.compact,button.secondary-button.compact,button.danger-button.compact,:root[data-theme-density='compact'] button.primary-button,:root[data-theme-density='compact'] button.secondary-button,:root[data-theme-density='compact'] button.danger-button{min-height:32px;padding:8px 14px;font-size:12px;gap:8px}
+/* loading契约：按钮进入.is-loading即以统一spinner呈现，语义文字由调用方保留。 */
+button.is-loading{cursor:progress}
+button.is-loading::before{content:"";width:12px;height:12px;flex:none;border-radius:50%;border:2px solid currentColor;border-top-color:transparent;animation:spin .9s linear infinite}
+.spin{animation:spin .9s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 .text-button,.back-button{background:transparent;color:var(--accent);padding:6px 2px;font-weight:550;line-height:1.6}
 .text-button:hover,.back-button:hover{color:var(--theme-accent-primary)}
 .back-button{margin-bottom:20px;color:var(--muted)}

@@ -29,6 +29,20 @@ function fixture(seedStorage) {
   const course=vue.ref({course:{id:'c'},study:{id:'round-1'},lessons:[{id:'l',title:'合成知识点',exercises:[{id:'e1',title:'合成题1',prompt:'题面1',requirements:''},{id:'e2',title:'合成题2',prompt:'题面2',requirements:''}]}]})
   return {model:mod.exports.useCourseAnswers(course),store,state,calls,errors,hold(p){hold=p},reject(code){reject=code},dispose(){cleanup.forEach(f=>f())}}
 }
+test('reloading a fresh round clears superseded so the new round can save again',async()=>{
+  const f=fixture();await f.model.load();f.model.rows.value[0].answer='旧轮输入'
+  f.reject('STUDY_ROUND_SUPERSEDED');assert.equal(await f.model.write('save'),false)
+  assert.equal(f.model.superseded.value,true)
+  assert.equal(await f.model.load(),true)
+  assert.equal(f.model.superseded.value,false)
+  // The sealed round's cached input surfaces as recovery for the new round; resolve it, then saving works.
+  assert.ok(f.model.recovery.value)
+  f.model.discardCache()
+  f.model.rows.value[0].answer='新轮输入'
+  assert.equal(await f.model.write('save'),true)
+  assert.equal(f.model.superseded.value,false)
+})
+test('a sealed round sets superseded, clears the pending write and never retries it as save failure',async()=>{const f=fixture();await f.model.load();f.model.rows.value[0].answer='本机未提交输入';f.reject('STUDY_ROUND_SUPERSEDED');assert.equal(await f.model.write('save'),false);assert.equal(f.model.superseded.value,true);assert.equal(f.model.saveFailed.value,false);assert.equal(f.model.pending.value,null);assert.equal(await f.model.write('save'),false);assert.equal(f.calls.length,1);assert.equal(f.model.rows.value[0].answer,'本机未提交输入')})
 test('空题可保留草稿，正式提交校验完整性',async()=>{
  const f=fixture();try{await f.model.load();assert.equal(f.model.missing.value.length,2)
  assert.equal(await f.model.write('save'),true);assert.equal(await f.model.write('submit'),false);assert.equal(f.calls.length,0)
