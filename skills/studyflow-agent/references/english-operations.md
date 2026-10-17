@@ -52,3 +52,7 @@ Ctrl+Quote整句朗读、Ctrl+Shift+Quote当前词、Ctrl+Semicolon解析、Ctrl
 `audio.dictionary.metadata` reads the current frozen item's per-word auxiliary metadata without playing audio or waiting for provider HTTP. Missing/unknown phonetics are allowed; returned word phonetics do not certify accent or sentence transcription.
 
 English evidence-free rounds may use the existing restart preview/restart flow. A preview includes `expected_training_version`; pass it unchanged together with `expected_version`, source hash and a stable idempotency key. Browsing/navigation alone may be allowed. Any saved input (even an empty saved draft), text reveal, check, completed training or unknown write blocks abandonment. Preview does not authorize restarting a learner's actual round.
+
+## 2.9.1 解析数据来源调整
+
+训练界面不再自动调用`audio.dictionary.metadata`或轮询IPA，不显示音标辅助状态/重试条；课程作者负责核对并写入音标、当前短义与词性。既有metadata只读API保留兼容，不作为新制课必经步骤。`audio.dictionary.lookup`继续负责整句/单词发音兜底。短语先按结构和最小必要语境编写，不因后续会作主语/宾语就在独立片段上断言该角色。详见[英语制课规则](english-course-authoring.md)。

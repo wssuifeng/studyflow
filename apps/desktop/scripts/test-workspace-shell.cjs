@@ -6,7 +6,9 @@ test('普通页面路由拥有独立滚动与反馈清理契约',()=>{
  const app=read('app/App.vue')
  assert.match(app,/function resetMainScrollForRoute\(next:string\)/)
  assert.match(app,/resetMainScrollForRoute\(next\)/)
- assert.match(app,/nextName!==['"]course['"]&&nextName!==['"]tool['"]\)newFeedback\.value=false/)
+ assert.doesNotMatch(app,/newFeedback|工作区有新反馈或状态更新/)
+ assert.match(app,/checkingChanges=true/)
+ assert.match(app,/finally\{checkingChanges=false\}/)
  assert.match(app,/if\(held\.ok\)shutdownRequest=held\.requestId/)
  assert.doesNotMatch(app,/shutdownRequest=held\.requestId;if\(!held\.ok\)/)
 })
@@ -62,3 +64,13 @@ test('前端审计修复保持生命周期与异常边界',()=>{
 })
 
 test('隐藏主题文件选择器有定位锚点，不从长设置正文溢出到窗口根滚动区',()=>{assert.match(read('features/workspace/styles/themes.css'),/\.visually-hidden\s*\{position:absolute;top:0;left:0;/)})
+
+test('topbar按钮几何回归共享基线，app层不再覆盖padding与字号',()=>{
+ const shell=read('app/styles/shell.css'),desktop=read('app/styles/desktop.css'),workspace=read('app/styles/workspace.css'),base=read('shared/styles/base.css')
+ assert.doesNotMatch(shell,/\.topbar button\{[^}]*font-size/)
+ const topbar=desktop.match(/\.topbar \.secondary-button \{[^}]*\}/)
+ assert.ok(topbar,'topbar secondary保留视觉差异')
+ assert.ok(!/(padding|font-size)\s*:/.test(topbar[0]),'topbar不得覆盖按钮几何')
+ assert.doesNotMatch(workspace,/button\.primary-button/)
+ assert.match(base,/button\.primary-button,button\.secondary-button,button\.danger-button\{/)
+})

@@ -1,3 +1,4 @@
+/* ARIA契约（§7.1/§8.4）：error-state须配role="alert"（异步失败须向读屏播报），loading-state须配role="status"，empty-state无播报要求。 */
 .empty-state,.error-state,.loading-state{text-align:center;border:1px dashed var(--line);border-radius:17px;padding:48px 25px;color:var(--muted);font-size:13px}
 .empty-state,.loading-state{background:var(--theme-surface-raised)}
 .error-state{background:color-mix(in srgb,var(--theme-status-danger-soft) 52.16%,transparent)}

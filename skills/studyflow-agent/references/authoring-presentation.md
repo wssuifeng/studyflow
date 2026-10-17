@@ -62,6 +62,16 @@
 
 ## Bounded advisory report
 
-Run the standard-library helper from this actual Skill root: `python scripts/authoring_quality.py --package <explicit-package.json>`. Optional `--blueprint`, `--sources`, `--related` and `--validation-receipt` read only named local JSON files; stdout is the report, not a course rewrite. The CLI still owns protocol validation. To bind its receipt, wrap the actual result as `{"package_sha256":"<input-bytes-hash>","result":<CLI-result>}`; unbound or stale receipts are not passes.
+Run the read-only CLI: `studyflow course quality-check --file <explicit-package.json> --format json`. Optional `--blueprint`, `--sources`, repeatable `--related`, `--validation-receipt` and `--rendering-receipt` read only named local JSON files; stdout is the report, not a course rewrite. The CLI owns the check, including protocol validation. To bind a receipt, wrap the actual result as `{"package_sha256":"<input-bytes-hash>","result":<CLI-result>}`; unbound or stale receipts are not passes. This Skill's `scripts/authoring_quality.py` only forwards arguments to that CLI command; it needs an environment with the `studyflow` CLI installed and exits with a clear error instead of falling back to local rules.
 
 Reports are deterministic and hash/rule-version bound. Long sections, matching numeric examples, placeholder references and normalized duplicates are review candidates, never automatic cutting or semantic verdicts. Empty optional phonetics are allowed; nonempty phonetics still need source/accent/license checks. Track human decisions against each report item in the task workspace, and do not report unread ranges or inferred sentence frames as reviewed.
+
+## 英语解析的作者数据检查（2.9.1）
+
+音标由制课Agent核实并写入，默认不做运行时补齐。逐词短义和词性必须匹配当前语境；短语的结构类别不等于完整句中的主语/宾语功能。检查同卡片部分词有音标的基线、无音标不留整行、长义不撑歪单词；不能用CSS截断来代替内容纠错。完整原文可悬浮查看。质量提示不能替代语义审核。
+
+英语内容审核还必须执行[自然表达与语境审核](english-course-authoring.md#41-自然表达与语境审核所有英语制课任务必过)：先核对实际语境、自然目标句和专业事实，再看递进拆分及展示；不要把语法成立、词表覆盖、validate或渲染通过当作自然度验收。仅调排版不能修正生硬或意义空泛的句子。
+
+## 英语全项词段核对（2.9.3）
+
+英语任务按[独立表达与成分划分复核](english-course-authoring.md#42-独立表达与成分划分复核)检查。质量报告的`english_structure_review`只投影作者start/end真正选中的词，并按作者POS提示明显边界矛盾；不做语法解析或自动更正。对授权课的全部项核对词段，不只验单词/短语/整句各一个代表；区分现行源、轮次冻结源、Core返回和DOM投影，尤其不要把旧轮次仍有的错误说成已在用户界面消失。

@@ -80,6 +80,9 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     blocked_restart=await invoke(main,'course.study.restart.preview',{'study_session_id':active['study']['id']})
     assert not blocked_restart['can_restart'] and any(r['code']=='ANSWER_HISTORY_PRESENT' for r in blocked_restart['blocked_reasons'])
     checks.append('A4 native Engine restart preview protects rounds with already-saved answers')
+    maintenance=await invoke(main,'course.study.restart.preview',{'study_session_id':active['study']['id'],'reset_current_state':True})
+    assert maintenance['can_restart'] and maintenance['expected_state_hash']
+    checks.append('1.8.7 native maintenance preview allows existing answers with state fingerprint')
 
     await theme('白紫');await go_course(teaching['course_id'])
     await expect(main.locator('.teaching-disclosure summary')).to_be_visible()
@@ -119,7 +122,24 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
         await main.get_by_role('button',name='定位边界',exact=True).click()
         await expect(main.get_by_text('先确定位置，再读取内容。',exact=True)).to_be_visible()
         await main.get_by_role('button',name='打开答题与笔记',exact=True).click()
-        await main.locator('#sequence-tools-tab').click()
+        await main.get_by_role('tab',name='学习工具',exact=False).click()
+        answer=main.locator('.knowledge-question textarea').first
+        await answer.fill('原生合成答案，用于检查选中与后台保存。')
+        await answer.focus();await main.keyboard.press('Control+a');await main.keyboard.press('ArrowLeft');await main.keyboard.press('Control+Shift+ArrowRight')
+        box=await answer.bounding_box()
+        await main.mouse.move(box['x']+18,box['y']+18);await main.mouse.down();await main.mouse.move(box['x']+145,box['y']+18,steps=8);await main.mouse.up()
+        await main.keyboard.insert_text('原生替换')
+        await asyncio.sleep(1.3)
+        await main.keyboard.press('Control+a')
+        selection=await answer.evaluate('(el)=>({start:el.selectionStart,end:el.selectionEnd,value:el.value})')
+        persisted=await invoke(main,'course.answers.get',{'course_id':teaching['course_id']})
+        assert any(row['draft'] and row['draft']['answer_text']==selection['value'] for row in persisted['answers'])
+
+        await main.evaluate('window.dispatchEvent(new Event("focus"))');await asyncio.sleep(.6)
+        await expect(main.locator('.study-material')).to_be_visible();await expect(answer).to_be_focused()
+        assert selection==await answer.evaluate('(el)=>({start:el.selectionStart,end:el.selectionEnd,value:el.value})')
+        assert await main.get_by_text('工作区有新反馈或状态更新',exact=False).count()==0
+        checks.append('BUG-ANSWER-SELECT-01 '+selected_theme+': native drag/keyboard selection, replacement and silent autosave retain reader and focus')
         await main.locator('.answer-reference>summary').click()
         await expect(main.get_by_text('位权由位置与基数决定。',exact=True)).to_be_visible()
         await main.screenshot(path=str(workspace/('native-q234-'+('sequence' if selected_theme=='序光' else 'white')+'.png')))
@@ -347,14 +367,14 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     await main.screenshot(path=str(workspace/'native-agent-settings-paths.png'))
     checks.append('A5 actual release settings generate confirmed CLI/Skill/workspace paths from installed resources')
 
-    # 1.8.5: actual native restart UI, guarded evidence, silent metadata.
+    # 1.8.6: native restart guards, aligned authored rows and no metadata UI.
     for theme_name in ['序光','白紫轻学']:
         await theme(theme_name)
         cid=fixture['empty' if theme_name=='序光' else 'empty-white']['course_id']
         old=await invoke(main,'course.study.open',{'course_id':cid,'idempotency_key':'empty-open-'+theme_name})
         old_id=old['study']['id']
         await go_course(cid)
-        await main.get_by_role('button',name='放弃空轮次，用最新材料重新开始',exact=True).click()
+        await main.get_by_role('button',name='用最新材料重新开始',exact=True).click()
         await expect(main.get_by_role('heading',name='用最新材料重新开始？',exact=True)).to_be_visible()
         await main.get_by_role('button',name='确认重新开始',exact=True).click()
         await expect(main.get_by_role('textbox',name='第 1 个单词',exact=True)).to_be_visible()
@@ -365,16 +385,40 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
         await main.get_by_role('textbox',name='第 1 个单词',exact=True).press('Control+Semicolon')
         await expect(main.locator('.english-breakdown')).to_be_visible()
         await expect(main.locator('.part-word small').filter(has_text='/tiː/')).to_be_visible()
-        await expect(main.locator('.english-metadata-status')).to_be_visible()
+        await expect(main.locator('.english-metadata-status')).to_have_count(0)
+        assert await main.get_by_role('button',name='重试辅助信息',exact=True).count()==0
+        tops=await main.locator('.english-breakdown .part-word strong').evaluate_all('(els)=>els.map(el=>el.getBoundingClientRect().top)')
+        assert max(tops)-min(tops)<=1,tops
         current=await invoke(main,'course.english.get',{'study_session_id':sid})
         start=time.monotonic()
         metadata=await invoke(main,'audio.dictionary.metadata',{'study_session_id':sid,'exercise_id':current['items'][0]['exercise_id'],'accent':'en-GB'})
         assert time.monotonic()-start<1.5
         assert metadata['sentence_transcription'] is False and len(metadata['words'])==3
-        await main.screenshot(path=str(workspace/('native-185-'+theme_name+'.png')))
+        await main.screenshot(path=str(workspace/('native-186-'+theme_name+'.png')))
+        # This marker affects only the disposable protocol proxy, never product default behavior.
+        await main.get_by_role('textbox',name='第 1 个单词',exact=True).press('Control+Semicolon')
+        for i,word in enumerate(('I','like','tea')):
+            await main.get_by_role('textbox',name=f'第 {i+1} 个单词',exact=True).fill(word)
+        (workspace/'fault-notebook-save.english-check').write_text('synthetic protocol fault',encoding='utf-8')
+        await main.get_by_role('button',name='检查答案',exact=False).click()
+        problem=main.get_by_role('alertdialog',name='保存尚未确认',exact=True)
+        await expect(problem).to_be_visible()
+        await expect(main.locator('.english-error')).to_have_count(0)
+        await problem.get_by_text('技术信息',exact=True).click()
+        await expect(problem.get_by_text('已写入本地诊断日志',exact=False)).to_be_visible()
+        log=workspace/'diagnostics/ui-diagnostics.jsonl'
+        assert log.exists() and all(set(json.loads(line))<={'event_id','context','code','operation','request_id','response_id','recorded_at_unix'} for line in log.read_text(encoding='utf-8').splitlines())
+        await problem.get_by_role('button',name='暂时关闭',exact=True).click()
+        await expect(problem).not_to_be_visible()
+        await expect(main.get_by_role('textbox',name='第 2 个单词',exact=True)).to_have_value('like')
+        await main.get_by_role('button',name='保存待确认',exact=True).click()
+        await problem.get_by_role('button',name='重试原操作',exact=True).click()
+        await expect(problem).not_to_be_visible()
+        await expect(main.get_by_role('button',name='下一项 →',exact=True)).to_be_visible()
+        checks.append('native '+theme_name+' wrong-id reply: metadata log persisted, no banner, dismiss retains input, original check replay succeeds')
         await main.get_by_role('button',name='← 返回课程',exact=True).click()
-        await main.get_by_role('button',name='放弃空轮次，用最新材料重新开始',exact=True).click()
+        await main.get_by_role('button',name='用最新材料重新开始',exact=True).click()
         await expect(main.locator('.study-restart-dialog')).to_be_visible()
-        assert await main.get_by_role('button',name='确认重新开始',exact=True).count()==0
+        await expect(main.get_by_role('button',name='确认重新开始',exact=True)).to_be_visible()
         await main.get_by_role('button',name='保留当前轮次',exact=True).click()
-        checks.append('1.8.5 '+theme_name+' actual empty restart, abandoned snapshot retained, hint blocks restart, author phonetic visible and metadata nonblocking')
+        checks.append('1.8.7 '+theme_name+' confirmed reset available after hints; cancel preserves current state; authored phonetics aligned')

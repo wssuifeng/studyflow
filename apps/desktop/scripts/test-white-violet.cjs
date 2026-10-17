@@ -81,3 +81,21 @@ test('white-violet course shell shares fixed navigation and course outline behav
  const shell=fs.readFileSync(path.join(root,'shared/themes/runtime.css'),'utf8')+fs.readFileSync(path.join(root,'app/styles/workspace.css'),'utf8')
  assert.match(shell,/:root\[data-theme-shell-contract='v2'\] \.learning-shell:not\(\.focus-shell\)>\.sidebar\{[\s\S]*position:fixed!important;/)
 })
+
+test('白紫阅读页与序光共用统一骨架，主题CSS只保留视觉配方',()=>{
+ const reader=fs.readFileSync(path.join(root,'features/courses/components/CourseReader.vue'),'utf8')
+ const css=fs.readFileSync(path.join(root,'features/courses/styles/white-violet.css'),'utf8')
+ // 双主题同结构：白紫同样走唯一的reader-toolbar，不另造第二套顶栏
+ assert.equal((reader.match(/class="reader-toolbar"/g)||[]).length,1)
+ assert.ok(reader.includes('reader-actions'))
+ assert.ok(reader.includes('toggleSound'))
+ assert.ok(!css.includes('.reader-navigation'),'白紫不再定义顶部全量导航几何')
+ assert.ok(!css.includes('.knowledge-step'),'知识点步进条样式只属于组件本身')
+ assert.ok(!css.includes('.reader-heading'))
+ // 白紫为共享结构（练习入口/翻页）提供视觉配方
+ assert.ok(css.includes('.sequence-practice-entry'))
+ assert.ok(css.includes('.sequence-page-turn'))
+ // 正文单一滚动域：不再为大居中卡片叠加厚留白
+ assert.ok(!/\.study-material\s*\{[^}]*padding:\s*2[0-9]px/.test(css),'study-material不得再叠卡片级padding')
+ assert.ok(!/\.study-unit-heading\s*\{[^}]*min-height:\s*10[0-9]px/.test(css),'标题区不得再撑百级最小高度')
+})

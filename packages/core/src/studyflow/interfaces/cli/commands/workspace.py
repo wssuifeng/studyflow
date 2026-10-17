@@ -44,6 +44,7 @@ def workspace_purge_legacy_notes(
 
 @workspace_app.command("purge-courses")
 def workspace_purge_courses(
+    course_ids: list[str] | None = typer.Option(None, "--id", help="只删除指定课程；可重复传入多个ID。省略时才清理全部课程。"),
     dry_run: bool = typer.Option(False, "--dry-run", help="只盘点课程及其关联数据，不执行删除。"),
     confirm: bool = typer.Option(False, "--confirm", help="确认删除课程及其专属数据。"),
     backup: Path | None = typer.Option(None, "--backup", exists=True, readable=True, help="已通过 workspace export 导出的备份文件。执行删除时必填。"),
@@ -57,12 +58,12 @@ def workspace_purge_courses(
     try:
         service = runtime.service(read_only=dry_run)
         if dry_run:
-            output({"ok": True, "mode": "dry-run", **service.preview_course_purge()}, format)
+            output({"ok": True, "mode": "dry-run", **service.preview_course_purge(course_ids=course_ids)}, format)
             return
         if backup is None:
             raise DomainError("BACKUP_REQUIRED", "确认清理必须提供已导出的备份文件。", "先运行 workspace export --output <backup.zip>，再传入 --backup。")
         checked = validate_backup(backup)
-        output({"ok": True, "mode": "purge", "backup": checked, **service.purge_courses(confirm=True)}, format)
+        output({"ok": True, "mode": "purge", "backup": checked, **service.purge_courses(confirm=True, course_ids=course_ids)}, format)
     except Exception as exc:
         fail(exc)
 

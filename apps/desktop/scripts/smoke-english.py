@@ -76,7 +76,7 @@ try:
   page.get_by_role('button',name='收录复习',exact=True).click();page.get_by_role('button',name='无提示复测',exact=True).click()
   expect(page.get_by_role('heading',name='我喜欢茶。',exact=True)).to_be_visible()
   page.get_by_role('textbox',name='第 1 个单词').fill('I');page.get_by_role('textbox',name='第 2 个单词').fill('like');page.get_by_role('textbox',name='第 3 个单词').fill('tea')
-  expect(page.locator('.english-training-header small')).to_have_text('草稿已同步');page.reload();expect(page.get_by_role('textbox',name='第 2 个单词')).to_have_value('like');checks.append('retest_saved_draft_restores_after_reload')
+  expect(page.locator('.english-training-header small')).to_have_text('已保存');page.reload();expect(page.get_by_role('textbox',name='第 2 个单词')).to_have_value('like');checks.append('retest_saved_draft_restores_after_reload')
   page.get_by_role('button',name='确认本次复测',exact=True).click();expect(page.get_by_role('heading',name='本次无提示复测通过',exact=True)).to_be_visible();checks.append('real_retest_task')
   page.screenshot(path=str(RESULTS/'retest-1920.png'))
   # Run the other official theme at a laptop-width viewport and inject only a save failure.
@@ -97,7 +97,10 @@ try:
   page.screenshot(path=str(RESULTS/'white-violet-960.png'));checks.append('white_violet_narrow_shared_layout')
   fault['save']=True
   page.get_by_role('textbox',name='第 1 个单词').fill('I')
-  expect(page.get_by_role('alert')).to_contain_text('合成保存故障')
+  problem=page.get_by_role('alertdialog',name='保存尚未确认',exact=True)
+  expect(problem).to_be_visible()
+  expect(page.locator('.english-error')).to_have_count(0)
+  problem.get_by_role('button',name='暂时关闭',exact=True).click()
   page.get_by_role('button',name='← 返回课程',exact=True).click()
   expect(page.get_by_role('alertdialog')).to_be_visible()
   page.screenshot(path=str(RESULTS/'save-failure-exit-960.png'))

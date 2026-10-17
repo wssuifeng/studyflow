@@ -16,7 +16,9 @@ def summary(service, role="all", plan_line_id=None, course_id=None, status=None,
     if plan_line_id:query=query.where(Course.plan_line_id==plan_line_id)
     if course_id:query=query.where(Course.id==course_id)
     if history:query=query.where(Submission.status.in_({"PASSED","REVIEWED","RECHECKED"}))
-    else:query=query.where(Submission.status.in_({"WAITING_REVIEW","NEEDS_REVISION","RETEST_REQUIRED"}))
+    else:
+        from studyflow.modules.learning.reset import current_submission_predicate
+        query=query.where(Submission.status.in_({"WAITING_REVIEW","NEEDS_REVISION","RETEST_REQUIRED"}),current_submission_predicate())
     if status:query=query.where(Submission.status==status)
     task_exists=exists(select(RetestTask.id).where(RetestTask.parent_submission_id==Submission.id))
     if role=="agent":query=query.where((Submission.status=="WAITING_REVIEW")|((Submission.status=="RETEST_REQUIRED")&~task_exists))

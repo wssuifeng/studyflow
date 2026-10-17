@@ -261,7 +261,7 @@ def test_reveal_without_prior_draft_returns_current_cas(app_service, tmp_path):
     assert saved["answer_version"] > revealed["answer_version"]
 
 
-def test_revision_keeps_old_targets_until_an_explicit_new_round(app_service, tmp_path):
+def test_revision_resets_training_and_seals_old_round(app_service, tmp_path):
     from studyflow.modules.courses.revisions import preview, apply
     course, opened = install(app_service, tmp_path)
     sid = opened["study"]["id"]
@@ -270,17 +270,19 @@ def test_revision_keeps_old_targets_until_an_explicit_new_round(app_service, tmp
     path = tmp_path / "revised.json"
     path.write_text(json.dumps(updated), encoding="utf-8")
     proposed = preview(app_service.courses, course["course_id"], path, 1)
-    apply(app_service.courses, course["course_id"], path, 1, proposed["preview_hash"], "revise")
+    applied = apply(app_service.courses, course["course_id"], path, 1, proposed["preview_hash"], "revise")
+    assert applied["learning_state_reset"] is True
     assert app_service.english.get(sid)["course"]["source_changed"]
     eid = app_service.english.get(sid)["items"][0]["exercise_id"]
-    saved = app_service.english.save(sid, eid, "I like tea", 0, "old-save")
-    assert app_service.english.check(sid, eid, saved["answer_version"], "old-check")["matched"]
-    finish(app_service, opened)
-    new = app_service.open_course_study(course["course_id"], "new-revision", new_version=True)
-    new_sid = new["study"]["id"]
-    saved = app_service.english.save(new_sid, eid, "I like tea", 0, "new-save")
-    assert not app_service.english.check(new_sid, eid, saved["answer_version"], "new-check")["matched"]
-    assert app_service.english.get(sid)["items"][0]["matched"]
+    with pytest.raises(DomainError) as late:
+        app_service.english.save(sid, eid, "I like tea", 0, "old-save")
+    assert late.value.code == "STUDY_ROUND_SUPERSEDED"
+    fresh = app_service.open_course_study(course["course_id"], "after-reset-open")
+    fresh_sid = fresh["study"]["id"]
+    assert fresh_sid != sid and fresh["study"]["is_current"] is True
+    saved = app_service.english.save(fresh_sid, eid, "I like tea", 0, "new-save")
+    assert not app_service.english.check(fresh_sid, eid, saved["answer_version"], "new-check")["matched"]
+    assert app_service.course_study_detail(sid)["study"]["is_current"] is False
 
 
 def test_archive_is_logical_idempotent_and_protects_active_retests(app_service, tmp_path):

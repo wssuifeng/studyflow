@@ -93,3 +93,74 @@ test('导航展示契约兼容旧宽度和完整课程大纲，仍拒绝越界',
  for(const width of [56,184,240,264,280])assert.equal(display.parseDisplay({...validDisplay(),navigation_width:width}).navigation_width,width)
  for(const width of [55,281,264.5])assert.throws(()=>display.parseDisplay({...validDisplay(),navigation_width:width}))
 })
+
+// ---------------- 共享UI契约（§7.1/§8.4）：四语义按钮、状态提示、反馈语义 ----------------
+const sharedFile=p=>fs.readFileSync(path.join(src,p),'utf8')
+const sharedStyle=p=>fs.readFileSync(path.join(src,'../styles',p),'utf8')
+const appStyle=p=>fs.readFileSync(path.join(src,'../../app/styles',p),'utf8')
+
+test('四语义按钮在共享层一处定义几何基线、危险语义与紧凑variant',()=>{
+ const base=sharedStyle('base.css')
+ assert.match(base,/button\.primary-button,button\.secondary-button,button\.danger-button\{[^}]*min-height:36px/)
+ assert.match(base,/button\.danger-button\{background:var\(--theme-status-danger-soft\);border:1px solid var\(--theme-status-danger\);color:var\(--theme-status-danger\)\}/)
+ assert.match(base,/button\.danger-button:hover:not\(:disabled\)\{background:color-mix\(in srgb,var\(--theme-status-danger\)/)
+ assert.match(base,/button\.primary-button\.compact,button\.secondary-button\.compact,button\.danger-button\.compact,:root\[data-theme-density='compact'\] button\.primary-button/)
+ assert.match(base,/\{min-height:32px;padding:8px 14px;font-size:12px/)
+})
+
+test('按钮loading态与spinner动画进入共享契约，app层不再自持spin',()=>{
+ const base=sharedStyle('base.css'),shell=appStyle('shell.css')
+ assert.match(base,/button\.is-loading\{cursor:progress\}/)
+ assert.match(base,/button\.is-loading::before\{[^}]*animation:spin \.9s linear infinite\}/)
+ assert.match(base,/\.spin\{animation:spin \.9s linear infinite\}/)
+ assert.match(base,/@keyframes spin\{to\{transform:rotate\(360deg\)\}\}/)
+ assert.doesNotMatch(shell,/\.spin\{|@keyframes spin/)
+})
+
+test('表单与按钮focus环几何统一为共享层同一契约',()=>{
+ const base=sharedStyle('base.css'),runtime=sharedFile('runtime.css'),iteration=sharedStyle('iteration.css')
+ assert.match(base,/button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible,input:focus-visible\{outline:3px solid var\(--theme-focus-ring\);outline-offset:3px\}/)
+ assert.match(runtime,/:focus-visible\s*\{outline:3px solid var\(--theme-focus-ring\);outline-offset:3px\}/)
+ assert.doesNotMatch(iteration,/:focus-visible\{[^}]*outline/)
+})
+
+test('primary-button的hover与阴影只在共享层一处定义',()=>{
+ const base=sharedStyle('base.css'),iteration=sharedStyle('iteration.css'),workspace=appStyle('workspace.css'),runtime=sharedFile('runtime.css')
+ assert.match(base,/button\.primary-button\{background:var\(--accent\);color:var\(--theme-text-inverse\);box-shadow:0 3px 8px/)
+ assert.match(base,/button\.primary-button:hover:not\(:disabled\)\{background:var\(--theme-accent-strong\);box-shadow:0 6px 18px/)
+ for(const text of [iteration,workspace,runtime])assert.doesNotMatch(text,/primary-button/)
+})
+
+test('StatusBanner定位几何只在notices.css定义，recovery-note按role区分语义色桶',()=>{
+ const notices=sharedStyle('notices.css'),shell=appStyle('shell.css')
+ assert.match(notices,/\.status-banner\s*\{[^}]*position:fixed/)
+ const banner=shell.match(/\.status-banner\{[^}]*\}/)
+ assert.ok(banner,'shell.css保留status-banner视觉配方')
+ assert.ok(!/(position|top|z-index|margin)\s*:/.test(banner[0]),'shell.css不得再定义定位几何')
+ assert.match(notices,/\.recovery-note\{[^}]*background:var\(--theme-accent-soft\)[^}]*color:var\(--theme-accent-primary\)\}/)
+ assert.match(notices,/\.recovery-note\[role='alert'\]\{[^}]*background:var\(--theme-status-warning-soft\)/)
+})
+
+test('共享反馈契约用联合类型约束tone，非法tone在编译期暴露',()=>{
+ const feedback=fs.readFileSync(path.join(src,'../ui/feedback.ts'),'utf8')
+ assert.match(feedback,/export type FeedbackTone = 'success' \| 'error' \| 'info'/)
+ assert.match(feedback,/reactive<\{ message: string; tone: FeedbackTone; action: string \}>/)
+ assert.match(feedback,/notify\(message: string, tone: FeedbackTone = 'success', action = ''\)/)
+})
+
+test('notify/reportError按声明的tone更新横幅，仅success与info按时清理',()=>{
+ const code=ts.transpileModule(fs.readFileSync(path.join(src,'../ui/feedback.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+ const timers=[]
+ class EngineError extends Error{constructor(code,message,nextAction){super(message);this.code=code;this.nextAction=nextAction}}
+ const mod={exports:{}}
+ vm.runInNewContext(code,{module:mod,exports:mod.exports,require:n=>n==='vue'?{reactive:x=>x}:n.endsWith('engine')?{EngineError}:require(n),setTimeout:(fn,ms)=>{const t={fn,ms,cancelled:false};timers.push(t);return t},clearTimeout:t=>{if(t)t.cancelled=true},Date,JSON,Math,Object,Array,Error})
+ const {notify,reportError,notice}=mod.exports
+ notify('已保存')
+ assert.equal(notice.message,'已保存');assert.equal(notice.tone,'success')
+ notify('有新反馈','info')
+ assert.equal(notice.tone,'info');assert.equal(timers.length,2);assert.ok(timers.every(t=>t.ms===4500))
+ reportError(new Error('写入未完成'))
+ assert.equal(notice.tone,'error');assert.equal(notice.message,'写入未完成');assert.equal(timers.length,2)
+ reportError(new EngineError('E_WRITE','保存失败','重试保存'))
+ assert.equal(notice.tone,'error');assert.equal(notice.message,'保存失败');assert.equal(notice.action,'重试保存')
+})

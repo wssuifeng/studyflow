@@ -121,8 +121,6 @@ button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visibl
 @media(max-width:1279px){.window-titlebar:has(+.learning-shell.panel-open) .window-brand {min-width:72px;padding-inline:25px;}.window-titlebar:has(+.learning-shell.panel-open) .window-brand>span:last-child{display:none;}}
 .window-titlebar:has(+.learning-shell.focus-shell) .window-brand {min-width:auto;background:transparent;}
 
-button.primary-button {box-shadow:0 3px 8px color-mix(in srgb,var(--theme-shadow-ink) 6.27%,transparent);}
-button.primary-button:hover:not(:disabled) {background:var(--theme-accent-primary);box-shadow:0 4px 12px color-mix(in srgb,var(--theme-shadow-ink) 10.98%,transparent);}
 button.secondary-button:hover:not(:disabled) {background:var(--sf-hover);border-color:var(--sf-border-l2);}
 .text-button:hover,.back-button:hover {color:var(--theme-text-primary);}
 .knowledge-step.current {border-color:var(--sf-brand);}

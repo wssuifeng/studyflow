@@ -2,7 +2,7 @@
 name: studyflow-agent
 description: Use the local StudyFlow CLI from any external Agent or script to discover the workspace, inspect current learning state, create or import courses, process review queues, and write lifecycle-safe feedback. Use when operating an explicit StudyFlow data workspace, including an installed desktop app-data workspace, or maintaining explicitly authorized course-authoring materials and bounded vocabulary selections; keep material and data roots separate and never access databases directly.
 metadata:
-  version: "2.9.0"
+  version: "2.9.6"
 ---
 
 # StudyFlow Agent
@@ -74,7 +74,7 @@ Rules:
 
 ### Course-authoring task routing
 
-For plan/new-course/revision/audit work, read [shared authoring](references/course-authoring.md) and [presentation/content review](references/authoring-presentation.md), use the bounded advisory helper documented there when reviewing a package, then the relevant task in [authoring prompts](references/authoring-prompts.md). English additionally reads [English authoring](references/english-course-authoring.md); error-driven supplemental publication reads english-remediation. Only batch/OCR/resume jobs need [workflow safeguards](references/authoring-workflows.md). Do not load all references for an ordinary queue review.
+For plan/new-course/revision/audit work, read [shared authoring](references/course-authoring.md) and [presentation/content review](references/authoring-presentation.md), use the bounded advisory helper documented there when reviewing a package, then the relevant task in [authoring prompts](references/authoring-prompts.md). English additionally reads [English authoring](references/english-course-authoring.md), including its natural-expression/context gate for every in-scope item and chain, not just reported examples; error-driven supplemental publication reads english-remediation. Only batch/OCR/resume jobs need [workflow safeguards](references/authoring-workflows.md). Do not load all references for an ordinary queue review.
 
 Author a coherent learning sequence, not a fixed set of component types. Learner-visible prompt/requirements never carry the solution or grading-answer checklist. If discovered, use package /5 review_reference bound to stable exercise ID and frozen question fingerprint; this is local purpose separation, not account permissions. Read [current sections/reference/groups contract](references/course-experience-v5.md) before using it. Schema validation, content review and real rendering are distinct gates. A report or generated course does not authorize live course revision, learner submissions, vocabulary annotation or restarting a frozen round. Source facts and local resource limits remain in the task/plan, not universal Skill constraints.
 
@@ -173,7 +173,7 @@ Read the supporting contract only when exact fields, exit behavior, or a command
 - Use `assignment queue` and `submission get` frozen `study_context` for review. A `markdown_path` may now contain newer material; never replace the submitted context with its live contents. `snapshot_status=LEGACY_UNVERSIONED` means no original snapshot exists; state this limitation rather than inventing one.
 - Queue `batches` groups a course submission while each item remains a precise review task. `study_session_id` and `batch_id` identify the round and submission group. Waiting for review does not block ordinary course progression.
 - User answers belong to one round. Authorized course answer JSON may include `study_session_id`; preserve returned draft versions and original request keys. Navigation saves drafts; only final whole-course submission creates formal review work.
-- `--new-version` is explicit and only allowed after the previous round closes. Do not silently change the learner's current material or copy passed answers into a new round.
+- On legacy apps, `--new-version` requires a closed round. On apps advertising course maintenance reset, an authorized changed-content update resets the current learning; an already-published update stuck on old content uses `course reset-learning` preview/confirm. Follow [course maintenance](references/course-maintenance.md), discover capabilities, and never fabricate passed answers or reset unrelated courses.
 - For a retest, put a clear new problem in feedback `detail_markdown` and an actionable `next_action`; distinguish retest from correction. The learner sees it beside the original material/answer. Do not generate a fake learner answer.
 
 ### Continuous plan notes
@@ -202,7 +202,11 @@ For /3 structured courses, read [course packages](references/course-packages.md)
 
 The current-source settings copy includes verified `system.installation` CLI argv, an installed/repository Skill path and explicit workspace. An installed Skill is not automatically the public Skill. Keep argv paths intact and discover executable support; updating this repository Skill does not update the installed executable or public copy.
 
-`course.study.restart.preview` / `course.study.restart` are only for an explicitly authorized learner restart of an unsubmitted general round. Never use them automatically after a course edit. Read [closed-loop contract](references/closed-loop-contract.md); existing answers, uncertain writes and English training block the operation. History and notes are retained; old snapshots are not rewritten.
+Course updates may replace content on the same course ID even when drafts, submitted answers or English checks exist. A successful material change resets current learning; notes and historical evidence remain. Use `course update-preview` / `course update-apply`, then `course readback-check`. Do not force the learner to finish/review old material first.
+
+For an already-updated course still showing old material, obtain explicit authorization for that course, then `course reset-learning --id <course-id> --dry-run --format json`; pass the returned state/content hashes with `--confirm --idempotency-key` to apply. Engine equivalents are `course.learning.reset.preview` / `.apply`. This clears current progress/answers/training and current queue ownership; it retains notes and history, does not grade or touch other courses, and never requires empty answers. Read [course maintenance](references/course-maintenance.md).
+
+`course.study.restart` without `reset_current_state` remains the old evidence-free compatibility operation, not the current Agent maintenance path. Modern desktop confirmation uses `reset_current_state=true` and the preview's state hash. Do not retry blocked legacy restart or run whole-workspace purge just to view a revision. Physical deletion uses the separate confirmed/backed-up `workspace purge-courses --id <course-id>` only when authorized.
 
 ## Error-driven English supplemental courses
 

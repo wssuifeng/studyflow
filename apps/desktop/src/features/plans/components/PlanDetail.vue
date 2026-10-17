@@ -3,7 +3,7 @@ import {computed,onBeforeUnmount,onMounted,ref} from 'vue'
 import {listen} from '@tauri-apps/api/event'
 import {isTauri,studyApi,engineCall} from '../../../shared/api'
 import type {PlanDetailData} from '../../../shared/api/contracts'
-import {navigate,reportError,statusLabel,makeRequestKey,notify} from '../../../shared/ui'
+import {navigate,reportError,statusLabel,makeRequestKey} from '../../../shared/ui'
 import {usePlanNotebook} from '../../notes/composables/usePlanNotebook'
 import SupplementCourses from '../../english/remediation/SupplementCourses.vue'
 import PlanNotebook from '../../notes/components/PlanNotebook.vue'
@@ -30,7 +30,7 @@ async function mutate(operation:string,values:Record<string,unknown>){
  try{
   if(!await notebook.save())return
   await engineCall('plan.edit',{plan_line_id:props.id,expected_version:data.value.plan.version,idempotency_key:makeRequestKey('plan-edit'),operation,values})
-  await load();notify('计划已更新，学习证据保持不变。')
+  await load()
  }catch(cause){reportError(cause)}finally{editing.value=false}
 }
 async function reorder(id:string,direction:number){if(!data.value)return;const ids=data.value.courses.map(c=>c.id),i=ids.indexOf(id),j=i+direction;if(j<0||j>=ids.length)return;[ids[i],ids[j]]=[ids[j]!,ids[i]!];await mutate('REORDER',{course_ids:ids})}
@@ -50,7 +50,7 @@ onBeforeUnmount(()=>{disposed=true;offSaved?.();offClosed?.()})
  <button class="back-button" @click="navigate('/plans')">← 我的计划</button>
  <div v-if="loading" class="loading-state">正在读取学习计划…</div>
  <template v-else-if="data">
-  <div class="detail-heading"><div><p class="eyebrow">LEARNING PATH</p><h2>{{data.plan.name}}</h2><p>{{data.plan.course_total}} 门课程 · {{data.plan.completed_courses}} 门课程已完成学习</p></div><button v-if="data.current_course" class="primary-button" @click="navigate('/course/'+data.current_course.id+'?plan='+props.id)">继续当前课程 →</button></div>
+   <div class="detail-heading"><div><h2>{{data.plan.name}}</h2><p>{{data.plan.course_total}} 门课程 · {{data.plan.completed_courses}} 门课程已完成学习</p></div><button v-if="data.current_course" class="primary-button" @click="navigate('/course/'+data.current_course.id+'?plan='+props.id)">继续当前课程 →</button></div>
   <details class="plan-management"><summary>管理计划与安排</summary><div class="management-controls"><label>优先级 <input v-model.number="newPriority" type="number" min="1" max="100"/></label><button class="secondary-button" :disabled="editing" @click="mutate('UPDATE',{priority:newPriority})">保存优先级</button><button class="secondary-button" :disabled="editing" @click="mutate('UPDATE',{status:data.plan.status==='ACTIVE'?'PAUSED':'ACTIVE'})">{{data.plan.status==='ACTIVE'?'暂停计划':'恢复计划'}}</button><button v-if="data.plan.status!=='ARCHIVED'" class="text-button" :disabled="editing" @click="mutate('UPDATE',{status:'ARCHIVED'})">归档（保留全部记录）</button></div><div class="management-controls"><select v-model="selectedCourse" aria-label="选择安排课程"><option value="">选择课程</option><option v-for="c in data.courses" :key="c.id" :value="c.id">{{c.title}}</option></select><input v-model="scheduledDate" type="date" aria-label="安排日期"/><button class="secondary-button" :disabled="editing||!selectedCourse" @click="mutate('SCHEDULE',{course_id:selectedCourse,date:scheduledDate})">安排学习</button><button class="text-button" :disabled="editing||!selectedCourse" @click="mutate('UPDATE',{focus_course_id:selectedCourse})">设为当前重点</button></div><div v-for="item in schedules.filter(i=>i.status!=='CANCELLED')" :key="item.id" class="schedule-row"><span>{{item.date}} · {{data.courses.find(c=>c.id===item.course_id)?.title}}</span><button class="text-button" :disabled="editing" @click="mutate('RESCHEDULE',{schedule_id:item.id,date:scheduledDate})">顺延到所选日期</button><button class="text-button" :disabled="editing" @click="mutate('CANCEL_SCHEDULE',{schedule_id:item.id})">取消安排</button></div></details>
   <nav class="plan-view-tabs" aria-label="计划内容"><button :class="{selected:view==='courses'}" :aria-pressed="view==='courses'" @click="view='courses'">课程路径</button><button :class="{selected:view==='supplement'}" :aria-pressed="view==='supplement'" @click="view='supplement'">补充学习{{data.plan.supplement_total?' · '+data.plan.supplement_total:''}}</button><button :class="{selected:view==='notes'}" :aria-pressed="view==='notes'" @click="view='notes'">计划学习笔记</button></nav>
   <div v-if="view==='notes'" class="plan-notebook-view"><p v-if="!owner" class="tools-caption">这份笔记正在独立窗口编辑，这里同步查看。</p><PlanNotebook :notebook="notebook" :plan-title="data.plan.name" :blocked="!owner"/></div>
@@ -61,7 +61,7 @@ onBeforeUnmount(()=>{disposed=true;offSaved?.();offClosed?.()})
     <header class="plan-group-heading"><h3>{{group.title}} <span>{{group.courses.length}}</span></h3><p>{{group.caption}}</p></header>
     <ol class="path-list"><li v-for="course in group.courses" :key="course.id" :class="{current:course.id===data.current_course?.id}">
      <span class="path-marker">{{course.learning_group==='COMPLETED'?'✓':course.sequence}}</span>
-     <div class="plan-course-copy"><span class="eyebrow" v-if="course.id===data.current_course?.id">当前推进课程</span><h3>{{course.title}}</h3><p v-if="course.summary" class="plan-course-summary">{{course.summary}}</p><p>{{course.knowledge_total}} 个知识点 · {{statusLabel(course.study_status||'NOT_STARTED')}} · 本轮通过 {{course.exercise_completed}}/{{course.exercise_total}}</p><p v-if="course.management_reason" class="plan-management-reason">{{course.management_reason}}</p></div>
+     <div class="plan-course-copy"><span class="eyebrow" v-if="course.id===data.current_course?.id">当前推进课程</span><h4>{{course.title}}</h4><p v-if="course.summary" class="plan-course-summary">{{course.summary}}</p><p>{{course.knowledge_total}} 个知识点 · {{statusLabel(course.study_status||'NOT_STARTED')}} · 本轮通过 {{course.exercise_completed}}/{{course.exercise_total}}</p><p v-if="course.management_reason" class="plan-management-reason">{{course.management_reason}}</p></div>
      <div class="course-management"><div><button class="text-button" :disabled="editing" aria-label="课程上移" @click="reorder(course.id,-1)">↑</button><button class="text-button" :disabled="editing" aria-label="课程下移" @click="reorder(course.id,1)">↓</button></div><button v-if="course.learning_group==='OTHER'" class="text-button" :disabled="editing" @click="mutate('COURSE_POSITION',{course_id:course.id,position:'NORMAL'})">恢复到计划</button><button v-else class="text-button" :disabled="editing" @click="beginHold(course)">暂放其他</button><button class="secondary-button" @click="navigate('/course/'+course.id+'?plan='+props.id)">{{course.learning_submitted?'查看内容与反馈':course.learning_group==='OTHER'?'查看课程':'进入课程'}} →</button></div>
     </li></ol><p v-if="!group.courses.length" class="plan-group-empty">{{group.key==='PENDING'?'目前没有待学习课程':group.key==='COMPLETED'?'完成课程后会显示在这里':'没有暂缓或备用课程'}}</p>
    </section>

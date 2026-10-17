@@ -2,32 +2,78 @@ const test=require('node:test'),assert=require('node:assert/strict'),fs=require(
 const ts=require('typescript'),vue=require('vue')
 const code=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/features/english/training/useEnglishTraining.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
 function fixture(initial={}){
- const calls=[],store=new Map();let serial=0,fail=false,failCheck=false,saveGate=null
+ const calls=[],store=new Map();let serial=0,fail=false,failCheck=false,saveGate=null,supersede=false
  const study={course:{id:'c',title:'Synthetic',plan_line_id:'p'},study_session_id:'s',revision:1,position:0,state_version:0,completed:false,items:['e1','e2'].map(exercise_id=>({exercise_id,token_count:3,answer_text:'',answer_version:0,status:'NOT_STARTED',matched:false,differences:[],assisted:false}))}
  Object.assign(study,initial)
- async function engineCall(method,params){calls.push({method,params:JSON.parse(JSON.stringify(params||{}))});if(method==='course.english.get')return JSON.parse(JSON.stringify(study));if(method==='course.english.save'){if(saveGate){const gate=saveGate;saveGate=null;await gate.promise}if(fail){fail=false;throw new Error('save failed')}const row=study.items.find(i=>i.exercise_id===params.exercise_id);row.answer_version++;row.answer_text=params.answer_text;return {answer_version:row.answer_version,state_version:++study.state_version}}if(method==='course.english.check'){const row=study.items.find(i=>i.exercise_id===params.exercise_id);row.matched=true;row.skipped=false;if(failCheck){failCheck=false;throw new Error('check reply lost')}return {matched:true,differences:[],state_version:++study.state_version}};if(method==='course.english.reveal')return {target:'I like tea.',tokens:['I','like','tea'],phonetic:'',gloss:'喜欢茶',explanation:'',state_version:++study.state_version};if(method==='course.english.answer')return {target:'I like tea.',tokens:['I','like','tea'],phonetic:'',gloss:'',explanation:''};if(method==='course.english.navigate'){study.position=params.position;return {state_version:++study.state_version}};if(method==='course.english.submit')return {completed:true,state_version:++study.state_version};throw Error(method)}
+ async function engineCall(method,params){calls.push({method,params:JSON.parse(JSON.stringify(params||{}))});if(method==='course.english.get')return JSON.parse(JSON.stringify(study));if(method==='course.english.save'){if(supersede){supersede=false;const sealed=new Error('该轮学习已随课程内容更新收口。');sealed.code='STUDY_ROUND_SUPERSEDED';throw sealed}if(saveGate){const gate=saveGate;saveGate=null;await gate.promise}if(fail){fail=false;throw new Error('save failed')}const row=study.items.find(i=>i.exercise_id===params.exercise_id);row.answer_version++;row.answer_text=params.answer_text;return {answer_version:row.answer_version,state_version:++study.state_version}}if(method==='course.english.check'){const row=study.items.find(i=>i.exercise_id===params.exercise_id);if(!row.answer_text.trim()){const validation=new Error('先输入答案；跳过不算答错。');validation.code='ANSWER_EMPTY';throw validation}row.matched=true;row.skipped=false;if(failCheck){failCheck=false;throw new Error('check reply lost')}return {matched:true,differences:[],state_version:++study.state_version}};if(method==='course.english.reveal')return {target:'I like tea.',tokens:['I','like','tea'],phonetic:'',gloss:'喜欢茶',explanation:'',state_version:++study.state_version};if(method==='course.english.answer')return {target:'I like tea.',tokens:['I','like','tea'],phonetic:'',gloss:'',explanation:''};if(method==='course.english.navigate'){study.position=params.position;return {state_version:++study.state_version}};if(method==='course.english.submit')return {completed:true,state_version:++study.state_version};throw Error(method)}
  const context={exports:{},require:id=>id==='vue'?{...vue,onBeforeUnmount:()=>{}}:id.endsWith('/api')?{engineCall}:{makeRequestKey:op=>op+':'+(++serial),windowStorageKey:k=>'synthetic:'+k},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},setTimeout,clearTimeout,console,Blob,URL,document:{createElement:()=>({click(){}})}}
  vm.runInNewContext(code,context)
- return {api:context.exports.useEnglishTraining('s'),calls,failNext:()=>fail=true,failNextCheck:()=>failCheck=true,delayNextSave:()=>{let release;const promise=new Promise(r=>release=r);saveGate={promise};return release}}
+ return {api:context.exports.useEnglishTraining('s'),calls,store,failNext:()=>fail=true,failNextCheck:()=>failCheck=true,supersedeNext:()=>supersede=true,delayNextSave:()=>{let release;const promise=new Promise(r=>release=r);saveGate={promise};return release}}
 }
 test('saved baseline is reactive: checking and navigation do not invalidate a valid answer with duplicate saves',async()=>{const f=fixture();await f.api.load();f.api.tokens.value=['I','like','tea'];assert.equal(f.api.dirty.value,true);await f.api.save();assert.equal(f.api.dirty.value,false);await f.api.check();await f.api.move(1);assert.equal(f.calls.filter(x=>x.method==='course.english.save').length,1)})
+test('empty input guard keeps an unconfirmed pending write available for retry',async()=>{
+  const f=fixture();await f.api.load()
+  f.api.tokens.value=['I','like',''];f.failNext()
+  assert.equal(await f.api.save(),false)
+  const pendingBefore=JSON.stringify(f.api.pending.value)
+  f.api.tokens.value=['','','']
+  assert.equal(await f.api.check(),null)
+  assert.ok(f.api.validationNotice.value.includes('先输入答案'))
+  assert.equal(JSON.stringify(f.api.pending.value),pendingBefore)
+  assert.equal(await f.api.retryPending(),true)
+})
+test('empty input check stays local: near-input notice, no engine call, no failure banner',async()=>{const f=fixture();await f.api.load();assert.equal(await f.api.check(),null);assert.ok(f.api.validationNotice.value.includes('先输入答案'));assert.equal(f.api.failed.value,'');assert.equal(f.calls.filter(x=>x.method==='course.english.check').length,0);assert.equal(f.api.pending.value,null)})
+test('a sealed round stops autosaving, keeps input local and never shows the save-failure banner',async()=>{const f=fixture();await f.api.load();f.api.tokens.value=['I','lik','tea'];f.supersedeNext();assert.equal(await f.api.check(),null);assert.equal(f.api.superseded.value,true);assert.equal(f.api.failed.value,'');assert.equal(f.api.pending.value,null);assert.equal(await f.api.save(),false);assert.equal(f.calls.filter(x=>x.method==='course.english.save').length,1);assert.equal(f.api.tokens.value[1],'lik')})
+test('material reset notice replaces the finish-old-material banner and offers reopening the course',()=>{const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8');assert.ok(!source.includes('请先完成并提交本轮训练'));assert.ok(source.includes('training.superseded.value'));assert.ok(source.includes('重新打开课程'));const overview=fs.readFileSync(path.join(__dirname,'../src/features/english/course/EnglishCourseOverview.vue'),'utf8');assert.ok(!overview.includes('继续训练仍读取原材料'));assert.ok(overview.includes('学习进度已重置'))})
 test('failed saving keeps input and reuses the exact idempotency request',async()=>{const f=fixture();await f.api.load();f.api.tokens.value=['I','lik','tea'];f.failNext();assert.equal(await f.api.save(),false);const pending=JSON.stringify(f.api.pending.value);assert.equal(f.api.tokens.value[1],'lik');assert.equal(await f.api.retryPending(),true);const writes=f.calls.filter(x=>x.method==='course.english.save');assert.deepEqual(writes[0].params,writes[1].params);assert.ok(pending.includes('english-save'));assert.equal(f.api.dirty.value,false)})
 test('navigation waits for the current draft instead of dropping skipped input',async()=>{const f=fixture();await f.api.load();f.api.tokens.value=['I','like',''];await f.api.move(1);const write=f.calls.findIndex(x=>x.method==='course.english.save'),move=f.calls.findIndex(x=>x.method==='course.english.navigate');assert.ok(write>=0&&move>write);assert.equal(f.api.position.value,1)})
 
 test('double checking shares one in-flight action instead of issuing two attempts', async()=>{const f=fixture();await f.api.load();f.api.tokens.value=['I','like','tea'];await Promise.all([f.api.check(),f.api.check()]);assert.equal(f.calls.filter(x=>x.method==='course.english.check').length,1)})
 test('a lost check reply retains its key and never creates a fresh attempt on retry', async()=>{const f=fixture();await f.api.load();f.api.tokens.value=['I','like','tea'];f.failNextCheck();assert.equal(await f.api.check(),null);assert.equal(f.api.pending.value.method,'course.english.check');await f.api.check();const attempts=f.calls.filter(x=>x.method==='course.english.check');assert.equal(attempts.length,2);assert.deepEqual(attempts[0].params,attempts[1].params);assert.equal(f.api.item.value.matched,true)})
+test('empty answer validation stays near the input without a save failure or poisoned pending',async()=>{
+ const f=fixture();await f.api.load()
+ assert.equal(await f.api.check(),null)
+ assert.equal(f.api.validationNotice.value,'先输入答案；跳过不算答错。')
+ assert.equal(f.api.failed.value,'')
+ assert.equal(f.api.pending.value,null)
+ // W0c：空输入本地校验，不再触发引擎（原引擎路径断言=1）
+ assert.equal(f.calls.filter(x=>x.method==='course.english.check').length,0)
+ assert.equal([...f.store.values()].length,0)
+ f.api.tokens.value=['I','like','tea'];f.api.edited()
+ assert.equal(f.api.validationNotice.value,'')
+ await new Promise(r=>setTimeout(r,900))
+ assert.equal(f.api.dirty.value,false)
+ assert.equal(f.calls.filter(x=>x.method==='course.english.save').length,1)
+ assert.equal((await f.api.check()).matched,true)
+})
 
 const retestCode=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/features/english/training/useEnglishRetest.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
 function retestFixture(){
  const calls=[],store=new Map();let fail=false,serial=0
  const task={task_id:'t',title:'Synthetic',prompt:'Tea',token_count:3,status:'READY',answer_text:'',answer_version:0,result:null}
- async function engineCall(method,params){calls.push({method,params:JSON.parse(JSON.stringify(params||{}))});if(method==='course.english.retest-get')return {...task};if(fail){fail=false;throw Error('save failed')}if(method==='course.english.retest-save'){task.answer_version++;task.answer_text=params.answer_text;task.status='IN_PROGRESS';return {answer_version:task.answer_version,status:task.status}}if(method==='course.english.retest-check'){task.result={matched:true,status:'PASSED',differences:[],answer_version:++task.answer_version};return task.result}throw Error(method)}
+ async function engineCall(method,params){calls.push({method,params:JSON.parse(JSON.stringify(params||{}))});if(method==='course.english.retest-get')return {...task};if(fail){fail=false;throw Error('save failed')}if(method==='course.english.retest-save'){task.answer_version++;task.answer_text=params.answer_text;task.status='IN_PROGRESS';return {answer_version:task.answer_version,status:task.status}}if(method==='course.english.retest-check'){if(!String(params.answer_text).trim()){const validation=new Error('复测需要非空且最多4000字符的答案。');validation.code='ANSWER_EMPTY';throw validation}task.result={matched:true,status:'PASSED',differences:[],answer_version:++task.answer_version};return task.result}throw Error(method)}
  const context={exports:{},require:id=>id==='vue'?{...vue,onBeforeUnmount:()=>{}}:id.endsWith('/api')?{engineCall}:{makeRequestKey:op=>op+':'+(++serial),windowStorageKey:k=>'synthetic:'+k},localStorage:{getItem:k=>store.get(k)||null,setItem:(k,v)=>store.set(k,v),removeItem:k=>store.delete(k)},setTimeout,clearTimeout,console,Blob,URL,document:{createElement:()=>({click(){}})}}
  vm.runInNewContext(retestCode,context)
  return {api:context.exports.useEnglishRetest('t'),calls,failNext:()=>fail=true,store}
 }
 test('retest draft saving keeps input, retries original key, then confirms at the returned CAS version',async()=>{const f=retestFixture();await f.api.load();f.api.tokens.value=['I','like','tea'];f.failNext();assert.equal(await f.api.save(),false);assert.equal(f.api.tokens.value[1],'like');assert.equal(await f.api.retryPending(),true);const saves=f.calls.filter(x=>x.method==='course.english.retest-save');assert.deepEqual(saves[0].params,saves[1].params);assert.equal(f.api.dirty.value,false);await Promise.all([f.api.check(),f.api.check()]);const checks=f.calls.filter(x=>x.method==='course.english.retest-check');assert.equal(checks.length,1);assert.equal(checks[0].params.expected_version,1);assert.equal(f.api.result.value.matched,true)})
 test('retest suspend stops all later saving and leaves a best-effort recovery cache',async()=>{const f=retestFixture();await f.api.load();f.api.tokens.value=['I','like',''];f.api.suspend();assert.equal(await f.api.save(),false);assert.equal(f.calls.filter(x=>x.method==='course.english.retest-save').length,0);assert.ok([...f.store.values()][0].includes('I like'))})
+test('empty retest confirmation explains near the input and keeps saving available',async()=>{
+ const f=retestFixture();await f.api.load()
+ await f.api.check()
+ // W0c：本地守卫先于引擎，消息统一为空输入本地文案
+ assert.equal(f.api.validationNotice.value,'先输入答案；跳过不算答错。')
+ assert.equal(f.api.failed.value,'')
+ assert.equal(f.api.pending.value,null)
+ assert.equal([...f.store.values()].length,0)
+ f.api.tokens.value=['I','like','tea'];f.api.edited()
+ assert.equal(f.api.validationNotice.value,'')
+ await new Promise(r=>setTimeout(r,900))
+ assert.equal(f.api.dirty.value,false)
+ await f.api.check()
+ assert.equal(f.api.result.value.matched,true)
+ assert.equal(f.api.validationNotice.value,'')
+})
 
 const audioCode=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/shared/audio/dictionary.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
 function audioFixture(options={}){
@@ -134,6 +180,38 @@ test('training analysis and shortcuts are conditional and contain no Agent revie
  assert.ok(!source.includes('交给Agent审核'));assert.ok(!source.includes('提交本项审核'));assert.ok(!source.includes('<AnswerReference'))
 })
 
+test('empty-input guidance renders as a status note beside the editor and refocuses the first empty word',()=>{
+ const training=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
+ assert.ok(training.includes('v-if="training.validationNotice.value" class="english-assistance" role="status"'))
+ assert.ok(training.includes('tokens.value.findIndex(t=>!t.trim())'))
+ // The notice must sit after the v-else answer block so v-else still pairs with the TokenEditor v-if.
+ assert.ok(training.indexOf('class="english-answer"')<training.indexOf('v-if="training.validationNotice.value"'))
+ const retest=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishRetestPage.vue'),'utf8')
+ assert.ok(retest.includes('v-if="session.validationNotice.value" class="english-assistance" role="status"'))
+ assert.ok(retest.includes('tokens.value.findIndex(t=>!t.trim())'))
+})
+test('settings shortcut legend matches the actual bindings instead of unreachable hint actions',()=>{
+ const page=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
+ assert.ok(page.includes("Ctrl+'：整句朗读 · Ctrl+Shift+'：单词朗读 · Ctrl+;：解析 · Ctrl+.：暂跳 · Ctrl+,：上一项"))
+ for(const gone of ['当前词提示','本句提示','提示就在输入位置显示'])assert.ok(!page.includes(gone),gone)
+})
+test('correction analysis card is height-bounded so the input row stays reachable',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'../src/features/english/training/english.css'),'utf8')
+ const rule=css.match(/\.english-breakdown\{[^}]+\}/)[0]
+ assert.match(rule,/max-height/);assert.match(rule,/overflow:auto/)
+})
+test('english pages keep one secondary treatment per action level instead of mixing button classes',()=>{
+ const training=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
+ assert.ok(!training.includes('class="text-button" @click="navigate'))
+ const retest=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishRetestPage.vue'),'utf8')
+ assert.ok(!retest.includes('class="text-button"'))
+})
+test('retest editor shares the training input bounds and save status vocabulary',()=>{
+ const retest=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishRetestPage.vue'),'utf8')
+ assert.ok(retest.includes(':minimum="task.token_count" :maximum="task.token_count"'))
+ assert.ok(retest.includes("busy?'保存中':session.dirty.value?'待保存':session.pending.value?'保存待确认':'已保存'"));assert.ok(retest.includes('class="english-save-status is-problem"'));assert.ok(retest.includes('RequestProblemDialog'))
+})
+
 
 test('one unavailable dictionary accent retries the same full sentence in the other accent without changing preference',async()=>{
  const f=audioFixture();const play=f.api.playDictionary('s','e').catch(error=>({failure:error.message}));f.requests[0].resolve(dictionary)
@@ -202,7 +280,7 @@ test('English overview distinguishes explicit revised-material start, same-versi
 })
 
 // Compile and render the actual SFC, not a duplicate of its fallback logic.
-async function renderBreakdown(overrides={}){
+async function renderBreakdown(overrides={},componentProps={}){
  const {parse,compileScript}=require('@vue/compiler-sfc')
  const {renderToString}=require('@vue/server-renderer')
  const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/SentenceBreakdown.vue'),'utf8')
@@ -212,7 +290,7 @@ async function renderBreakdown(overrides={}){
  const module={exports:{}},context={module,exports:module.exports,require:id=>id==='vue'?vue:require(id)}
  vm.runInNewContext(js,context)
  const reference={target:'This program',tokens:['This','program'],phonetic:'',gloss:'这个程序',explanation:'完整词组说明。',sentence_parts:[],...overrides}
- return renderToString(vue.createSSRApp({render:()=>vue.h(module.exports.default,{reference})}))
+ return renderToString(vue.createSSRApp({render:()=>vue.h(module.exports.default,{reference,...componentProps})}))
 }
 test('unannotated fragment renders its real meaning with accessible word audio, without inventing grammar',async()=>{
  const html=await renderBreakdown()
@@ -239,4 +317,51 @@ test('fallback explanations remain escaped text rather than arbitrary course HTM
  const html=await renderBreakdown({explanation:'<img src=x onerror=alert(1)>',gloss:'<b>程序</b>'})
  assert.ok(!html.includes('<img'));assert.ok(!html.includes('<b>程序</b>'))
  assert.match(html,/&lt;img/);assert.match(html,/&lt;b&gt;程序/)
+})
+
+test('analysis uses authored phonetics only, never injected runtime dictionary metadata',async()=>{
+ const html=await renderBreakdown({sentence_parts:[{role:'subject',start:0,end:2,words:[{phonetic:'/ðɪs/',gloss:'这个',pos:'det.'},{gloss:'程序',pos:'n.'}]}]},{metadata:{1:{word:'program',phonetic:'/RUNTIME-MUST-NOT-RENDER/'}}})
+ assert.match(html,/ðɪs/);assert.ok(!html.includes('RUNTIME-MUST-NOT-RENDER'))
+})
+test('scaffolding phrase suppresses clause roles without inventing a new grammar label',async()=>{
+ const html=await renderBreakdown({sentence_parts:[{role:'subject',start:0,end:2,words:[{gloss:'这个',pos:'det.'},{gloss:'程序',pos:'n.'}]}]},{showRoles:false})
+ assert.ok(!html.includes('part-role'));assert.ok(!html.includes('role-subject'));assert.match(html,/>程序<\/span>/)
+})
+test('training no longer requests dictionary metadata or shows retry/status paragraphs',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
+ for(const retired of ['useWordMetadata','wordMetadata','english-metadata-status','重试辅助信息'])assert.ok(!source.includes(retired),retired)
+ assert.ok(source.includes('playDictionary'),'audio fallback must remain')
+})
+
+test('authored alignment rows retain mixed IPA slots and omit wholly absent metadata rows',async()=>{
+ const mixed=await renderBreakdown({sentence_parts:[{role:'subject',start:0,end:2,words:[{phonetic:'/ðɪs/',gloss:'这个',pos:'det.'},{gloss:'程序',pos:'n.'}]}]})
+ assert.match(mixed,/has-word-phonetics/);assert.match(mixed,/has-word-gloss/);assert.equal((mixed.match(/<small/g)||[]).length,2);assert.match(mixed,/aria-hidden="true"/)
+ const empty=await renderBreakdown({sentence_parts:[{role:'other',start:0,end:2,words:[{},{ }]}]})
+ assert.ok(!empty.includes('has-word-phonetics'));assert.ok(!empty.includes('has-word-gloss'));assert.ok(!empty.includes('<small'))
+ })
+
+// Error presentation is separate from pending writes; diagnostic records never contain learner text.
+const diagnosticCode=ts.transpileModule(fs.readFileSync(path.join(__dirname,'../src/shared/ui/requestDiagnostics.ts'),'utf8'),{compilerOptions:{module:ts.ModuleKind.CommonJS,target:ts.ScriptTarget.ES2022}}).outputText
+function diagnosticsFixture(native=true){
+ const calls=[],logged=[],module={exports:{}}
+ vm.runInNewContext(diagnosticCode,{module,exports:module.exports,require:()=>({isTauri:()=>native,invoke:async(command,args)=>{calls.push({command,args});return {ok:true}}}),console:{error:(...a)=>logged.push(a),warn:()=>{}},Date,Math})
+ return {...module.exports,calls,logged}
+}
+test('technical response mismatch becomes a human-readable problem without dumping raw messages',()=>{
+ const d=diagnosticsFixture(),view=d.describeRequestProblem('响应ID不匹配 secret answer text')
+ assert.equal(view.code,'INVALID_RESPONSE');assert.equal(view.title,'保存尚未确认')
+ assert.ok(!JSON.stringify(view).includes('secret answer text'))
+ assert.equal(d.describeRequestProblem('Engine正在处理较长请求，本请求尚未发送').code,'ENGINE_BUSY')
+})
+test('native diagnostics store allowlisted metadata, not errors, requests or learner input',async()=>{
+ const d=diagnosticsFixture(),entry=d.requestDiagnostic('english-training','响应ID不匹配 answer=private')
+ assert.equal(await d.persistRequestDiagnostic(entry),true)
+ assert.equal(d.calls[0].command,'record_ui_diagnostic')
+ const saved=d.calls[0].args.event
+ assert.deepEqual(Object.keys(saved).sort(),['code','context','event_id'].sort())
+ assert.ok(!JSON.stringify(saved).includes('private'));assert.equal(saved.code,'INVALID_RESPONSE')
+})
+test('browser diagnostics do not claim durable disk logging',async()=>{
+ const d=diagnosticsFixture(false),entry=d.requestDiagnostic('english-retest','failed')
+ assert.equal(await d.persistRequestDiagnostic(entry),false);assert.equal(d.calls.length,0);assert.equal(d.logged.length,1)
 })

@@ -121,6 +121,14 @@ export function initializeThemes() {
 }
 function action(result: ThemeResult) { refresh(); return result }
 export function selectTheme(id: string) { return action(controller.select(id)) }
+/** 主题身份比较封装在主题系统层：业务组件（如主题选择UI）通过本辅助判断选中态，不自行比较主题ID。 */
+export function isThemeActive(theme: { id: string }): boolean {
+  return activeTheme.value?.id === theme.id
+}
+/** 当前选中主题是否为本地导入的自定义主题（决定“移除自定义主题”入口可见性）。 */
+export function isActiveThemeCustom(): boolean {
+  return availableThemes.value.some(item => item.source === 'custom' && item.theme.id === activeTheme.value?.id)
+}
 export function importTheme(text: string) { return action(controller.importTheme(text)) }
 export function exportTheme() { return controller.exportTheme() }
 export function removeTheme(id: string) { return action(controller.removeTheme(id)) }

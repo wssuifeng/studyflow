@@ -11,8 +11,7 @@ const props=defineProps<{ focus?: boolean; windowChrome?: boolean; active:string
 const emit=defineEmits<{navigate:[path:string];refresh:[]}>()
 const panel=reactive<PanelPresentation>({visible:false,width:420,full:false})
 const viewport=ref(window.innerWidth)
-const sequenceNavigation=computed(()=>displayThemeId.value==='sequence-light'?Math.round(viewport.value<900?64:Math.min(280,Math.max(216,viewport.value*.14))):undefined)
-const navigationWidth=computed(()=>sequenceNavigation.value ?? navigationRailWidth(viewport.value,activeDisplay.value.navigation_width))
+const navigationWidth=computed(()=>navigationRailWidth(viewport.value,activeDisplay.value.navigation_width))
 const geometry=computed(()=>panelGeometry(viewport.value,panel.width,panel.full,!!props.focus,navigationWidth.value))
 let owner:symbol|undefined
 provide(workspacePanelKey,{geometry,navigationVisible:computed(()=>!props.focus),publish:(id,state)=>{owner=id;Object.assign(panel,state)},release:id=>{if(owner===id){panel.visible=false;panel.full=false;owner=undefined}}})

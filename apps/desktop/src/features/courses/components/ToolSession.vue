@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import {emitTo} from '@tauri-apps/api/event'
 import {computed,onBeforeUnmount,onMounted,ref,watch} from 'vue'
 import {studyApi} from '../../../shared/api'
 import type {CourseStudyDetailData,NotebookBlock} from '../../../shared/api/contracts'
@@ -41,7 +40,7 @@ function exportUnsaved(){if(props.tool==='notes')notebook.exportRecovery();else{
 function addNote(block:NotebookBlock){if(props.tool!=='notes'||props.paused||notebook.loading.value||notebook.failed.value||notebook.recovery.value||notebook.pending.value)return false;return notebook.blocks.value.some(b=>b.id===block.id)||notebook.add(block)}
 const exit=useSafeStudyExit({busy:()=>!!answers.busy.value||notebook.busy.value,hasProblem,flush,retry,suspend})
 async function reload(){if(props.tool==='notes'){if(!notebook.dirty.value&&!notebook.pending.value&&!notebook.recovery.value)await notebook.load()}else if(!answers.dirty.value&&!answers.pending.value&&!answers.recovery.value)await answers.load()}
-async function select(next:number){if(next>=0&&next<(data.value?.lessons.length||0))index.value=next}
+async function select(next:number){if(Number.isInteger(next)&&next>=0&&next<(data.value?.lessons.length||0))index.value=next}
 defineExpose({flush,retry,suspend,exportUnsaved,addNote,reload,hasProblem,focusLesson:(id:string)=>{const i=data.value?.lessons.findIndex(l=>l.id===id)??-1;if(i>=0)index.value=i}})
 onBeforeUnmount(()=>{alive=false})
 onMounted(load)
@@ -53,7 +52,7 @@ onMounted(load)
  <template v-else-if="data">
   <header v-if="tool!=='notes'" class="tool-course-context"><span>{{context.planTitle||data.course.plan_line}}</span><h2>{{data.course.title}}</h2><label class="tool-knowledge-select">浏览知识点<select :value="index" :disabled="paused" @change="select(Number(($event.target as HTMLSelectElement).value))"><option v-for="(lesson,i) in data.lessons" :key="lesson.id" :value="i">{{i+1}} · {{lesson.title}}</option></select></label></header>
   <div v-if="answers.recovery.value && tool==='exercises'" class="notebook-alert"><p>本窗口有未保存的作答，需要你确认。</p><button class="text-button" @click="answers.restoreCache">恢复</button><button class="text-button" @click="exportUnsaved">导出</button><button class="text-button" @click="answers.discardCache">使用工作区版本</button></div>
-  <div class="native-tool-content" :data-tool="tool"><CourseToolContent :tool="tool" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notebook" :plan-title="context.planTitle||data.course.plan_line||undefined" :course-id="context.courseId" @select="select" @section="(i,b)=>emitTo('main','studyflow-focus-section',{lessonId:data!.lessons[i].id,blockId:b,studyId:context.studyId})"/></div>
+  <div class="native-tool-content" :data-tool="tool"><CourseToolContent :tool="tool" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notebook" :plan-title="context.planTitle||data.course.plan_line||undefined" :course-id="context.courseId"/></div>
   <footer v-if="tool==='exercises'" class="native-tool-footer"><span aria-live="polite">{{answers.busy.value?'正在保存':answers.saveFailed.value?'保存失败，输入已保留':answers.dirty.value?'等待自动保存':answers.savedAt.value?'已保存 '+answers.savedAt.value:'答案自动保存 · 整课提交在主窗口完成'}}</span><button v-if="answers.saveFailed.value||answers.pending.value" class="text-button" @click="retry">重试保存</button></footer>
  </template>
 </template>

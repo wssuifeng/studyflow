@@ -22,8 +22,11 @@ def require_study(db, identifier, course_id=None, active=False):
     row = db.get(CourseStudySession, identifier)
     if not row or (course_id and row.course_id != course_id):
         raise DomainError("OBJECT_NOT_FOUND", "学习会话不存在或不属于本课。", "重新打开课程，保留本机未保存内容。")
-    if active and (row.abandoned_at is not None or current_study(db, row.course_id).id != row.id):
-        raise DomainError("VERSION_CONFLICT", "该轮学习已经收口，当前课程正在使用另一个版本。", "保留草稿并重新打开当前学习轮次。")
+    if active:
+        if row.abandoned_at is not None:
+            raise DomainError("STUDY_ROUND_SUPERSEDED", "该轮学习已随课程内容更新收口。", "课程内容已更新，学习进度已重置；重新打开课程将从最新材料开始，本机未提交输入已保留。")
+        if current_study(db, row.course_id).id != row.id:
+            raise DomainError("STUDY_ROUND_SUPERSEDED", "该轮学习已经收口，当前课程正在使用另一个版本。", "保留草稿并重新打开当前学习轮次。")
     return row
 
 
@@ -150,6 +153,29 @@ def detail(service, study_id):
                 "resume_lesson_id": study.resume_lesson_id, "next_action":"在当前知识点学习和作答，整课完成后统一提交。"}
 
 
+def _superseded_round_target(db, service, course_id, plan_line_id, key, identifier):
+    """Replay of an open whose round was sealed by a course revision reset: return the live round.
+
+    The original receipt stays untouched as history; a fresh round is opened once under a derived
+    key so retries of the same logical open converge on the same live session.
+    """
+    row = db.get(CourseStudySession, identifier)
+    if row is None or row.abandoned_at is None:
+        return identifier
+    current = current_study(db, course_id)
+    if current is not None and current.abandoned_at is None and current.id != identifier:
+        return current.id
+    text, digest = capture(service, course_id, plan_line_id)
+    revision = current.revision + 1 if current else 1
+    derived = key[:148] + ":reset" + str(revision)
+    row = CourseStudySession(id=new_id(), course_id=course_id, revision=revision,
+                             idempotency_key=derived, new_version=True, snapshot_json=text, content_hash=digest,
+                             progress_json="{}", version=1)
+    db.add(row); db.flush()
+    service._event(db, "USER_ENGINE", "course_study", row.id, "OPEN", "课程内容更新后从最新材料重新开始")
+    return row.id
+
+
 def open_study(service, course_id, key, new_version=False, review_round=False, plan_line_id=None):
     if not isinstance(key,str) or not key.strip() or len(key)>160 or not isinstance(new_version,bool) or not isinstance(review_round,bool):
         raise DomainError("INVALID_ARGUMENT", "学习开始需要有效幂等键和布尔new_version。", "同一请求使用原幂等键。")
@@ -169,20 +195,22 @@ def open_study(service, course_id, key, new_version=False, review_round=False, p
             if receipt.operation!="STUDY_OPEN" or receipt.payload_hash!=digest_request:
                 raise DomainError("IDEMPOTENCY_KEY_CONFLICT","幂等键已用于其他学习写入请求。")
             identifier=json.loads(receipt.result_json)["study_session_id"]
+            identifier=_superseded_round_target(db,service,course_id,plan_line_id,key,identifier)
         elif replay:
             if replay.course_id != course_id or replay.new_version != (new_version or review_round):
-                raise DomainError("IDEMPOTENCY_KEY_CONFLICT", "幂等键已用于其他学习开始请求。")
+                raise DomainError("IDEMPOTENCY_KEY_CONFLICT","幂等键已用于其他学习开始请求。")
             identifier = replay.id
+            identifier=_superseded_round_target(db,service,course_id,plan_line_id,key,identifier)
         else:
             current = current_study(db, course_id)
-            if current and not new_version and not review_round:
+            if current and current.abandoned_at is None and not new_version and not review_round:
                 identifier = current.id
             else:
                 from .round_policy import next_round_allowed, round_start_info
-                if current and not next_round_allowed(db, current):
+                if current and current.abandoned_at is None and not next_round_allowed(db, current):
                     raise DomainError("COURSE_STUDY_IN_PROGRESS", "当前学习尚未收口，不能切换材料版本。", round_start_info(db, current, None)["new_round_blocker"])
                 text, digest = capture(service, course_id,plan_line_id)
-                if current and digest == current.content_hash and not review_round:
+                if current and current.abandoned_at is None and digest == current.content_hash and not review_round:
                     raise DomainError("COURSE_VERSION_UNCHANGED", "学习材料没有更新，无需开始新版。", "继续回看当前课程即可。")
                 progress = {}
                 if not current:

@@ -1,5 +1,7 @@
 # Error-driven English supplemental learning
 
+补充课与迁移题同样执行[自然表达与语境审核](english-course-authoring.md#41-自然表达与语境审核所有英语制课任务必过)，先形成自然、准确的目标句，再反推渐进练习；不要为了重复错误词或旧句型制造生硬句。
+
 Use only after discovering the running CLI's package `/4`, `course.remediation.preview/publish/list/get`, and scoped mistake queries. Older binaries must not be treated as supporting them merely because this Skill was updated.
 
 ## Scope and teaching decisions

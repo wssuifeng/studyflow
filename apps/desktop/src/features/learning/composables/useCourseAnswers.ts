@@ -15,6 +15,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
   const loading = ref(true)
   const failed = ref(false)
   const saveFailed = ref(false)
+  const superseded = ref(false)
   const busy = ref('')
   const savedAt = ref('')
   const cacheUnavailable=ref(false)
@@ -42,7 +43,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
   }
   function schedule() {
     clearTimeout(timer)
-    if (enabled.value && !disposed && dirty.value && !loading.value && !saveFailed.value && !recovery.value && !pending.value) timer = setTimeout(() => write('save'), 900)
+    if (enabled.value && !disposed && dirty.value && !loading.value && !saveFailed.value && !recovery.value && !pending.value && !superseded.value) timer = setTimeout(() => write('save'), 900)
   }
   watch(rows, () => { keepCache(); schedule() }, {deep: true, flush: 'sync'})
 
@@ -59,6 +60,9 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
           requirements: state.retest_task?.requirements || ex.requirements, answer, savedAnswer: answer}
       }))
       recovery.value = null; pending.value = null; pendingFromStorage = false
+      // A fresh load (e.g. reopening after a revision reset) must clear the sealed-round state,
+      // or the new round can never save.
+      superseded.value = false
       const cached = cacheRead(cacheKey())
       if (cached) {
         const values = JSON.parse(cached)
@@ -142,6 +146,11 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
       return !!result
     } catch (cause) {
       if (disposed) return false
+      if (cause instanceof EngineError && cause.code === 'STUDY_ROUND_SUPERSEDED') {
+        // The round was sealed by a course revision reset; writes can never land on it again.
+        superseded.value = true; pending.value = null; pendingFromStorage = false; cacheRemove(requestKey())
+        reportError(cause); return false
+      }
       saveFailed.value = true
       if (cause instanceof EngineError && !['INTERNAL_ERROR','DATABASE_ERROR','DATABASE_LOCKED','DATABASE_DISK_FULL','WORKSPACE_DISK_FULL','DATABASE_READ_ONLY','WORKSPACE_READ_ONLY','DATABASE_CONSTRAINT_ERROR','CONNECTION_FAILED','BRIDGE_UNAVAILABLE','ENGINE_TIMEOUT','ENGINE_BUSY','ENGINE_UNCONFIRMED','INVALID_RESPONSE'].includes(cause.code)) {
         pending.value = null; cacheRemove(requestKey())
@@ -152,7 +161,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
   async function write(operation: 'save' | 'submit'): Promise<boolean> {
     clearTimeout(timer)
     if (inFlight) { if (!await inFlight) return false; return write(operation) }
-    if (disposed || failed.value || loading.value || recovery.value || pending.value || saveFailed.value) return false
+    if (disposed || failed.value || loading.value || recovery.value || pending.value || saveFailed.value || superseded.value) return false
     if (!enabled.value && operation === 'save') return !dirty.value
     if (operation === 'submit' && missing.value.length) return false
     if (operation === 'save' && !dirty.value) return true
@@ -178,6 +187,6 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
   }
   window.addEventListener('beforeunload', beforeUnload)
   onBeforeUnmount(() => {disposed = true; clearTimeout(timer); keepCache(); window.removeEventListener('beforeunload', beforeUnload)})
-  return {cacheUnavailable,rows, loading, failed, saveFailed, busy, savedAt, recovery, pending, editable, dirty, missing,
+  return {cacheUnavailable,rows, loading, failed, saveFailed, superseded, busy, savedAt, recovery, pending, editable, dirty, missing,
     load, write, retry, suspendAutosave, restoreCache, discardCache, exportRecovery, keepCache}
 }

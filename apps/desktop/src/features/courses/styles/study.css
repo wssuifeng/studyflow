@@ -40,9 +40,6 @@
 .practice-heading h3 {font-size:15px;margin:0 0 6px;font-weight:600;}
 .knowledge-question {padding:0 0 23px;margin-bottom:24px;border-bottom:1px solid var(--line);}
 .knowledge-question:last-of-type {border-bottom:0;margin-bottom:0;}
-.knowledge-question .question-heading {align-items:flex-start;gap:8px;flex-wrap:wrap;}
-.knowledge-question .question-heading h4 {flex:1;min-width:120px;font-size:14px;line-height:1.8;font-weight:600;}
-.knowledge-question .question-index {flex-shrink:0;width:24px;height:25px;background:var(--theme-status-info-soft);color:var(--theme-text-muted);}
 .knowledge-question .exercise-prompt {white-space:pre-wrap;font-size:13px;line-height:1.9;color:var(--ink);margin:13px 0;}
 .knowledge-question textarea,.note-editor {display:block;width:100%;min-height:190px;border:1px solid var(--theme-border-subtle);border-radius:8px;padding:14px 15px;background:var(--theme-surface-input);color:var(--ink);font-size:13px;line-height:1.85;resize:vertical;transition:border-color .15s,box-shadow .15s;}
 .knowledge-question textarea:focus,.note-editor:focus {outline:0;border-color:var(--theme-focus-ring);box-shadow:0 0 0 3px color-mix(in srgb,var(--theme-shadow-ink) 4.71%,transparent);}
@@ -139,13 +136,13 @@
 .leave-study-dialog p.leave-loss-warning {color:var(--theme-status-warning);}
 .leave-dialog-actions {display:flex;justify-content:flex-end;gap:10px;flex-wrap:wrap;margin-top:20px;}
 .leave-dialog-actions .secondary-button {font-size:11px;padding:10px 12px;}
-.danger-button {padding:10px 12px;border-radius:8px;background:var(--theme-status-danger-soft);border:1px solid var(--theme-status-danger);color:var(--theme-status-danger);font-size:11px;font-weight:600;}
-.danger-button:hover {background:var(--theme-status-danger-soft);}
+.leave-dialog-actions .danger-button {padding:10px 12px;border-radius:8px;background:var(--theme-status-danger-soft);border:1px solid var(--theme-status-danger);color:var(--theme-status-danger);font-size:11px;font-weight:600;}
+.leave-dialog-actions .danger-button:hover {background:var(--theme-status-danger-soft);}
 .leave-study-dialog p.leave-retry-hint {font-size:10px;margin-top:16px;}
 .leave-export {font-size:11px;}
 
 
-/* 练习题采用「题面 → 要求 → 作答」阅读顺序；状态只保留在题目元信息和课程级摘要，不在每题渲染生命周期时间线。 */
+/* 练习题采用「题面 → 要求 → 作答」阅读顺序；状态保留在课程级摘要和实际作答区域，不在每题渲染生命周期时间线。 */
 .knowledge-exercises .practice-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;padding-bottom:16px;border-bottom:1px solid var(--theme-border-subtle)}
 .knowledge-exercises .practice-heading h3{font-size:16px;line-height:1.5;color:var(--theme-text-primary)}
 .knowledge-exercises .practice-heading .small{font-size:11px;line-height:1.6}
@@ -154,15 +151,8 @@
 .practice-summary strong{color:var(--theme-text-secondary);font-size:13px;font-variant-numeric:tabular-nums}
 .knowledge-question{padding:0 0 28px;margin-bottom:28px;border-bottom:1px solid var(--theme-border-subtle)}
 .knowledge-question:last-of-type{border-bottom:0;margin-bottom:0}
-.knowledge-question .question-heading{display:flex;align-items:flex-start;gap:11px;min-width:0;margin-bottom:15px}
-.question-index-block{display:flex;flex-direction:column;align-items:center;gap:5px;flex:none;width:34px}
-.question-index-block .question-index{display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--theme-border-strong);border-radius:9px;background:var(--theme-accent-soft);color:var(--theme-accent-primary);font-size:12px;font-weight:700;font-variant-numeric:tabular-nums}
-.question-type{font-size:9px;line-height:1;color:var(--theme-text-muted);white-space:nowrap}
-.question-title{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
-.question-title h4{margin:0!important;color:var(--theme-text-primary);font-size:14px!important;line-height:1.55!important;font-weight:650!important}
-.question-meta{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--theme-text-muted);font-size:10px;line-height:1.45}
 .exercise-prompt-wrap{padding:14px 15px 15px;border:1px solid var(--theme-border-subtle);border-left:3px solid var(--theme-accent-primary);border-radius:0 10px 10px 0;background:color-mix(in srgb,var(--theme-accent-soft) 34%,var(--theme-surface-panel));}
-.exercise-prompt-label{display:block;margin-bottom:6px;color:var(--theme-accent-strong);font-size:10px;font-weight:700;letter-spacing:.08em}
+.exercise-prompt-index{display:inline-grid;place-items:center;min-width:26px;min-height:24px;margin-bottom:8px;padding:2px 6px;border-radius:6px;background:var(--theme-accent-soft);color:var(--theme-accent-strong);font-size:11px;font-weight:650;line-height:1.4;font-variant-numeric:tabular-nums}
 .knowledge-question .exercise-prompt{white-space:pre-wrap;margin:0!important;color:var(--theme-text-primary);font-size:13px;line-height:1.8}
 .question-requirements-box{margin-top:10px;padding:11px 13px;border-radius:8px;background:var(--theme-surface-raised);color:var(--theme-text-secondary);font-size:11px;line-height:1.75}
 .question-requirements-box strong{display:block;margin-bottom:3px;color:var(--theme-text-primary);font-size:10px}

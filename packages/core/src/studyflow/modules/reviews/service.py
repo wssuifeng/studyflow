@@ -69,7 +69,9 @@ class ReviewsService(Service):
 
     def list_pending_submissions(self) -> list[Submission]:
         with self.session() as db:
-            return db.scalars(select(Submission).options(joinedload(Submission.exercise), joinedload(Submission.reviews)).where(Submission.status == "WAITING_REVIEW").order_by(Submission.created_at)).all()
+            from studyflow.modules.courses.models import Exercise
+            from studyflow.modules.learning.reset import current_submission_predicate
+            return db.scalars(select(Submission).join(Exercise).options(joinedload(Submission.exercise), joinedload(Submission.reviews)).where(Submission.status == "WAITING_REVIEW", current_submission_predicate()).order_by(Submission.created_at)).all()
 
     def write_review(self, submission_id: str, summary: str, detail_markdown: str = "", issue_count: int = 0, needs_revision: bool = False, idempotency_key: str | None = None, source: str = AGENT_SOURCE, *, decision: str | None = None, next_action: str = "", issues: list | None = None, reference_hash: str | None = None, reference_revision: int | None = None, reference_reason: str = "") -> ReviewFeedback:
         if not isinstance(summary, str) or not summary.strip():

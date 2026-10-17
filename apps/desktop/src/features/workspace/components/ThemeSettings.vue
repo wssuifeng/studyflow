@@ -1,20 +1,18 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { activeTheme, availableThemes, themeNotice, selectTheme, importTheme, exportTheme, removeTheme, resetTheme, setDisplayOptions, imageIntensity, typographyPreference } from '../../../shared/themes'
+import { activeTheme, availableThemes, isThemeActive, isActiveThemeCustom, themeNotice, selectTheme, importTheme, exportTheme, removeTheme, resetTheme, setDisplayOptions, imageIntensity, typographyPreference } from '../../../shared/themes'
 import { MAX_THEME_BYTES, MAX_CUSTOM_THEMES } from '../../../shared/themes/contract'
 import type { ThemeResult } from '../../../shared/themes/controller'
-import { notify } from '../../../shared/ui'
 const input = ref<HTMLInputElement | null>(null), importing = ref(false), message = ref(''), failed = ref(false), removal = ref('')
-const custom = computed(() => availableThemes.value.find(item => item.theme.id === activeTheme.value.id)?.source === 'custom')
+const custom = computed(() => isActiveThemeCustom())
 const scaleChoice = computed(() => typographyPreference.value.scale === 'auto' ? 'auto' : String(typographyPreference.value.scale))
 const lineChoice = computed(() => typographyPreference.value.lineHeight === 'auto' ? 'auto' : String(typographyPreference.value.lineHeight))
 const SCALES = [{ id: 'auto', label: '跟随主题' }, { id: '0.95', label: '略紧 0.95' }, { id: '1', label: '标准 1.0' }, { id: '1.08', label: '略大 1.08' }]
 const LINES = [{ id: 'auto', label: '跟随主题' }, { id: '1.65', label: '紧凑 1.65' }, { id: '1.85', label: '标准 1.85' }, { id: '2.05', label: '宽松 2.05' }]
 const IMAGES = [{ id: 'full', label: '使用主题素材' }, { id: 'subtle', label: '弱化素材' }, { id: 'none', label: '无图模式' }]
-function report(result: ThemeResult, success: string) {
+function report(result: ThemeResult, _success: string) {
   failed.value = !result.ok
-  message.value = result.ok ? success : result.error
-  if (result.ok) notify(success, 'info')
+  message.value = result.ok ? '' : result.error
 }
 function choose(id: string) { removal.value = ''; report(selectTheme(id), '主题已切换，学习内容保持不变。') }
 function chooseScale(value: string) { report(setDisplayOptions({ typography: { scale: value === 'auto' ? 'auto' : Number(value), lineHeight: typographyPreference.value.lineHeight } }), '正文字号标度已更新。') }
@@ -43,11 +41,11 @@ function remove() { const name = activeTheme.value.name; report(removeTheme(remo
   <section class="workspace-panel theme-settings" aria-labelledby="theme-settings-heading">
     <header class="theme-settings-heading"><div><h3 id="theme-settings-heading">外观主题</h3><p class="muted small">同一套课程与工具，换一种舒服的阅读环境。</p></div><span class="theme-current-label">当前 · {{ activeTheme.name }}</span></header>
     <div class="theme-options" role="group" aria-label="选择外观主题">
-      <button v-for="item in availableThemes" :key="item.theme.id" type="button" class="theme-option" :class="{ selected: activeTheme.id === item.theme.id }" :aria-pressed="activeTheme.id === item.theme.id" @click="choose(item.theme.id)">
+      <button v-for="item in availableThemes" :key="item.theme.id" type="button" class="theme-option" :class="{ selected: isThemeActive(item.theme) }" :aria-pressed="isThemeActive(item.theme)" @click="choose(item.theme.id)">
         <span class="theme-preview" aria-hidden="true" :style="{ '--preview-canvas': item.theme.tokens['surface.canvas'], '--preview-panel': item.theme.tokens['surface.panel'], '--preview-raised': item.theme.tokens['surface.raised'], '--preview-accent': item.theme.tokens['accent.primary'], '--preview-text': item.theme.tokens['text.primary'], '--preview-border': item.theme.tokens['border.subtle'] }">
           <span class="theme-preview-nav"><i/><i/><i/></span><span class="theme-preview-page"><i class="preview-title"/><i/><i/><span class="preview-callout"><i/></span></span><span class="theme-preview-tools"><i/><i/></span>
         </span>
-        <span class="theme-option-heading"><strong>{{ item.theme.name }}</strong><span class="theme-choice-indicator">{{ activeTheme.id === item.theme.id ? '✓ 已选择' : item.theme.appearance === 'dark' ? '深色' : '浅色' }}</span></span>
+        <span class="theme-option-heading"><strong>{{ item.theme.name }}</strong><span class="theme-choice-indicator">{{ isThemeActive(item.theme) ? '✓ 已选择' : item.theme.appearance === 'dark' ? '深色' : '浅色' }}</span></span>
         <span class="theme-option-description">{{ item.theme.description }}</span><span v-if="item.source === 'custom'" class="theme-custom-label">本地导入</span>
       </button>
     </div>

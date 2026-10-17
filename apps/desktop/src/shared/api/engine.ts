@@ -1,4 +1,5 @@
 import { invoke, isTauri } from '@tauri-apps/api/core'
+import {persistRequestDiagnostic, requestDiagnostic} from '../ui/requestDiagnostics'
 export { isTauri } from '@tauri-apps/api/core'
 
 export type EngineResponse<T = unknown> = {
@@ -38,7 +39,10 @@ export async function engineCall<T>(method: string, params: Record<string, unkno
     if (cause instanceof EngineError) throw cause
     throw new EngineError('CONNECTION_FAILED', '无法连接本地工作区', '请重新打开软件，或恢复开发服务后重试。')
   }
-  if(response.id!==request.id)throw new EngineError('INVALID_RESPONSE','响应ID不匹配','写入结果待确认，保留原请求。')
+  if(response.id!==request.id){
+    void persistRequestDiagnostic({...requestDiagnostic('engine-response','INVALID_RESPONSE'),operation:method,request_id:String(request.id),response_id:String(response.id)})
+    throw new EngineError('INVALID_RESPONSE','响应ID不匹配','写入结果待确认，保留原请求。')
+  }
   if (!response.ok) {
     const details = response.error
     throw new EngineError(details?.code || 'ENGINE_ERROR', details?.message || 'StudyFlow Engine 请求失败', (details?.next_action || '') + (details?.diagnostic_id ? ' 诊断编号：' + details.diagnostic_id : ''))

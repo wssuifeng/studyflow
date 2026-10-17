@@ -1,9 +1,8 @@
 <script setup lang="ts">
 import {computed, inject, nextTick, onBeforeUnmount, onMounted, onUpdated, ref, watch} from 'vue'
-import {isTauri, studyApi} from '../../../shared/api'
+import {EngineError, isTauri, studyApi} from '../../../shared/api'
 import type {CourseStudyDetailData,StudyRestartPreview} from '../../../shared/api/contracts'
 import {makeRequestKey, navigate, notify, reportError, statusLabel, windowStorageKey} from '../../../shared/ui'
-import KnowledgePointPager from './KnowledgePointPager.vue'
 import {createProgressSaveQueue} from '../progressSaveQueue'
 import CourseOutline from './CourseOutline.vue'
 import {activeTheme} from '../../../shared/themes'
@@ -40,7 +39,6 @@ const answers = useCourseAnswers(data,answersOwner)
 const notes = usePlanNotebook(computed(()=>data.value?.course.plan_line_id||undefined),notesOwner)
 const shellPanel=inject(workspacePanelKey)
 const panelOwner=Symbol('course-panel')
-const sequenceTheme=computed(()=>activeTheme.value.id==='sequence-light')
 let storedDockLayout:string|null=null
 try {storedDockLayout=localStorage.getItem(windowStorageKey('course-dock'))}catch {/* Layout preference is optional. */}
 const dock=ref(storedDockLayout?restoreDockLayout(storedDockLayout):normalizeDock({width:activeDisplay.value.tools_width}))
@@ -149,6 +147,7 @@ const moving = ref(false)
 const submitting = ref(false)
 const progressSaving = ref(false)
 const progressFailed = ref(false)
+const materialSuperseded = ref(false)
 const ready = ref(false)
 const body = ref<HTMLElement | null>(null)
 const restoringReadingScroll=ref(false)
@@ -182,7 +181,7 @@ async function previewRestart(){
 async function confirmRestart(){
  if(restartBusy.value||!data.value)return
  const info=restartPreview.value
- if(!restartPending.value){if(!info?.can_restart||!info.expected_content_hash)return;restartPending.value={study_session_id:info.study_session_id,expected_version:info.expected_version,expected_content_hash:info.expected_content_hash,idempotency_key:makeRequestKey('study-restart')};cacheRestart()}
+ if(!restartPending.value){if(!info?.can_restart||!info.expected_content_hash)return;restartPending.value={expected_state_hash:info.expected_state_hash,reset_current_state:info.reset_current_state,study_session_id:info.study_session_id,expected_version:info.expected_version,expected_content_hash:info.expected_content_hash,idempotency_key:makeRequestKey('study-restart')};cacheRestart()}
  restartBusy.value=true;moving.value=true
  try{
   if(!restartHold){const held=await prepareTools('hold');restartHold=held.requestId;if(!held.ok){notify('工具窗口内容未确认；已保留原重开请求。','info');return}}
@@ -209,7 +208,7 @@ const readingPercent = computed(() => data.value?.lessons.length ? Math.round(da
 const planPosition = computed(() => ({current: Math.max(1, data.value?.course.sequence || 1), total: Math.max(1, data.value?.course.total || 1)}))
 const courseProgressPercent = computed(() => Math.max(0, Math.min(100, Math.round(data.value?.course.progress_percent || 0))))
 const courseStatus = computed(() => statusLabel(data.value?.course.study_status || 'IN_PROGRESS'))
-const saveLabel = computed(() => answers.busy.value || notes.busy.value || progressSaving.value ? '保存中…' : answers.saveFailed.value || notes.saveFailed.value || progressFailed.value ? '保存失败，内容已保留' : answers.dirty.value || notes.dirty.value ? '有修改，正在等待保存' : answers.savedAt.value || notes.savedAt.value ? (answers.savedAt.value || notes.savedAt.value)+' 已保存' : '答案与笔记自动保存到本地工作区')
+const saveLabel = computed(() => answers.busy.value || notes.busy.value || progressSaving.value ? '保存中…' : materialSuperseded.value || answers.superseded.value ? '本轮已收口' : answers.saveFailed.value || notes.saveFailed.value || progressFailed.value ? '保存失败，内容已保留' : answers.dirty.value || notes.dirty.value ? '有修改，正在等待保存' : answers.savedAt.value || notes.savedAt.value ? (answers.savedAt.value || notes.savedAt.value)+' 已保存' : '答案与笔记自动保存到本地工作区')
 const renderedLesson = computed(() => lesson.value && data.value ? highlightNotebookExcerpts(learningContent(lesson.value.rendered_html,lesson.value.title),notes.blocks.value,data.value.study.id,lesson.value.id) : '')
 const documentHeadings=ref<{id:string;title:string;level:number}[]>([])
 const activeHeading=ref('')
@@ -255,6 +254,8 @@ async function load(newVersion = false,reviewRound=false) {
     data.value = props.studyId && !newVersion && !reviewRound ? await studyApi.courseStudy(props.studyId) : await studyApi.openCourseStudy(props.id,key,newVersion,reviewRound,props.planLineId)
     openingRequest.value=null
     if(data.value.course.id!==props.id){data.value=null;throw new Error('学习轮次与课程不匹配。')}
+    // A sealed-round notice must not survive into a freshly loaded round (audit: stale banner after reopen).
+    materialSuperseded.value=false
     restartPending.value=readRestartRequest(restartStorage(),restartCacheKey,data.value.study.workspace_key||'')
     if(!data.value.study.is_current&&!restartPending.value){const source='/source/'+data.value.study.id+'?lesson='+(props.lessonId||data.value.lessons[0]?.id);data.value=null;await navigate(source);return}
     try{localStorage.removeItem(keyName)}catch{/* content is frozen in the workspace */}
@@ -296,6 +297,8 @@ function savePosition(complete = false): Promise<boolean> {
   clearTimeout(timer)
   return enqueueProgressSave(async()=>{
     if(disposed||restartPending.value)return false
+    // A sealed round can never accept progress writes; skip instead of firing doomed requests + toasts.
+    if(materialSuperseded.value||answers.superseded.value)return true
     if(safeExit.leaving.value)return true
     if(!data.value||!lesson.value)return true
     const current=lesson.value
@@ -308,7 +311,8 @@ function savePosition(complete = false): Promise<boolean> {
       const saved=await studyApi.saveStudyProgress({study_session_id:data.value.study.id,lesson_id:current.id,progress_percent:percent,last_position:JSON.stringify({scrollTop}),expected_version:data.value.study.progress_version})
       data.value.study.progress_version=saved.version;current.progress=saved;progressFailed.value=false
       return true
-    }catch(cause){if(safeExit.leaving.value||disposed)return false;progressFailed.value=true;reportError(cause);return false}
+    }catch(cause){if(safeExit.leaving.value||disposed)return false;if(cause instanceof EngineError&&cause.code==='STUDY_ROUND_SUPERSEDED'){materialSuperseded.value=true;reportError(cause);return false}progressFailed.value=true;reportError(cause);return false}
+    // EngineError is the only error shape engineCall throws (shared/api/engine.ts); other throwers must wrap it the same way or this branch silently misses.
     finally{progressSaving.value=false}
   })
 }
@@ -316,6 +320,7 @@ function savePosition(complete = false): Promise<boolean> {
 function onScroll() {updateActiveHeading();if(restoringReadingScroll.value)return;if(ready.value&&body.value?.getClientRects().length){readingScrollTop.value=body.value.scrollTop;clearTimeout(timer); timer=setTimeout(()=>savePosition(),750)}}
 async function flushCurrent() {
   if (loading.value || !data.value) return true
+  if (materialSuperseded.value || answers.superseded.value) {if (notes.dirty.value || notes.pending.value) return notes.save(); return true}
   const peers=await prepareTools()
   if(!peers.ok) {notify('独立工具窗口尚未保存，请先处理那里的输入。','info');return false}
   if(!answersOwner.value&&!answers.dirty.value&&!answers.pending.value&&!answers.recovery.value)await answers.load()
@@ -325,7 +330,7 @@ async function flushCurrent() {
 }
 const safeExit = useSafeStudyExit({
   busy: () => moving.value || submitting.value || !!answers.busy.value || notes.busy.value,
-  hasProblem: () => !!(restartPending.value || answers.saveFailed.value || notes.saveFailed.value || progressFailed.value || answers.pending.value || notes.pending.value || answers.recovery.value || notes.recovery.value),
+  hasProblem: () => !!(restartPending.value || answers.saveFailed.value || notes.saveFailed.value || progressFailed.value || answers.pending.value || notes.pending.value || answers.recovery.value || notes.recovery.value || (materialSuperseded.value && answers.dirty.value)),
   flush: flushCurrent, retry: retrySaving,
   suspend: () => {clearTimeout(timer); answers.suspendAutosave(); notes.suspendAutosave(); if(safeExit.dialog.value?.path==='close-window'){void suspendTools();window.dispatchEvent(new CustomEvent('studyflow-discard-close'))}},
 })
@@ -349,7 +354,7 @@ async function moveTo(next:number) {
  await restorePosition();return savePosition()
 }
 async function selectLesson(next:number) {
- if(moving.value||submitting.value||next===index.value||next<0||next>=(data.value?.lessons.length||0))return false
+ if(!Number.isInteger(next)||moving.value||submitting.value||next===index.value||next<0||next>=(data.value?.lessons.length||0))return false
  moving.value=true;ready.value=false
  try {if(!await flushCurrent())return false;return await moveTo(next)}
  finally {moving.value=false;ready.value=true}
@@ -397,8 +402,17 @@ async function submitCourse() {
 }
 async function syncFeedback() {
   if (!await flushCurrent()) return
-  try {data.value = await studyApi.courseStudy(data.value!.study.id); await Promise.all([answers.load(), notes.load()]); await syncToolContext(); notify('反馈已同步。')}
+  try {data.value = await studyApi.courseStudy(data.value!.study.id); await Promise.all([answers.load(), notes.load()]); await syncToolContext()}
   catch (cause) {reportError(cause)}
+}
+async function reloadAfterReset() {
+  // A sealed round cannot be written; reopen the course so the reader lands on the fresh material.
+  // The URL may still carry ?study=<sealed id> (line 194 replaceState), so load() would re-read the
+  // sealed round and bounce to /source — force the open path until the round is current.
+  try {
+    await load()
+    if (data.value && !data.value.study.is_current) await load(true)
+  } catch (cause) { reportError(cause) }
 }
 async function retrySaving() {
   if(restartPending.value){await confirmRestart();if(restartPending.value)return}
@@ -411,10 +425,7 @@ async function retrySaving() {
       await savePosition()
     } catch (cause) {reportError(cause)}
   }
-  if (!(answers.failed.value || notes.failed.value || answers.saveFailed.value || notes.saveFailed.value || progressFailed.value ||
-        answers.pending.value || notes.pending.value || answers.recovery.value || notes.recovery.value || answers.dirty.value || notes.dirty.value)) {
-    notify('保存已恢复，答案与笔记已同步到工作区。')
-  }
+
 }
 async function syncToolContext(prepare=true) {
  if(!isTauri()||!context.value)return
@@ -469,7 +480,7 @@ async function markNote() {
   lesson_id:lesson.value.id,source_study_id:data.value.study.id,course_title:data.value.course.title,lesson_title:lesson.value.title}
  if(!notesOwner.value){if(!await addDetachedNote(context.value.planId,block)){notify('笔记窗口暂时不能接收摘录，选文仍保留，请处理该窗口后重试。','info');return}}
  else {if(notes.failed.value||notes.loading.value||notes.recovery.value||notes.pending.value||notes.cacheUnreadable.value){notify('请先恢复笔记的保存状态，再添加摘录。','info');return}notes.add(block);sidebarOpen.value=true;tab.value='notes'}
- selection.value=null;window.getSelection()?.removeAllRanges();notify('摘录已记入计划笔记，可以补充自己的理解。')
+ selection.value=null;window.getSelection()?.removeAllRanges()
 }
 const toolListeners:(()=>void)[]=[]
 const dockingTools=new Set<ToolTab>()
@@ -510,7 +521,7 @@ watch(()=>[props.lessonId,props.initialView],async()=>{
   }
   if(target>=0 && target!==index.value) await selectLesson(target)
 })
-watch(() => [sequenceTheme.value,dockMaxWidth.value, dock.value.width, dock.value.full, sidebarOpen.value, loading.value, data.value?.study.source_changed, answers.recovery.value, notes.recovery.value,
+watch(() => [dockMaxWidth.value, dock.value.width, dock.value.full, sidebarOpen.value, loading.value, data.value?.study.source_changed, answers.recovery.value, notes.recovery.value,
   answers.failed.value, answers.saveFailed.value, notes.saveFailed.value, progressFailed.value,
   !!answers.pending.value && !answers.busy.value, !!notes.pending.value && !notes.busy.value],
   async () => {await nextTick(); fitStudyLayout()})
@@ -528,7 +539,7 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
 
 <template>
  <Teleport to="body"><dialog v-if="restartPreview" ref="restartDialog" class="study-restart-dialog" aria-labelledby="study-restart-title" @cancel.prevent="closeRestartDialog">
-  <h3 id="study-restart-title">用最新版重新开始？</h3><p>原轮次和已保存笔记会保留。本轮阅读位置不迁移，新轮次从头开始；不会删除课程或学习历史。</p>
+  <h3 id="study-restart-title">用最新版重新开始？</h3><p>将重置本课当前阅读进度、作答及待批改状态，从最新材料重新开始。原轮次、历史作答和已保存笔记会保留，其他课程不受影响。</p>
   <p v-if="restartPending" role="status">请求结果尚未确认，请使用原请求重试。也可以稍后处理，软件不会自动丢弃请求。</p>
   <div><button class="secondary-button" :disabled="restartBusy" @click="closeRestartDialog">{{restartPending?'稍后处理':'取消'}}</button><button class="primary-button" :disabled="restartBusy" @click="confirmRestart">{{restartBusy?'确认中…':restartPending?'重试原请求':'保留历史并重新开始'}}</button></div>
  </dialog></Teleport>
@@ -538,38 +549,23 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
   <div v-else-if="!data" class="error-state"><p>课程暂时无法打开，没有覆盖学习记录。</p><button class="secondary-button" @click="load()">重新打开</button></div>
   <div v-else :class="['study-workspace', {'layout-overflow': layoutOverflow}]">
     <Teleport v-if="shellPanel?.navigationVisible?.value" defer to="#course-sidebar-content"><CourseOutline :plan-title="data.course.plan_line || '我的计划'" :course-title="data.course.title" :position="planPosition.current" :total="planPosition.total" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :headings="documentHeadings" :active-heading="activeHeading" :busy="blocked" :reading-percent="readingPercent" @select="selectLesson" @heading="jumpToHeading" @back="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"/></Teleport>
-    <div class="sequence-reader-bar" v-if="sequenceTheme"><button type="button" class="sequence-exit course-navigation-action" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')" aria-label="退出课程详情，返回课程目录"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>课程目录</span></button><span class="sequence-breadcrumb" :title="data.course.title">{{data.course.title}}</span><div class="sequence-reader-controls"><button class="sequence-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button class="text-button" :disabled="blocked" @click="syncFeedback" aria-label="同步反馈">↻</button><button class="tools-toggle" :aria-expanded="sidebarOpen" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" aria-controls="workspace-tool-panel" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
-    <div v-if="!sequenceTheme" class="reader-toolbar"><button class="back-link" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')">← {{data.course.plan_line || '我的计划'}}</button>
-    <header class="reader-heading">
-      <div class="reader-heading-copy">
-        <p class="reader-context">{{data.course.plan_line || '我的计划'}} <span>/</span> 当前学习课程</p>
-        <h2>{{data.course.title}}</h2>
-        <p class="reader-subtitle">第 {{planPosition.current}} 节 · {{data.course.subject || '课程阅读与练习'}}</p>
-      </div>
-      <section class="reader-progress-summary" aria-label="课程学习进度">
-        <div class="reader-progress-position"><span>课程位置</span><strong>{{String(planPosition.current).padStart(2,'0')}} / {{String(planPosition.total).padStart(2,'0')}}</strong></div>
-        <div class="reader-progress-track" role="progressbar" :aria-valuenow="courseProgressPercent" aria-valuemin="0" aria-valuemax="100"><span :style="{width:courseProgressPercent+'%'}"/></div>
-        <div class="reader-progress-meta"><span>本课阅读 {{readingPercent}}%</span><span class="reader-progress-status">{{courseStatus}}</span></div>
-        <button class="text-button" :disabled="blocked" @click="syncFeedback">同步反馈 ↻</button>
-      </section>
-    </header>
-    </div>
+    <div class="reader-toolbar"><button type="button" class="course-navigation-action" :title="data.course.plan_line || '我的计划'" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>{{data.course.plan_line || '我的计划'}}</span></button><p class="reader-context" :title="data.course.title">{{data.course.title}}</p><div class="reader-actions"><button type="button" class="reader-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button type="button" class="text-button" :disabled="blocked" @click="syncFeedback">同步反馈 ↻</button><button ref="toolsToggle" type="button" class="tools-toggle" :aria-expanded="sidebarOpen" aria-controls="workspace-tool-panel" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
     <div v-if="['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')&&!data.study.source_changed" class="study-version-note"><span>本轮已通过。可以只回看，或明确开启一轮新的复习；旧答案保留。</span><button class="text-button" @click="newVersionConfirm=true">开启复习轮次</button><span v-if="newVersionConfirm"><button class="text-button" @click="async()=>{if(await flushCurrent()){newVersionConfirm=false;await load(false,true)}}">确认重新学习与作答</button><button class="text-button" @click="newVersionConfirm=false">取消</button></span></div>
+    <div v-if="materialSuperseded||answers.superseded.value" class="study-version-note" role="status"><span>课程内容已更新，本轮已收口保留为历史，学习进度已重置。重新读取课程将从最新材料开始。</span><button class="text-button" @click="reloadAfterReset">重新读取课程</button></div>
     <div v-if="restartPending" class="study-version-note" role="status"><span>重新开始的结果待确认，原请求已保留。请勿重复创建轮次。</span><span v-if="restartCacheUnavailable">本机缓存不可用；原请求仅在本窗口保留。离开前可导出未保存数据。</span><button class="text-button" :disabled="restartBusy" @click="confirmRestart">{{restartBusy?'确认中…':'重试原请求'}}</button></div>
-    <div v-else-if="!['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')" class="study-restart-entry"><button class="text-button" :disabled="blocked" @click="previewRestart">用最新版重新开始</button><span>仅无作答记录时可用 · 历史与笔记保留</span></div>
+    <div v-else-if="!['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')" class="study-restart-entry"><button class="text-button" :disabled="blocked" @click="previewRestart">用最新版重新开始</button><span>当前进度与作答重置 · 历史与笔记保留</span></div>
     <div v-if="data.study.source_changed" class="study-version-note"><span>{{data.study.source_available ? '材料已更新，本次学习仍使用开始时的版本。' : '源文件暂时不可读，仍可使用本次学习的固定材料。'}}</span><button v-if="data.study.source_available && ['PASSED','READ_COMPLETED'].includes(data.course.study_status || '')" class="text-button" @click="newVersionConfirm=true">开始新版学习</button><span v-if="newVersionConfirm">旧答案和反馈将保留。<button class="text-button" @click="startNewVersion">确认开始</button><button class="text-button" @click="newVersionConfirm=false">取消</button></span></div>
     <StudyRecovery :answers="answers" :notebook="notes" :progress-failed="progressFailed" @retry="retrySaving" @notes="sidebarOpen=true;tab='notes'"/>
     <div v-if="answers.failed.value" class="error-state"><p>作答状态读取失败，没有覆盖已有答案。</p><button class="secondary-button" @click="answers.load">重新读取作答</button></div>
     <template v-else-if="lesson">
-      <div v-if="!sequenceTheme" class="reader-navigation"><KnowledgePointPager :lessons="data.lessons" :index="index" :busy="blocked" :answer-states="answers.rows.value" @select="selectLesson"/><span class="reader-current-title" :class="{visible:readingScrollTop>90}">{{lesson.title}}</span><button ref="toolsToggle" class="tools-toggle" :aria-expanded="sidebarOpen" aria-controls="workspace-tool-panel" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div>
       <DisplaySlot slot="reading-shell" :fallback="'div'" :view-props="readingShellProps">
         <div ref="studyLayout" :style="{'--study-height': layoutHeight+'px'}" :class="layoutClass">
-        <article :key="lesson.id" class="study-material" aria-label="知识点正文"><div ref="body" data-reading-scroll-container class="study-material-body" tabindex="0" @scroll.passive="onScroll();selection=null" @mouseup="captureSelection" @keyup="captureSelection"><header class="study-unit-heading"><ThemeReadingArtwork v-if="!sequenceTheme"/><p class="eyebrow"><template v-if="sequenceTheme">第 {{planPosition.current}} / {{planPosition.total}} 课 · </template>知识点 {{String(index+1).padStart(2,'0')}} / {{data.lessons.length}}</p><h3>{{lesson.title.replace(/^\d+[｜|·.、\s]+/,'')}}</h3><p v-if="sequenceTheme && lesson.summary" class="sequence-lesson-summary">{{lesson.summary}}</p><span v-if="sequenceTheme" class="sequence-reading-status">{{courseStatus}} · 本课阅读 {{readingPercent}}%</span></header><TeachingContent :lesson-title="lesson.title" v-if="lesson.content_blocks?.length" :blocks="lesson.content_blocks" :exercises="lesson.exercises" :notes="notes.blocks.value" :study-id="data.study.id" :lesson-id="lesson.id" :blocked="blocked" :preference-scope="(data.study.workspace_key||data.study.id)+':'+data.study.content_hash" @practice="openPractice"/><div v-else class="markdown-body legacy-teaching-content" v-html="renderedLesson"/>
-        <section v-if="sequenceTheme && lesson.exercises.length" class="sequence-practice-entry"><div><span class="sequence-practice-icon">✓</span><h4>知识点练习</h4><span>{{lesson.exercises.length}} 道练习</span></div><p>把理解写下来，答案会随本课自动保存。也可以暂时跳过，最后统一提交。</p><button class="secondary-button" :disabled="blocked" @click="openPractice(lesson.exercises[0].id)">打开本节练习 <span>→</span></button></section>
-        <nav v-if="sequenceTheme" class="sequence-page-turn" aria-label="上下知识点"><button :disabled="index===0||blocked" @click="selectLesson(index-1)"><small>‹ 上一节</small><span>{{index>0?data.lessons[index-1].title:'已是第一节'}}</span></button><span class="sequence-page-number"><b>{{String(index+1).padStart(2,'0')}}</b> / {{String(data.lessons.length).padStart(2,'0')}}</span><button :disabled="index===data.lessons.length-1||blocked" @click="selectLesson(index+1)"><small>下一节 ›</small><span>{{index<data.lessons.length-1?data.lessons[index+1].title:'已是最后一节'}}</span></button></nav>
+        <article :key="lesson.id" class="study-material" aria-label="知识点正文"><div ref="body" data-reading-scroll-container class="study-material-body" tabindex="0" @scroll.passive="onScroll();selection=null" @mouseup="captureSelection" @keyup="captureSelection"><header class="study-unit-heading"><ThemeReadingArtwork/><p class="eyebrow">知识点 {{String(index+1).padStart(2,'0')}} / {{data.lessons.length}}</p><h3>{{lesson.title.replace(/^\d+[｜|·.、\s]+/,'')}}</h3><p v-if="lesson.summary" class="sequence-lesson-summary">{{lesson.summary}}</p><span class="sequence-reading-status">{{courseStatus}} · 本课阅读 {{readingPercent}}%</span></header><TeachingContent :lesson-title="lesson.title" v-if="lesson.content_blocks?.length" :blocks="lesson.content_blocks" :exercises="lesson.exercises" :notes="notes.blocks.value" :study-id="data.study.id" :lesson-id="lesson.id" :blocked="blocked" :preference-scope="(data.study.workspace_key||data.study.id)+':'+data.study.content_hash" @practice="openPractice"/><div v-else class="markdown-body legacy-teaching-content" v-html="renderedLesson"/>
+        <section v-if="lesson.exercises.length" class="sequence-practice-entry"><div><span class="sequence-practice-icon">✓</span><h4>知识点练习</h4><span>{{lesson.exercises.length}} 道练习</span></div><p>把理解写下来，答案会随本课自动保存。也可以暂时跳过，最后统一提交。</p><button class="secondary-button" :disabled="blocked" @click="openPractice(lesson.exercises[0].id)">打开本节练习 <span>→</span></button></section>
+        <nav class="sequence-page-turn" aria-label="上下知识点"><button :disabled="index===0||blocked" @click="selectLesson(index-1)"><small>‹ 上一节</small><span>{{index>0?data.lessons[index-1].title:'已是第一节'}}</span></button><span class="sequence-page-number"><b>{{String(index+1).padStart(2,'0')}}</b> / {{String(data.lessons.length).padStart(2,'0')}}</span><button :disabled="index===data.lessons.length-1||blocked" @click="selectLesson(index+1)"><small>下一节 ›</small><span>{{index<data.lessons.length-1?data.lessons[index+1].title:'已是最后一节'}}</span></button></nav>
         </div></article>
         <Teleport defer to="#workspace-tool-panel">
-        <CourseToolsSidebar v-if="!answers.loading.value" :dock="dock" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notes" :plan-title="data.course.plan_line||undefined" :course-id="data.course.id" :detached="detached" :max-width="dockMaxWidth" :effective-width="shellPanel?.geometry.value.width||dock.width" :course-title="data.course.title" :compact="shellPanel?.geometry.value.compact" :sequence="sequenceTheme" :course-position="planPosition.current" :course-total="planPosition.total" :course-progress="courseProgressPercent" :save-label="saveLabel" :save-failed="answers.saveFailed.value||notes.saveFailed.value||progressFailed" @activate="(t,p)=>dock=activateTool(dock,t,p)" @close="t=>dock=closeTool(dock,t)" @select="selectLesson" @section="jumpToBlock" @collapse="sidebarOpen=false" @width="setDockWidth" @full="dock={...dock,full:!dock.full}" @split="splitTool" @unsplit="dock={...dock,panes:dock.panes.slice(0,1)}" @ratio="r=>dock={...dock,split:r}" @detach="detachTool" @dock="putBackTool" @reorder="(from,to)=>dock=reorderTools(dock,from,to)"><template v-if="dock.full||shellPanel?.geometry.value.compact" #actions><StudyActions :blocked="blocked||progressSaving||answers.loading.value" :read="lesson.progress.status==='COMPLETED'" :last="index===data.lessons.length-1" :can-submit="!!answers.editable.value.length||!data.course.exercise_total&&!data.course.learning_submitted" :submitting="submitting" :feedback-needed="!!feedbackNeeded" :has-exercises="!!data.course.exercise_total" @read="confirmRead" @next="continueLearning" @submit="submitCourse" @done="navigate('/today')"/></template><template v-if="sequenceTheme||dock.full||shellPanel?.geometry.value.compact" #recovery><StudyRecovery :answers="answers" :notebook="notes" :progress-failed="progressFailed" @retry="retrySaving" @notes="sidebarOpen=true;tab='notes'"/></template></CourseToolsSidebar>
+        <CourseToolsSidebar v-if="!answers.loading.value" :dock="dock" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notes" :plan-title="data.course.plan_line||undefined" :course-id="data.course.id" :detached="detached" :max-width="dockMaxWidth" :effective-width="shellPanel?.geometry.value.width||dock.width" :course-title="data.course.title" :compact="shellPanel?.geometry.value.compact" :course-position="planPosition.current" :course-total="planPosition.total" :course-progress="courseProgressPercent" :save-label="saveLabel" :save-failed="answers.saveFailed.value||notes.saveFailed.value||progressFailed" @activate="(t,p)=>dock=activateTool(dock,t,p)" @close="t=>dock=closeTool(dock,t)" @select="selectLesson" @collapse="sidebarOpen=false" @width="setDockWidth" @full="dock={...dock,full:!dock.full}" @split="splitTool" @unsplit="dock={...dock,panes:dock.panes.slice(0,1)}" @ratio="r=>dock={...dock,split:r}" @detach="detachTool" @dock="putBackTool" @reorder="(from,to)=>dock=reorderTools(dock,from,to)"/>
         <div v-else class="loading-state" role="status">正在恢复学习工具…</div>
         </Teleport>
         </div>

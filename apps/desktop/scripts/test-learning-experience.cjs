@@ -21,6 +21,20 @@ test('teaching headings are relative to the component, preserving text ids and a
 
 test('component heading ids are lesson scoped when English overview renders multiple groups',()=>{const source=fs.readFileSync(path.join(root,'features/courses/components/TeachingContent.vue'),'utf8');assert.ok(source.includes("'block-title-'+lessonId+'-'+block.id"));assert.ok(source.includes("'content-block-'+lessonId+'-'+block.id"))})
 
+// 阅读域统一骨架：保存/退出/工具归属语义保持不变。
+test('统一阅读骨架保持保存退出链与工具归属，动作区唯一',()=>{
+ const reader=fs.readFileSync(path.join(root,'features/courses/components/CourseReader.vue'),'utf8')
+ const actions=fs.readFileSync(path.join(root,'features/courses/components/StudyActions.vue'),'utf8')
+ for(const marker of ['useSafeStudyExit','LeaveStudyDialog','StudyRecovery','retrySaving','exportUnsaved','savePosition(true)','study-action-bar'])assert.ok(reader.includes(marker),marker)
+ // 底部是唯一稳定动作区；侧栏不再接收第二份动作/恢复条（同一role=alert只出现一处）
+ assert.ok(!reader.includes('#actions'))
+ assert.ok(!reader.includes('#recovery'))
+ assert.equal((reader.match(/<StudyActions/g)||[]).length,1)
+ assert.equal((reader.match(/<StudyRecovery/g)||[]).length,1)
+ // 动作区四按钮disabled语义一致（含末位“继续学习”）
+ assert.equal((actions.match(/:disabled="blocked"/g)||[]).length,4)
+})
+
 // LC-05: copy routes to a single authoring reference source, not duplicated pedagogy.
 test('Agent entry routes both authoring modes and separates visible constraints from author references',()=>{
  const text=connection.agentConnection(info).text
@@ -35,7 +49,7 @@ test('Agent entry routes both authoring modes and separates visible constraints 
 const root=path.resolve(__dirname,'../../..'),skill=path.join(root,'skills/studyflow-agent')
 const read=name=>fs.readFileSync(path.join(skill,name),'utf8')
 test('authoring entry is versioned and task references are all resolvable',()=>{
- const entry=read('SKILL.md');assert.match(entry,/version: "2\.9\.0"/);assert.match(entry,/Course-authoring task routing/)
+ const entry=read('SKILL.md');assert.match(entry,/version: "2\.9\.6"/);assert.match(entry,/Course-authoring task routing/)
  for(const file of ['course-authoring.md','authoring-presentation.md','authoring-prompts.md','authoring-workflows.md','english-course-authoring.md']){assert.ok(entry.includes(file));assert.ok(fs.statSync(path.join(skill,'references',file)).isFile())}
  for(const file of fs.readdirSync(path.join(skill,'references')).filter(x=>x.endsWith('.md'))){const text=read('references/'+file);for(const link of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)){if(/^https?:|^#/.test(link[1]))continue;assert.ok(fs.existsSync(path.resolve(skill,'references',link[1].split('#')[0])),file+': '+link[1])}}
 })
@@ -66,9 +80,9 @@ test('external author reference requires version and frozen-question binding bef
  assert.ok(read('references/authoring-prompts.md').includes('版本绑定'))
 })
 
-test('teaching, data validity and real rendering are separate gates with no frozen-course bypass',()=>{
+test('teaching, validation and rendering remain separate; authorized maintenance uses the W2 reset contract',()=>{
  const text=read('references/course-authoring.md')
- for(const marker of ['四道交付关口','requirements只写','作者材料','逐题','CLI validate','真实呈现','不自动重开/清理'])assert.ok(text.includes(marker),marker)
+ for(const marker of ['四道交付关口','requirements只写','作者材料','逐题','CLI validate','真实呈现','明确授权','无变化/失败/幂等重放不重复重置','不以purge作为普通纠错步骤'])assert.ok(text.includes(marker),marker)
  assert.ok(!text.includes('错误查询增量仍待实现'))
 })
 test('presentation rules do not promise unsupported subsection or arbitrary HTML folding',()=>{
@@ -86,4 +100,13 @@ test('replay and concurrency safeguards are conditional on host, not universal t
  for(const marker of ['不因为Skill','稳定任务ID','动态结果','原负载/原键','UTF-8 BOM','固定最佳值'])assert.ok(text.includes(marker),marker)
 })
 
+test('English independent expressions and textual role review cannot be replaced by coverage or blank carriers',()=>{
+ const text=read('references/english-course-authoring.md')
+ for(const marker of ['## 4.2. 独立表达与成分划分复核','角色→实际词段','原形','不能只补一个挖空句框','全部题目的目标、全部变体、全部角色框'])assert.ok(text.includes(marker),marker)
+ assert.ok(read('references/authoring-presentation.md').includes('english_structure_review'))
+ assert.ok(!text.includes('应给`Each process ___.`等确切语境'))
+})
+
 }
+
+test('authorized reset persists its original state fingerprint across reload',()=>{const s=storage(),p={study_session_id:'round',expected_version:2,expected_content_hash:'a'.repeat(64),expected_state_hash:'b'.repeat(64),reset_current_state:true,idempotency_key:'reset-key'};restart.storeRestartRequest(s,'reset','workspace',p);assert.deepEqual({...restart.readRestartRequest(s,'reset','workspace')},p);s.setItem('bad',JSON.stringify({workspaceKey:'workspace',params:{...p,expected_state_hash:undefined}}));assert.equal(restart.readRestartRequest(s,'bad','workspace'),null)})

@@ -75,4 +75,4 @@ export type StudyNotesData = { protocol_version: string; study_session_id: strin
 export type StudyNoteWriteParams = { study_session_id: string; lesson_id: string; text: string; expected_version: number; idempotency_key: string }
 export type StudyNoteWriteData = { protocol_version: string; study_session_id: string; note: StudyNote }
 
-export type StudyRestartPreview = {expected_training_version?:number;study_session_id:string;course_id:string;revision:number;expected_version:number;expected_content_hash:string|null;can_restart:boolean;blocked_reasons:{code:string;message:string}[];history_retained:boolean;notes_retained:boolean;reading_position_transferred:boolean}
+export type StudyRestartPreview = {expected_state_hash?:string;reset_current_state?:boolean;expected_training_version?:number;study_session_id:string;course_id:string;revision:number;expected_version:number;expected_content_hash:string|null;can_restart:boolean;blocked_reasons:{code:string;message:string}[];history_retained:boolean;notes_retained:boolean;reading_position_transferred:boolean}

@@ -12,7 +12,7 @@
 .main-content { padding:29px clamp(24px,4vw,66px) 20px; margin:0 auto; }
 .topbar { margin-bottom:27px; }
 .topbar h1 { font-size:25px; font-weight:650; }
-.topbar .secondary-button { padding:10px 14px; font-size:12px; background:transparent; }
+.topbar .secondary-button { background:transparent; }
 .compact-topbar { margin-bottom:17px; }
 .compact-topbar h1 { font-size:13px; font-weight:550; color:var(--muted); letter-spacing:0; }
 .compact-topbar .eyebrow { display:none; }

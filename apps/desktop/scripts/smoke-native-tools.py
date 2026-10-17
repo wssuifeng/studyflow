@@ -26,7 +26,7 @@ async def run():
  with socket.socket() as sock:sock.bind(('127.0.0.1',0));port=sock.getsockname()[1]
  env={k:v for k,v in os.environ.items() if not k.startswith(('STUDYFLOW_','WEBVIEW2_'))}
  temp=workspace/'runtime-temp';temp.mkdir()
- env.update(STUDYFLOW_WORKSPACE=str(workspace),STUDYFLOW_DATABASE_PATH=str(workspace/'test.db'),STUDYFLOW_ENGINE_PATH=str(proxy.resolve()),STUDYFLOW_REAL_ENGINE=str(engine.resolve()),STUDYFLOW_FAULT_FILE=str(workspace/"fault-notebook-save"),STUDYFLOW_WINDOW_STATE_DIR=str(workspace/'window-state'),WEBVIEW2_USER_DATA_FOLDER=str(workspace/'webview-profile'),WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=f'--remote-debugging-port={port} --remote-debugging-address=127.0.0.1',TEMP=str(temp),TMP=str(temp))
+ env.update(STUDYFLOW_DIAGNOSTICS_DIR=str(workspace/'diagnostics'),STUDYFLOW_WORKSPACE=str(workspace),STUDYFLOW_DATABASE_PATH=str(workspace/'test.db'),STUDYFLOW_ENGINE_PATH=str(proxy.resolve()),STUDYFLOW_REAL_ENGINE=str(engine.resolve()),STUDYFLOW_FAULT_FILE=str(workspace/"fault-notebook-save"),STUDYFLOW_WINDOW_STATE_DIR=str(workspace/'window-state'),WEBVIEW2_USER_DATA_FOLDER=str(workspace/'webview-profile'),WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=f'--remote-debugging-port={port} --remote-debugging-address=127.0.0.1',TEMP=str(temp),TMP=str(temp))
  startup=subprocess.STARTUPINFO();startup.dwFlags|=subprocess.STARTF_USESHOWWINDOW;startup.wShowWindow=0
  errors=[];checks=[];browser=None
  with (workspace/'native.log').open('w',encoding='utf-8') as log:
@@ -90,7 +90,7 @@ async def run():
     await main.locator('.theme-option').filter(has_text='\u5e8f\u5149').click()
     await expect(main.locator('html')).to_have_attribute('data-theme-id','sequence-light')
     await main.evaluate('(id)=>{location.hash="/course/"+id}',support.courses[0])
-    await expect(main.locator('.sequence-breadcrumb')).to_have_text('\u5408\u6210\u8bfe\u7a0b1');checks.append('release main WebView loads against isolated workspace in sequence-light')
+    await expect(main.locator('.reader-toolbar .reader-context')).to_have_text('\u5408\u6210\u8bfe\u7a0b1');checks.append('release main WebView loads against isolated workspace in sequence-light')
     await expect(main.locator('.learning-shell > .sidebar')).to_have_css('overflow-y','hidden')
     await expect(main.locator('.learning-shell > .main-content')).to_have_css('overflow-y','hidden')
     await expect(main.locator('.study-material-body')).to_have_css('overflow-y','auto');checks.append('left navigation rail stays fixed while the reading pane scrolls')
@@ -186,6 +186,12 @@ async def run():
     await main.get_by_role('menuitem',name='拆为独立窗口 ↗',exact=True).click()
     exercises=await window('tool-exercises')
     await expect(exercises.get_by_role('textbox')).to_have_value('结构化课程原生测试答案')
+    detached_answer=exercises.get_by_role('textbox')
+    await detached_answer.focus();await exercises.keyboard.press('Control+a');await exercises.keyboard.press('ArrowLeft');await exercises.keyboard.press('Control+Shift+ArrowRight')
+    await expect(detached_answer).to_have_value('结构化课程原生测试答案')
+    await expect(main.locator('.study-material')).to_be_visible()
+    checks.append('BUG-ANSWER-SELECT-01 detached exercise selection retains independent tool and main reader')
+
     await main.locator('.teaching-practice-links button').click()
     await expect(exercises.get_by_role('textbox')).to_be_focused()
     checks.append('native component practice link opens and focuses the same detached answer')

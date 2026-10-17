@@ -77,9 +77,18 @@ class ReviewRequest(Request):
     reference_hash:str|None=Field(default=None,pattern="^[a-f0-9]{64}$")
     reference_revision:int|None=Field(default=None,ge=1)
     reference_reason:str=Field(default="",max_length=3000)
+class LearningResetPreviewRequest(Request):
+    course_id:str=Field(min_length=1)
+class LearningResetApplyRequest(LearningResetPreviewRequest):
+    expected_state_hash:str=Field(pattern="^[a-f0-9]{64}$")
+    expected_content_hash:str=Field(pattern="^[a-f0-9]{64}$")
+    idempotency_key:str=Field(min_length=1,max_length=160)
+    confirm:bool=False
 class RestartPreviewRequest(Request):
     study_session_id:str=Field(min_length=1)
+    reset_current_state:bool=False
 class RestartRequest(RestartPreviewRequest):
+    expected_state_hash:str|None=Field(default=None,pattern="^[a-f0-9]{64}$")
     expected_training_version:int|None=Field(default=None,ge=0)
     expected_version:int=Field(ge=1)
     expected_content_hash:str=Field(pattern="^[a-f0-9]{64}$")
@@ -143,7 +152,7 @@ class EvidenceRequest(PlanRequest):
     limit:int=Field(default=20,ge=1,le=100)
     cursor:str|None=None
 
-SCHEMAS={"exercise.reference.read":ReferenceRequest,"exercise.reference.view":ReferenceRequest,"learning.evidence":EvidenceRequest,"plan.notebook.read":NotebookReadRequest,"plan.notebook.apply":NotebookApplyRequest,"course.study.restart.preview":RestartPreviewRequest,"course.study.restart":RestartRequest,"assignment.summary":QueueRequest,"assignment.context":ContextRequest,"review.retest.publish":RetestRequest,"review.write":ReviewRequest,"course.update.preview":UpdatePreviewRequest,"course.update.apply":UpdateApplyRequest,"plan.edit":PlanEditRequest,"plan.schedule.list":PlanRequest,"plan.notebook.search":NotebookSearchRequest,"plan.notebook.export":PlanRequest,"course.source.read":SourceRequest,"workspace.export":BackupRequest,"workspace.validate":BackupRequest,"workspace.restore":RestoreRequest,"submission.resolve-branch":BranchRequest}
+SCHEMAS={"course.learning.reset.preview":LearningResetPreviewRequest,"course.learning.reset.apply":LearningResetApplyRequest,"exercise.reference.read":ReferenceRequest,"exercise.reference.view":ReferenceRequest,"learning.evidence":EvidenceRequest,"plan.notebook.read":NotebookReadRequest,"plan.notebook.apply":NotebookApplyRequest,"course.study.restart.preview":RestartPreviewRequest,"course.study.restart":RestartRequest,"assignment.summary":QueueRequest,"assignment.context":ContextRequest,"review.retest.publish":RetestRequest,"review.write":ReviewRequest,"course.update.preview":UpdatePreviewRequest,"course.update.apply":UpdateApplyRequest,"plan.edit":PlanEditRequest,"plan.schedule.list":PlanRequest,"plan.notebook.search":NotebookSearchRequest,"plan.notebook.export":PlanRequest,"course.source.read":SourceRequest,"workspace.export":BackupRequest,"workspace.validate":BackupRequest,"workspace.restore":RestoreRequest,"submission.resolve-branch":BranchRequest}
 
 def validate(method,params):
     from pydantic import ValidationError

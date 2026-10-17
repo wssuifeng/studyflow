@@ -26,8 +26,6 @@ body,.app-shell,.main-content {background:var(--theme-surface-canvas);color:var(
 .sidebar,.desktop-titlebar,.workspace-tool-panel,.detached-tool-shell {background:var(--theme-surface-panel);color:var(--theme-text-primary)}
 input,textarea,select {color:var(--theme-text-primary);accent-color:var(--theme-accent-primary)}
 input::placeholder,textarea::placeholder {color:var(--theme-text-muted);opacity:1}
-button.primary-button,.primary-button {color:var(--theme-text-inverse);background:var(--theme-accent-primary)}
-button.primary-button:hover:not(:disabled) {background:var(--theme-accent-strong)}
 .brand strong,.sidebar .brand strong {color:var(--theme-text-primary)}
 .nav-item.active,.sidebar .nav-item.active {color:var(--theme-accent-primary);background:var(--theme-surface-active)}
 .markdown-body,.teaching-richtext,.study-material-body {color:var(--theme-text-secondary)}
@@ -48,7 +46,7 @@ button.primary-button:hover:not(:disabled) {background:var(--theme-accent-strong
 .state-retest {--state-bg:var(--theme-status-danger-soft);--state-ink:var(--theme-status-danger)}
 .reader-navigation .knowledge-step.state-learning,.reader-navigation .knowledge-step.state-read,.reader-navigation .knowledge-step.state-passed,
 .reader-navigation .knowledge-step.state-draft,.reader-navigation .knowledge-step.state-review,.reader-navigation .knowledge-step.state-revision,.reader-navigation .knowledge-step.state-retest {background:var(--state-bg);color:var(--state-ink)}
-:focus-visible {outline:2px solid var(--theme-focus-ring);outline-offset:3px}
+:focus-visible {outline:3px solid var(--theme-focus-ring);outline-offset:3px}
 ::selection {background:var(--theme-surface-active);color:var(--theme-text-primary)}
 /* Whitelisted presentation presets do not change component keys or reading preferences. */
 :root[data-theme-heading='editorial'] {--theme-heading-font:'Noto Serif CJK SC','Source Han Serif SC','SimSun',serif}

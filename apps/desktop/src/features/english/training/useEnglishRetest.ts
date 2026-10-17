@@ -9,6 +9,7 @@ type Pending = {method: 'course.english.retest-save' | 'course.english.retest-ch
 
 export function useEnglishRetest(taskId: string) {
   const task = ref<Task | null>(null), tokens = ref<string[]>([]), busy = ref(false), failed = ref('')
+  const validationNotice = ref('')
   const result = ref<Result | null>(null), pending = ref<Pending | null>(null), recovery = ref<{text: string} | null>(null)
   const baseline = ref(''), text = computed(() => tokens.value.join(' ').trim()), dirty = computed(() => text.value !== baseline.value)
   let timer: ReturnType<typeof setTimeout> | undefined, disposed = false, suspended = false, checking = false
@@ -44,9 +45,14 @@ export function useEnglishRetest(taskId: string) {
       if (task.value) {task.value.answer_version = response.answer_version!; task.value.answer_text = request.params.answer_text; task.value.status = response.status}
       baseline.value = request.params.answer_text
       if (request.method === 'course.english.retest-check') result.value = response
-      pending.value = null; failed.value = ''; cache(); return true
-    } catch (cause) {failed.value = (cause as Error).message; cache(); return false}
-    finally {busy.value = false}
+      pending.value = null; failed.value = ''; validationNotice.value = ''; cache(); return true
+    } catch (cause) {
+      if (request.method === 'course.english.retest-check' && (cause as {code?: string}).code === 'ANSWER_EMPTY') {
+        // 空输入是校验提示（§7.1）：不进失败横幅、不清自动保存，焦点留在输入行。
+        pending.value = null; validationNotice.value = (cause as Error).message; cache(); return false
+      }
+      failed.value = (cause as Error).message; cache(); return false
+    } finally {busy.value = false}
   }
   async function save() {
     clearTimeout(timer)
@@ -58,6 +64,7 @@ export function useEnglishRetest(taskId: string) {
     cache(); return retryPending()
   }
   function edited() {
+    validationNotice.value = ''
     cache(); clearTimeout(timer)
     if (!failed.value && !pending.value && !recovery.value) timer = setTimeout(() => {void save()}, 750)
   }
@@ -65,18 +72,20 @@ export function useEnglishRetest(taskId: string) {
     if (checking || busy.value || result.value) return
     checking = true
     try {
+      // §7.1：空输入本地校验提示，不触发引擎（避免无草稿的VERSION_CONFLICT/ANSWER_EMPTY落到失败横幅）。
+      if (!text.value.trim()) {validationNotice.value='先输入答案；跳过不算答错。';return}
       if (!await save() || !task.value || result.value) return
       pending.value = {method: 'course.english.retest-check', params: {task_id: taskId, answer_text: text.value, expected_version: task.value.answer_version, idempotency_key: makeRequestKey('english-retest')}}
       cache(); await retryPending()
     } finally {checking = false}
   }
-  function restore() {if (!recovery.value) return; tokens.value = recovery.value.text.split(/\s+/); recovery.value = null; cache()}
+  function restore() {if (!recovery.value) return; tokens.value = recovery.value.text.split(/\s+/); recovery.value = null; validationNotice.value = ''; cache()}
   async function discardRecovery() {
     if (busy.value) return
     try {
       task.value = await engineCall<Task>('course.english.retest-get', {task_id: taskId})
       baseline.value = task.value.answer_text; tokens.value = baseline.value ? baseline.value.split(/\s+/) : Array(task.value.token_count).fill('')
-      result.value = task.value.result; recovery.value = null; pending.value = null; failed.value = ''
+      result.value = task.value.result; recovery.value = null; pending.value = null; failed.value = ''; validationNotice.value = ''
       try {localStorage.removeItem(cacheKey())} catch { /* best effort */ }
     } catch (cause) {failed.value = (cause as Error).message}
   }
@@ -86,5 +95,5 @@ export function useEnglishRetest(taskId: string) {
   }
   function suspend() {suspended = true; clearTimeout(timer); cache()}
   onBeforeUnmount(() => {disposed = true; clearTimeout(timer); cache()})
-  return {task, tokens, busy, failed, pending, recovery, result, dirty, load, save, edited, check, retryPending, restore, discardRecovery, exportInput, suspend}
+  return {task, tokens, busy, failed, validationNotice, pending, recovery, result, dirty, load, save, edited, check, retryPending, restore, discardRecovery, exportInput, suspend}
 }
