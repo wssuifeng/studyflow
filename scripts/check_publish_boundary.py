@@ -24,6 +24,8 @@ TAURI_FILES = {"Cargo.toml", "Cargo.lock", "build.rs", "tauri.conf.json"}
 PACKAGING_SOURCES = {"apps/desktop/src-tauri/wix/upgrade-compatibility.wxs"}
 DEMO = "packages/core/src/studyflow/resources/content/lessons/java-reference.md"
 BINARY_ASSETS = {"apps/desktop/src-tauri/icons/icon.png", "apps/desktop/src-tauri/icons/icon.ico", "apps/desktop/src/shared/themes/assets/white-violet-book.png", "apps/desktop/src/shared/themes/assets/sequence-light-landscape.png", "apps/desktop/src/shared/themes/assets/sequence-light-origami.png"}
+SHOWCASE_ASSETS = {"docs/assets/showcase/course-reading.png", "docs/assets/showcase/notes.png", "docs/assets/showcase/english-training.png"}
+BINARY_ASSETS.update(SHOWCASE_ASSETS)
 TEXT_SUFFIXES = {".md", ".py", ".ps1", ".vue", ".ts", ".css", ".html", ".svg", ".rs", ".json", ".toml", ".lock", ".ini", ".yaml", ".yml", ".example", ".mako"}
 GENERATED_PARTS = {".git", ".venv", "venv", "__pycache__", ".pytest_cache", "node_modules", "target", "dist", "build", "out", "test-results", "runtime", ".studyflow", "gen"}
 PRIVATE_PARTS = {"就业计划", "英语四级计划", "软考_软件设计师计划", "项目理解与掌握计划", "归档", "示例PDF与PDF生成参考提示词", "design-explorations"}

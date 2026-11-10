@@ -7,6 +7,9 @@ GUARD = runpy.run_path(str(Path(__file__).resolve().parents[3] / "scripts/check_
 
 
 @pytest.mark.parametrize("path", [
+    "docs/assets/showcase/course-reading.png",
+    "docs/assets/showcase/notes.png",
+    "docs/assets/showcase/english-training.png",
     "apps/desktop/src/app/App.vue",
     "apps/desktop/scripts/test-course-answers.cjs",
     "apps/desktop/scripts/test-themes.cjs",
@@ -30,6 +33,7 @@ def test_known_source_paths_remain_publishable(path):
 
 
 @pytest.mark.parametrize("path", [
+    "docs/assets/showcase/private-screenshot.png",
     "apps/desktop/scripts/unknown.cjs",
     "apps/desktop/src-tauri/wix/unknown.wxs",
     "apps/desktop/src-tauri/wix/upgrade-compatibility.wixobj",
