@@ -68,9 +68,11 @@ def main():
             page.wait_for_timeout(1600)
             page.get_by_role("button",name="搜索笔记",exact=True).click()
             page.get_by_role("searchbox",name="搜索笔记与摘录").fill("中文检索")
-            page.get_by_role("button",name="只读阅读",exact=True).click()
+            page.get_by_role("button",name="更多笔记操作",exact=True).click()
+            page.get_by_role("menuitem",name="只读阅读",exact=True).click()
             expect(page.locator(".notebook-reading")).to_contain_text("中文检索")
-            with page.expect_download() as download:page.get_by_role("button",name="导出笔记",exact=True).click()
+            page.get_by_role("button",name="更多笔记操作",exact=True).click()
+            with page.expect_download() as download:page.get_by_role("menuitem",name="导出笔记",exact=True).click()
             download.value.save_as(str(RESULT/"synthetic-notes.json"))
             screenshots=[]
             for route,name in [("/today","console-v17"),("/queue","queue-v17"),("/plan/"+plan.id,"plan-v17"),("/settings","workspace-v17")]:

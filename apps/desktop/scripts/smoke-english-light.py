@@ -85,7 +85,7 @@ try:
    expect(page.locator('.english-completion-reference .part-word strong')).to_have_text(["I","like","the","food"]);expect(page.locator('.english-completion-reference')).to_be_visible()
    page.get_by_role('button',name='下一项 →',exact=True).click();expect(page.get_by_role('heading',name='他没有一个计划',exact=True)).to_be_visible()
    for i,word in enumerate(['He',"doesn't",'have','a','plan']):page.get_by_label(f'第 {i+1} 个单词',exact=True).fill(word)
-   page.get_by_label('第 5 个单词',exact=True).press('Enter');expect(page.locator('.english-completion-reference .part-word strong')).to_have_text(["He","doesn't","have","a","plan"])
+   page.get_by_label('第 5 个单词',exact=True).press('Enter');expect(page.locator('.english-completion-reference .part-word strong')).to_have_text(["He","does","not","have","a","plan"]);assert any(item['matched'] and item['answer_text']=="He doesn't have a plan" for item in service.english.get(sid)['items'])
    page.get_by_role('button',name='下一项 →',exact=True).click()
    for i,word in enumerate(['write','code']):page.get_by_label(f'第 {i+1} 个单词',exact=True).fill(word)
    page.get_by_label('第 1 个单词',exact=True).press('Enter');expect(page.locator('.english-completion-view')).to_be_visible();page.get_by_role('button',name='下一项 →',exact=True).click()

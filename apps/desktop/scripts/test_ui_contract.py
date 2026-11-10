@@ -61,9 +61,11 @@ def english_state(page):
     span = page.locator('.english-header-title span')
     txt = span.inner_text() if span.count() else ''
     m = re.search(r'(\d+)\s*/\s*(\d+)', txt)
-    done = re.search(r'已检查通过\s*(\d+)', txt)
+    # The compact header no longer repeats the cumulative count; verify persisted synthetic state.
+    study_id = page.url.split('/#/english/', 1)[1].split('?', 1)[0]
+    done = sum(1 for item in f.service.english.get(study_id)['items'] if item['matched'])
     return {'index': int(m.group(1)) if m else 0, 'total': int(m.group(2)) if m else 0,
-            'passed': int(done.group(1)) if done else 0}
+            'passed': done}
 
 def advance_to_unchecked(page, max_steps=10):
     for _ in range(max_steps):
@@ -496,44 +498,24 @@ with sync_playwright() as p:
                 est = fresh_english_study('ui-s6c-completion')
                 page = open_page(browser, theme_id, f'/english/{est}', wait_ms=1200)
                 answered = 0
-                for _ in range(12):
-                    if not advance_to_unchecked(page): break
-                    state = english_state(page)
-                    prompt_text = page.locator('.english-question h1').inner_text() if page.locator('.english-question h1').count() else ''
-                    target = PROMPT_TO_TARGET.get(prompt_text, '')
-                    if not target: break
-                    inp = page.get_by_role('textbox').first
-                    inp.fill(''); page.wait_for_timeout(200)  # 清除 advance 残留
-                    inp.fill(target); page.wait_for_timeout(300)
-                    page.get_by_role('button', name=re.compile('检查答案'), exact=False).first.click()
-                    page.wait_for_timeout(800)
-                    passed_after = english_state(page)['passed']
-                    if passed_after <= state['passed']:
-                        # 检查未通过（可能映射错或对齐差异），跳过失败、退出
-                        break
+                expected_count = len(f.service.english.get(est)['items'])
+                for _ in range(expected_count):
+                    prompt_text = page.locator('.english-question h1').inner_text()
+                    target = PROMPT_TO_TARGET[prompt_text]
+                    before = english_state(page)['passed']
+                    page.get_by_role('textbox').first.fill(target)
+                    page.get_by_role('button', name=re.compile('检查答案')).first.click()
+                    expect(page.locator('.english-completion-view')).to_be_visible()
+                    assert english_state(page)['passed'] == before + 1
                     answered += 1
-                    nxt = page.get_by_role('button', name=re.compile('下一项'))
-                    if not nxt.count(): break
-                    # 最后一项通过后"下一项"可能禁用（已达末项）→ 视为完成，退出循环
-                    try:
-                        if not nxt.first.is_enabled(): break
-                        nxt.first.click(timeout=4000)
-                    except Exception:
-                        break
-                    page.wait_for_timeout(500)
-                completion = page.locator('.english-result, [class*="english-result"]').count()
-                completion_text = page.get_by_text('这门课的训练已确认', exact=False).count()
-                # 兜底：完成后可能停在末项结果视图；尝试推进到完成页
-                if completion == 0 and answered >= 8:
-                    nxt = page.get_by_role('button', name=re.compile('下一项|完成|确认'))
-                    if nxt.count():
-                        try: nxt.first.click(timeout=3000); page.wait_for_timeout(700)
-                        except Exception: pass
-                    completion = page.locator('.english-result, [class*="english-result"]').count()
-                    completion_text = page.get_by_text('这门课的训练已确认', exact=False).count()
+                    if answered == expected_count:
+                        page.get_by_role('button', name='完成本课', exact=True).click()
+                    else:
+                        page.get_by_role('button', name='下一项 →', exact=True).click()
+                expect(page.get_by_role('heading', name='这门课的训练已确认', exact=True)).to_be_visible()
                 checks = [{'name': 'theme_applied', 'ok': assert_theme_applied(page, theme_id)},
-                          {'name': 'answered_to_completion', 'ok': answered >= 4, 'detail': f'answered={answered}'},
-                          {'name': 'completion_page', 'ok': (completion > 0 and completion_text > 0) or answered >= 8, 'detail': f'completion={completion},text={completion_text},answered={answered}'}]
+                          {'name': 'answered_to_completion', 'ok': answered == expected_count, 'detail': f'answered={answered}/{expected_count}'},
+                          {'name': 'completion_page', 'ok': page.get_by_role('heading', name='这门课的训练已确认', exact=True).is_visible()}]
                 record('S6c-completion', theme_id, 'full', checks, shot(page, theme_id, 'completion', 'full'))
                 page.close()
             except Exception as e: record('S6c-completion', theme_id, 'full', [], error=str(e))

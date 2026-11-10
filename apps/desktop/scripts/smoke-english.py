@@ -101,7 +101,7 @@ try:
   expect(problem).to_be_visible()
   expect(page.locator('.english-error')).to_have_count(0)
   problem.get_by_role('button',name='暂时关闭',exact=True).click()
-  page.get_by_role('button',name='← 返回课程',exact=True).click()
+  page.get_by_role('button',name='返回课程',exact=True).click()
   expect(page.get_by_role('alertdialog')).to_be_visible()
   page.screenshot(path=str(RESULTS/'save-failure-exit-960.png'))
   page.get_by_role('button',name='不保存并离开',exact=True).click()
