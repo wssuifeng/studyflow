@@ -21,6 +21,7 @@ DESKTOP_TREES = {"src", "scripts", "src-tauri"}
 DESKTOP_FILES = {"package.json", "package-lock.json", "index.html", "tsconfig.json", "tsconfig.node.json", "vite.config.ts"}
 TAURI_TREES = {"src", "capabilities", "icons"}
 TAURI_FILES = {"Cargo.toml", "Cargo.lock", "build.rs", "tauri.conf.json"}
+PACKAGING_SOURCES = {"apps/desktop/src-tauri/wix/upgrade-compatibility.wxs"}
 DEMO = "packages/core/src/studyflow/resources/content/lessons/java-reference.md"
 BINARY_ASSETS = {"apps/desktop/src-tauri/icons/icon.png", "apps/desktop/src-tauri/icons/icon.ico", "apps/desktop/src/shared/themes/assets/white-violet-book.png", "apps/desktop/src/shared/themes/assets/sequence-light-landscape.png", "apps/desktop/src/shared/themes/assets/sequence-light-origami.png"}
 TEXT_SUFFIXES = {".md", ".py", ".ps1", ".vue", ".ts", ".css", ".html", ".svg", ".rs", ".json", ".toml", ".lock", ".ini", ".yaml", ".yml", ".example", ".mako"}
@@ -45,6 +46,8 @@ def path_problem(relative: str) -> str | None:
         return "private-or-generated-directory"
     if FORBIDDEN.search(path.name) or path.name.startswith(".env") and path.name != ".env.example":
         return "private-or-generated-file"
+    if relative in PACKAGING_SOURCES:
+        return None
     if len(parts) == 1:
         return None if relative in TOP_FILES else "unapproved-root-file"
     if parts[0] not in TREES:

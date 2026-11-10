@@ -9,8 +9,10 @@ def main():
     cli=Path(args.cli).resolve()
     results=ROOT/"test-results/implementation-20261003";results.mkdir(parents=True,exist_ok=True)
     root=Path(tempfile.mkdtemp(prefix="独立 CLI 合成工作区-",dir=results)).resolve()
+    temp_root=root/".runtime-temp";temp_root.mkdir()
     environment={k:v for k,v in os.environ.items() if k not in {"PYTHONPATH","VIRTUAL_ENV","STUDYFLOW_DATABASE_PATH","STUDYFLOW_DATABASE_URL","STUDYFLOW_WORKSPACE"}}
     environment["STUDYFLOW_WORKSPACE"]=str(root)
+    environment["TEMP"]=environment["TMP"]=str(temp_root)
     environment["PATH"]=str(Path(os.environ.get("WINDIR","C:/Windows"))/"System32")
     commands=[]
     def run(*arguments,expect_ok=True):
@@ -36,6 +38,11 @@ def main():
     def call(method,params=None,expect_ok=True):
         request=root/"request.json";request.write_text(json.dumps(params or {},ensure_ascii=False),encoding="utf-8")
         return run("call","--method",method,"--file",str(request),"--format","json",expect_ok=expect_ok)
+    installation=call("system.installation")
+    assert installation["workspace"]==str(root)
+    assert installation["agent_workspace_entry_status"] in {"found","missing","invalid"}
+    if installation["agent_workspace_entry_status"]=="found":assert Path(installation["agent_workspace_entry_path"]).is_file()
+    else:assert installation["agent_workspace_entry_path"] is None
     opened=call("course.study.open",{"course_id":imported["course_id"],"idempotency_key":"frozen-open"})
     exercise=opened["lessons"][0]["exercises"][0]["id"]
     submitted=call("course.answers.submit",{"course_id":imported["course_id"],"study_session_id":opened["study"]["id"],"answers":[{"exercise_id":exercise,"answer_text":"合成测试答案，非用户作答"}],"idempotency_key":"frozen-answer"})

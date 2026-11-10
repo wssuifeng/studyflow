@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <!-- Legacy installers used the studyflow publisher. Preserve a custom install
+         directory when upgrading to the wssuifeng publisher metadata. -->
+    <Property Id="STUDYFLOWLEGACYINSTALLDIR" Secure="yes">
+      <RegistrySearch Id="StudyFlowLegacyNsisInstallDir" Root="HKCU"
+                      Key="Software\studyflow\StudyFlow" Type="raw" />
+      <RegistrySearch Id="StudyFlowLegacyMsiInstallDir" Root="HKCU"
+                      Key="Software\studyflow\StudyFlow" Name="InstallDir" Type="raw" />
+    </Property>
+    <!-- An explicit directory or the new publisher's directory takes priority. -->
+    <SetProperty Id="INSTALLDIR" Value="[STUDYFLOWLEGACYINSTALLDIR]"
+                 After="AppSearch" Sequence="both">
+      NOT INSTALLDIR AND STUDYFLOWLEGACYINSTALLDIR
+    </SetProperty>
+    <!-- Referencing this group includes this complete compatibility fragment. -->
+    <ComponentGroup Id="StudyFlowUpgradeCompatibility" />
+  </Fragment>
+</Wix>

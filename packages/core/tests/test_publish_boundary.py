@@ -17,6 +17,7 @@ GUARD = runpy.run_path(str(Path(__file__).resolve().parents[3] / "scripts/check_
     "apps/desktop/src/shared/themes/builtin/sequence-light.json",
     "apps/desktop/src/shared/themes/builtin/white-violet.json",
     "apps/desktop/src-tauri/src/engine.rs",
+    "apps/desktop/src-tauri/wix/upgrade-compatibility.wxs",
     "apps/desktop/src-tauri/icons/icon.png",
     "packages/core/pyproject.toml",
     "packages/core/.env.example",
@@ -30,6 +31,10 @@ def test_known_source_paths_remain_publishable(path):
 
 @pytest.mark.parametrize("path", [
     "apps/desktop/scripts/unknown.cjs",
+    "apps/desktop/src-tauri/wix/unknown.wxs",
+    "apps/desktop/src-tauri/wix/upgrade-compatibility.wixobj",
+    "apps/desktop/src-tauri/wix/signing.pfx",
+    "apps/desktop/src-tauri/wix/tauri-signing.local.json",
     "apps/other/src/main.ts", "packages/other/src/main.py",
     "packages/core/src/private/main.py", "studyflow_app/studyflow/cli.py",
     "packages/core/.venv/pyvenv.cfg", "packages/core/.studyflow/studyflow.db",
