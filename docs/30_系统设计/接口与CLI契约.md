@@ -94,7 +94,7 @@ CLI与Skill适用任意外部Agent，Skill1.9.0；Engine传输协议仍为1.2。
 |---|---|---|
 | course.study.restart.preview | study_session_id | 真正只读；不取得写租约；返回无作答证据、轮次版本及目标内容，不结束轮次 |
 | course.study.restart | study_session_id、expected_version、expected_content_hash、idempotency_key | 人类明确确认；事务内 CAS 关闭旧轮次并冻结最新内容新轮次；原键重放；有任何草稿/提交/答案写回执或英语检查即拒绝 |
-| system.installation | 无 | 返回运行时确认的 workspace、cli_path/cli_argv、source_cli、skill_path/skill_kind 与存在/就绪标识；不读凭据、不改 PATH |
+| system.installation | 无 | 返回运行时确认的 workspace、cli_path/cli_argv、source_cli、skill_path/skill_kind 与存在/就绪标识；只读发现 `agent_workspace_entry_path` 和 `agent_workspace_entry_status`（found/missing/invalid）；不读凭据、不改 PATH、不写指针 |
 
 重开保留历史阅读与笔记，不复制答案或继承完成状态；旧轮次为 ABANDONED，迟到进度/作答写入拒绝，已确认原回执可重放。未作答的新轮次可经再次明确确认重开，生命周期回执本身不算作答。未知提交结果必须保留原载荷与键，不因重试多建轮次。
 

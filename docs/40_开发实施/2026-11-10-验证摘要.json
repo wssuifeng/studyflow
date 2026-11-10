@@ -1,0 +1,92 @@
+{
+  "date": "2026-11-10",
+  "sourceBaseline": "138573ace4bb901d6c72fb056e801f6f6dcce2ef",
+  "sourceVersion": "1.8.18",
+  "environment": {
+    "os": "Windows",
+    "python": "3.13",
+    "node": "24.12.0",
+    "data": "isolated synthetic SQLite workspaces",
+    "ui": "built Vue application in headless Edge"
+  },
+  "checks": [
+    {
+      "command": "python -m pytest packages/core/tests",
+      "passed": 508,
+      "skipped": 2,
+      "failed": 0
+    },
+    {
+      "command": "npm run theme:lint",
+      "status": "passed"
+    },
+    {
+      "command": "npm run test:learning",
+      "passed": 136,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:themes",
+      "passed": 89,
+      "failed": 0
+    },
+    {
+      "command": "npm run test:english",
+      "passed": 56,
+      "failed": 0
+    },
+    {
+      "command": "npm run build",
+      "status": "passed"
+    },
+    {
+      "command": "cargo test --manifest-path apps/desktop/src-tauri/Cargo.toml --release --lib",
+      "passed": 10,
+      "failed": 0
+    },
+    {
+      "command": "build-engine.ps1 + smoke-engine.py",
+      "passed": 48,
+      "failed": 0
+    },
+    {
+      "command": "smoke-learning-experience.py",
+      "checks": 17,
+      "status": "passed"
+    },
+    {
+      "command": "smoke-english.py",
+      "checks": 14,
+      "status": "passed"
+    },
+    {
+      "command": "smoke-english-light.py",
+      "status": "passed"
+    },
+    {
+      "command": "smoke-english-annotation.py",
+      "status": "passed"
+    },
+    {
+      "command": "smoke-iteration.py",
+      "status": "passed"
+    },
+    {
+      "command": "smoke-english-cli.py",
+      "status": "passed"
+    },
+    {
+      "command": "test_ui_contract.py",
+      "passed": 33,
+      "failed": 0,
+      "pageErrors": 0
+    }
+  ],
+  "notRun": [
+    "MSI build and install/upgrade/uninstall",
+    "current native Tauri window acceptance",
+    "actual audio listening acceptance",
+    "real learner data or long-term learning acceptance"
+  ],
+  "publicRelease": false
+}
