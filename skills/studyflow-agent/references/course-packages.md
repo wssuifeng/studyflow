@@ -26,7 +26,7 @@ Same package ID and identical content safely return `created=false` and the exis
 
 | type | Additional fields | Teaching use |
 |---|---|---|
-| concept | `body` | Explain a concept in continuous prose. |
+| concept | `body` | Explain one coherent question with the necessary prose and supported rich-text relationships. This does not require a long definition-only body. |
 | comparison | `columns: string[]`, `rows: string[][]` | Compare on shared dimensions; 2–6 columns, 1–50 rows. |
 | steps | `items: [{title, body}]` | Ordered process, 1–20 steps. |
 | example | `given`, `steps: [{title, body}]`, `conclusion` | Worked derivation with assumptions and reasoning. |
@@ -37,6 +37,8 @@ Same package ID and identical content safely return `created=false` and the exis
 Only rich-text `body`, `given`, `conclusion` support Markdown fragments (including code fences); HTML is sanitized, not executed. Titles, table cells and summary items are plain text. Do not supply CSS, SVG source, Vue templates, scripts, layout coordinates or fake interaction state. The UI owns rendering.
 
 ## Authoring quality
+
+This page and the all-types examples demonstrate the input contract, not a recommended lesson layout. Follow [shared authoring](course-authoring.md) for the explanation chain and [presentation review](authoring-presentation.md#2-按理解任务展开概念) for long concept material; do not copy the example block sequence.
 
 Choose components to suit the knowledge, not to satisfy a checklist: a CPU lesson can use comparison and steps; a numeric lesson should show assumptions, bit width and a worked derivation. Never pad every lesson with all seven types. Write substantive explanations, not just headings or tables. Keep essential reasoning visible; do not turn the course into decorative cards. No timing, textbook page references or Agent process instructions inside teaching blocks; keep provenance in external authoring records. Exercises must state meaningful constraints. Do not put solution text for assessment questions into the prompt or practice link.
 

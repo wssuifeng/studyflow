@@ -100,7 +100,7 @@ try:
   page.get_by_role('button',name='打开答题与笔记',exact=True).click();expect(page.locator('#workspace-tool-panel')).to_be_visible()
   assert page.get_by_role('heading',name='先理解位权',exact=True).is_visible();page.screenshot(path=str(RESULTS/'sequence-tools-1920.png'));checks.append('shared_template_with_tools')
   page.goto(origin+'/#/settings');copy=page.get_by_role('button',name='复制Agent接入说明',exact=True);expect(copy).to_be_enabled();copy.click();copied=page.evaluate('navigator.clipboard.readText()')
-  assert str(workspace) in copied and 'undefined' not in copied and '仓库 Skill' in copied and '"-m","studyflow"' in copied;checks.append('settings_exact_source_paths')
+  assert str(workspace) in copied and 'undefined' not in copied and 'Skill（仓库）' in copied and 'StudyFlow Agent 会话启动' in copied and '"-m","studyflow"' in copied;checks.append('settings_exact_source_paths')
   # Use a new context so the selected theme is not reset by the first context init script.
   white=browser.new_context(viewport={'width':1280,'height':800});white.add_init_script("localStorage.setItem('studyflow:theme-preference:v1',JSON.stringify({schema_version:'studyflow.theme-preference/1',selected_theme_id:'white-violet',custom_themes:[],revision:{clock:1,source:'synthetic-white'}}))")
   second=white.new_page();second.on('pageerror',lambda error:errors.append(str(error)));second.goto(origin+'/#/course/'+cid)

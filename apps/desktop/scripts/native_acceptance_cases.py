@@ -367,10 +367,22 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     assert installation['cli_available'] and installation['skill_available'] and installation['agent_ready']
     assert Path(installation['cli_path']).is_file() and Path(installation['skill_path']).is_file()
     assert Path(installation['workspace']).resolve()==workspace.resolve()
+    assert installation['agent_workspace_entry_status'] in {'found','missing','invalid'}
+    if installation['agent_workspace_entry_status']=='found':
+        assert Path(installation['agent_workspace_entry_path']).is_file()
+    else:
+        assert installation['agent_workspace_entry_path'] is None
     await main.evaluate("()=>{window.__capturedConnection='';Object.defineProperty(navigator.clipboard,'writeText',{configurable:true,value:async(text)=>{window.__capturedConnection=text}})}")
     await main.get_by_role('button',name='复制Agent接入说明',exact=True).click()
     prompt=await main.evaluate('window.__capturedConnection')
     assert installation['cli_path'] in prompt and installation['skill_path'] in prompt and installation['workspace'] in prompt
+    assert installation['agent_workspace_entry_status'] in prompt
+    if installation['agent_workspace_entry_status']=='found':
+        assert installation['agent_workspace_entry_path'] in prompt and '读取上述 AGENTS.md' in prompt
+    elif installation['agent_workspace_entry_status']=='missing':
+        assert '先按 Skill 初始化独立协作区' in prompt
+    else:
+        assert '停止初始化和后续业务操作' in prompt
     assert 'studyflow\\.exe' not in prompt and 'local.studyflow\\.desktop' not in prompt
     (workspace/'native-agent-connection.json').write_text(json.dumps({'installation':installation,'prompt':prompt,'clipboard_mode':'actual settings copy handler with capture; no user clipboard overwrite'},ensure_ascii=False,indent=2),encoding='utf-8')
     await main.screenshot(path=str(workspace/'native-agent-settings-paths.png'))

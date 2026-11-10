@@ -140,6 +140,28 @@ def test_plan_management_replays_and_preserves_evidence(app_service,synthetic):
     assert app_service.get_plan_line(plan.id).status=="PAUSED"
 
 
+def test_plan_reorder_respects_unique_course_numbers_without_transient_collisions(app_service):
+    from studyflow.modules.courses.models import Course
+    from studyflow.modules.planning.models import PlanCourseItem
+    from studyflow.modules.planning.management import edit_plan
+    from studyflow.shared.ids import new_id
+
+    plan=app_service.create_plan_line("Ordered English plan")
+    with app_service.session() as db:
+        courses=[Course(id=new_id(),plan_line_id=plan.id,title=f"Course {i}") for i in range(3)]
+        db.add_all(courses);db.flush()
+        db.add_all([PlanCourseItem(id=new_id(),plan_line_id=plan.id,course_id=course.id,sequence_number=i+1) for i,course in enumerate(courses)])
+        db.flush()
+        course_ids=[course.id for course in courses]
+
+    result=edit_plan(app_service.planning,plan.id,1,"reorder-unique","REORDER",{"course_ids":list(reversed(course_ids))})
+    assert result["version"]==2
+    with app_service.session() as db:
+        rows=list(db.scalars(select(PlanCourseItem).where(PlanCourseItem.plan_line_id==plan.id).order_by(PlanCourseItem.sequence_number)))
+        assert [row.course_id for row in rows]==list(reversed(course_ids))
+        assert [row.sequence_number for row in rows]==[1,2,3]
+
+
 def test_maintenance_lease_excludes_live_engine(app_service,synthetic,tmp_path):
     from studyflow.infrastructure.leases import workspace_lease
     from studyflow.engine import StudyFlowEngine
