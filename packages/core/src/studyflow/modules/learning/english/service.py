@@ -54,6 +54,11 @@ def get_view(db,study_id):
         checked=json.loads(attempt.result_json) if attempt else {}
         result.append({"exercise_id":ex["id"],"lesson_id":ex["lesson_id"],"title":ex["title"],"prompt":ex["prompt"],"group_title":ex["group_title"],"progression":ex["english"].get("progression"),"token_count":len(tokenize(ex["english"]["target"])),"min_token_count":min(len(tokenize(x)) for x in [ex["english"]["target"],*ex["english"].get("accepted_answers",[])]),"max_token_count":max(len(tokenize(x)) for x in [ex["english"]["target"],*ex["english"].get("accepted_answers",[])]),"error_count":checked.get("error_count",0),"evaluation_mode":ex["english"].get("evaluation_mode","local_exact"),"objective_ids":ex["english"].get("objective_ids",[]),"answer_text":row.answer_text if row else "","answer_version":row.version if row else 0,"submission_id":row.id if row else None,"status":row.status if row else "NOT_STARTED","matched":checked.get("matched",False),"differences":checked.get("differences",[]),"assisted":bool(detail and detail.assisted),"skipped":bool(detail and detail.skipped)})
     course=dict(frozen["course"])
+    from studyflow.modules.planning.models import PlanCourseItem
+    membership=db.scalar(select(PlanCourseItem).where(PlanCourseItem.course_id==study.course_id,PlanCourseItem.plan_line_id==course.get("plan_line_id")).order_by(PlanCourseItem.sequence_number))
+    course["sequence"]=membership.sequence_number if membership else None
+    course["track"]=membership.track if membership else course.get("track","MAIN")
+    course["total"]=db.scalar(select(func.count(PlanCourseItem.id)).where(PlanCourseItem.plan_line_id==membership.plan_line_id,PlanCourseItem.track==membership.track)) if membership else 0
     from studyflow.modules.courses.models import Course
     live=db.get(Course,study.course_id)
     course["source_changed"]=bool(live and frozen["course"].get("content_revision") and live.version!=frozen["course"]["content_revision"])

@@ -13,6 +13,7 @@ def seed(service,plan,workspace):
         {'role':'subject','start':0,'end':1,'words':[{'gloss':'我','pos':'代词'}]},
         {'role':'predicate','start':1,'end':2,'words':[{'gloss':'喜欢','pos':'动词'}]},
         {'role':'object','start':2,'end':3,'words':[{'gloss':'茶','pos':'名词'}]}]
+    english['lessons'][0]['exercises'][0]['english']['explanation']='主语 I 表示说话者，说明是谁在做动作；谓语 like 表示喜欢，是句子里表达动作的部分；宾语 tea 是喜欢的对象。英语陈述句通常按主语、谓语、宾语的顺序排列，因此先确认每个词在句子里承担什么作用，再把它们连起来理解整句。'
     teaching={'schema':'studyflow.course-package/5','package_id':'native-content-acceptance','plan_line':plan.name,'course':{'title':'原生教学验收 · 位权','learning_mode':'general'},'lessons':[{'id':'binary','title':'位权与进位','blocks':[{'id':'first','type':'concept','title':'先理解位权','body':'位权是该位一个单位代表的数值。'},{'id':'second','type':'concept','title':'再理解进位','body':'先定义，再计算。'},{'id':'detail','type':'details','title':'为什么相差两倍','summary':'低位的两个单位合成高位的一个单位。','body':'### 深入推导\n每位只有 0 和 1；单位变化来自基数。'},{'id':'compare','type':'comparison','title':'数制对照','columns':['数制','基数'],'rows':[['二进制','2'],['十进制','10']]}],'exercises':[{'id':'ex','title':'解释位权','prompt':'解释位权。'}]}]}
     teaching['lessons'][0]['blocks'].insert(2,{'id':'sections','type':'concept','title':'理解地址','sections':[{'id':'main','title':'地址定义','role':'main','body':'地址表示位置。'},{'id':'more','title':'地址补充','role':'supplement','summary':'位置与内容不相同。','body':'地址用于定位内容。','children':[{'id':'nested','title':'定位边界','role':'main','body':'先确定位置，再读取内容。'}]}]})
     teaching['lessons'][0]['exercises'][0]['review_reference']={'answer':'位权由位置与基数决定。','explanation':'相邻位代表的单位按基数变化。','criteria':['解释位置和单位的关系'],'source':'合成原生验收'}
@@ -260,7 +261,14 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     await w1.fill('I');await w1.press('Space');await expect(w2).to_be_focused();await w2.fill('lik');await w2.press('Space');await expect(w3).to_be_focused();await w3.fill('tea');await w3.press('Enter')
     await expect(main.get_by_text('原输入：lik',exact=True)).to_be_visible();await expect(w2).to_be_focused()
     await main.screenshot(path=str(workspace/'native-english-correction.png'))
-    await w2.press('l');await w2.type('ike');await w2.press('Enter');await expect(main.locator('.english-target')).to_have_text('I like tea');assert await main.locator('.english-breakdown').count()==0
+    await w2.press('l');await w2.type('ike');await w2.press('Enter');await expect(main.locator('.english-completion-prompt')).to_have_text('我喜欢茶。');await expect(main.locator('.english-completion-reference')).to_be_visible();assert await main.locator('.english-stage > .english-reference-panel:not(.english-completion-reference)').count()==0
+    completion_layout=await main.locator('.english-completion-reference').evaluate('''el=>{const explanation=el.querySelector('.breakdown-explanation'),rect=el.getBoundingClientRect(),style=explanation?getComputedStyle(explanation):null;return {panelWidth:rect.width,panelMaxWidth:getComputedStyle(el).maxWidth,viewport:innerWidth,explanationTextAlign:style?.textAlign||'',explanationMarginLeft:style?.marginLeft||'',explanationMarginRight:style?.marginRight||'',explanationLines:explanation&&style?Math.round(explanation.scrollHeight/parseFloat(style.lineHeight)):0}}''')
+    assert completion_layout['explanationTextAlign']=='center',completion_layout
+    assert completion_layout['panelWidth']<=min(760,completion_layout['viewport'])+2,completion_layout
+    assert completion_layout['explanationMarginLeft']==completion_layout['explanationMarginRight'],completion_layout
+    assert completion_layout['explanationLines']>=2,completion_layout
+    await main.screenshot(path=str(workspace/'native-english-completion-layout.png'))
+    checks.append('A3 completion explanation is centered and the reference panel grows only to its bounded content width')
     checks.append('A3 native space/enter navigation, exact wrong-word focus, retained original and first-key replacement')
     await main.evaluate("()=>{const NativeAudio=window.Audio;window.__nativeAudio=[];window.Audio=class extends NativeAudio{constructor(url){super(url);this.__requestedUrl=url;window.__nativeAudio.push(this)}};window.__nativeSpeechEvents=[];if(window.speechSynthesis){const speak=window.speechSynthesis.speak.bind(window.speechSynthesis);window.speechSynthesis.speak=utterance=>{for(const type of [\"start\",\"end\",\"error\"])utterance.addEventListener(type,event=>window.__nativeSpeechEvents.push({type,error:event.error||null}));speak(utterance)}}}")
     audio_evidence=[]
@@ -285,7 +293,8 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     voices=await main.evaluate("()=>({available:!!window.speechSynthesis,voices:window.speechSynthesis?.getVoices().map(v=>({lang:v.lang,name:v.name}))||[],speaking:window.speechSynthesis?.speaking,events:window.__nativeSpeechEvents||[],notice:document.querySelector('.english-assistance')?.textContent||''})")
     (workspace/'native-system-voice.json').write_text(json.dumps(voices,ensure_ascii=False,indent=2),encoding='utf-8')
     checks.append('A3 actual sentence playback for both accent requests (announced alternate voice when unavailable)' if all(e['played'] for e in audio_evidence) else 'UNVERIFIED A3 online dictionary voice; local fallback evidence retained')
-    await main.get_by_role('button',name='笔记',exact=True).click()
+    await main.get_by_role('button',name='训练设置',exact=True).click()
+    await main.get_by_role('button',name='打开计划笔记',exact=True).click()
     assert await main.get_by_role('tab',name='练习',exact=True).count()==0
     pending_retry=main.get_by_role('button',name='原键重试／读取冲突',exact=True)
     if await pending_retry.count():
@@ -308,7 +317,7 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     await main.screenshot(path=str(workspace/'native-fallback-sequence.png'))
     await main.get_by_role('textbox',name='第 1 个单词').press('Control+Semicolon')
     checks.append('A3 sequence native missing annotation uses real meaning without inferred grammar')
-    await main.get_by_role('button',name='← 返回课程',exact=True).click()
+    await main.get_by_role('button',name='返回课程',exact=True).click()
     await theme('白紫');await go_course(fixture['english']['course_id']);await main.get_by_role('button',name='开始 / 继续训练 →',exact=True).click();await expect(main.get_by_role('heading',name='我喜欢咖啡。',exact=True)).to_be_visible()
     await main.get_by_role('textbox',name='第 1 个单词').press('Control+Semicolon')
     await expect(main.locator('.fallback-meaning')).to_have_text('我喜欢咖啡。')
@@ -351,7 +360,7 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
     checks.append('A3 white-violet shares complete English training flow')
 
     # A5: generated connection text is captured at the real Copy action. System clipboard separately guarded.
-    await main.get_by_role('button',name='← 返回课程',exact=True).click()
+    await main.get_by_role('button',name='返回课程',exact=True).click()
     await main.get_by_role('button',name='工作区',exact=True).first.click()
     await expect(main.get_by_role('button',name='复制Agent接入说明',exact=True)).to_be_enabled()
     installation=await invoke(main,'system.installation')
@@ -416,7 +425,7 @@ async def cases(main,window,service,plan,workspace,fixture,checks,process_id):
         await expect(problem).not_to_be_visible()
         await expect(main.get_by_role('button',name='下一项 →',exact=True)).to_be_visible()
         checks.append('native '+theme_name+' wrong-id reply: metadata log persisted, no banner, dismiss retains input, original check replay succeeds')
-        await main.get_by_role('button',name='← 返回课程',exact=True).click()
+        await main.get_by_role('button',name='返回课程',exact=True).click()
         await main.get_by_role('button',name='用最新材料重新开始',exact=True).click()
         await expect(main.locator('.study-restart-dialog')).to_be_visible()
         await expect(main.get_by_role('button',name='确认重新开始',exact=True)).to_be_visible()

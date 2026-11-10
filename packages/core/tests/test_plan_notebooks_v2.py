@@ -185,7 +185,7 @@ def test_0015_upgrade_keeps_legacy_notes_and_backup(tmp_path):
     finally: engine.dispose()
     with sqlite3.connect(path) as db:
         assert db.execute("SELECT blocks_json,version,format_version FROM plan_notebooks").fetchone()==(original,3,1)
-        assert db.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0017_course_experience"
+        assert db.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0018_plan_course_sequence"
     backups=list(tmp_path.glob("legacy.backup-*.db"));assert len(backups)==1
     with sqlite3.connect(backups[0]) as db: assert db.execute("SELECT blocks_json FROM plan_notebooks").fetchone()[0]==original
 

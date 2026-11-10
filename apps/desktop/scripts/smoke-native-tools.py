@@ -118,7 +118,17 @@ async def run():
     await notes.keyboard.insert_text('真实原生窗口合成笔记')
     await notes.keyboard.press('Control+s')
     await expect(notes.get_by_text('已保存',exact=False).first).to_be_visible()
-    await notes.get_by_role('button',name='知识点范围',exact=True).click()
+    # Tooltip is an overlay: it must appear without changing the toolbar/editor geometry.
+    toolbar_box=await notes.locator('.scope-bar').bounding_box();editor_box=await notes.locator('.notebook-scroll').bounding_box()
+    tooltip=notes.get_by_role('button',name='搜索笔记',exact=True)
+    await tooltip.hover()
+    opacity=await tooltip.evaluate("el=>getComputedStyle(el,'::after').opacity")
+    assert float(opacity)>0,opacity
+    after_toolbar=await notes.locator('.scope-bar').bounding_box();after_editor=await notes.locator('.notebook-scroll').bounding_box()
+    assert toolbar_box and after_toolbar and editor_box and after_editor
+    assert abs(toolbar_box['y']-after_toolbar['y'])<0.5 and abs(editor_box['y']-after_editor['y'])<0.5
+    checks.append('native notebook tooltip overlays without shifting the editor')
+    await notes.get_by_role('button',name='当前笔记位置',exact=True).click()
     await notes.locator('.picker-item').filter(has_text='合成知识点3').click()
     await expect(notes.locator('.scope-button').last).to_contain_text('合成知识点3')
     checks.append('v2 native continuous editor and actual knowledge-point scope picker')
@@ -151,7 +161,7 @@ async def run():
     await main.wait_for_function('()=>getSelection()?.toString()==="窗第三"')
     checks.append('native notebook selection and document scroll transfer back with manual scope')
 
-    await main.get_by_role('button',name='知识点范围',exact=True).click()
+    await main.get_by_role('button',name='当前笔记位置',exact=True).click()
     await main.locator('.picker-item').filter(has_text='合成知识点1').click()
     await expect(main.get_by_role('textbox',name='连续笔记编辑器',exact=True)).to_contain_text('真实原生窗口合成笔记')
     checks.append('native put-back restores shared v2 note; selected scope and hidden entry preserved')
@@ -224,4 +234,3 @@ async def run():
 if __name__=='__main__':
  try:asyncio.run(run())
  finally:support.server.shutdown();support.database.dispose()
-

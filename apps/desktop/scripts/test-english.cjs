@@ -94,6 +94,20 @@ test('English work surface exposes only notes as a drawer and keeps directory in
  assert.ok(source.includes('SentenceBreakdown'));assert.ok(!source.includes("drawer==='lesson'"));assert.ok(!source.includes("drawer==='directory'"))
  assert.ok(source.includes('stageLabels[item.progression.stage]'))
 })
+test('English training header uses course sequence and compact icon controls without rendering long course summaries',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
+ assert.ok(source.includes('data.course.sequence'));assert.ok(!source.includes('data.course.summary'))
+ assert.ok(source.includes('title="返回课程"'));assert.ok(source.includes('title="训练设置"'));assert.ok(source.includes('title="打开计划笔记"'))
+ assert.ok(source.includes('M12.22 2h-.44'));assert.ok(!source.includes('M10 3v2M10 15v2'))
+ assert.ok(source.includes('english-training-feedback'));assert.ok(source.includes("interactionFeedback('complete')"));assert.ok(source.includes('english-completion-view'));assert.ok(!source.includes('english-answer-feedback-slot'));assert.ok(!source.includes('答案已确认'))
+ assert.ok(!source.includes('>{{data.course.title}}</strong>'))
+})
+test('completion feedback keeps a streak only for the immediately following confirmed answer',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
+ assert.ok(source.includes('const continuingStreak=wasAnswer&&index===origin+1'))
+ assert.ok(source.includes('if(!continuingStreak)correctStreak.value=0'))
+ assert.ok(source.includes("if(phase.value==='answer')await training.loadReference()"))
+})
 test('supplement courses use an independent grouping and keep source/transfer results visible',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../src/features/english/remediation/SupplementCourses.vue'),'utf8')
  assert.ok(source.includes('course.remediation.list'));assert.ok(source.includes('course.remediation.get'))
@@ -120,6 +134,10 @@ test('navigation joins the in-flight autosave and saves newer input before movin
 test('word hints keep the input phase and user answer while recording assistance',async()=>{
  const f=fixture();await f.api.load();f.api.tokens.value=['I','lik',''];await f.api.reveal('hint');assert.equal(f.api.phase.value,'input');assert.equal(f.api.hintMode.value,'word');assert.equal(f.api.tokens.value[1],'lik');assert.equal(f.api.item.value.assisted,true);assert.equal(f.api.reference.value.target,'I like tea.');
  f.api.tokens.value=['I','like',''];f.api.edited();assert.equal(f.api.reference.value.target,'I like tea.');f.api.hideHint();assert.equal(f.api.hintMode.value,null);
+})
+test('confirmed items enter the completion state and can reload their sentence reference',async()=>{
+ const f=fixture({items:[{exercise_id:'e1',token_count:3,answer_text:'I like tea',answer_version:2,status:'PASSED',matched:true,differences:[],assisted:false},{exercise_id:'e2',token_count:3,answer_text:'',answer_version:0,status:'NOT_STARTED',matched:false,differences:[],assisted:false}]})
+ await f.api.load();assert.equal(f.api.phase.value,'answer');assert.equal(await f.api.loadReference(),true);assert.equal(f.api.reference.value.target,'I like tea.');assert.equal(f.calls.at(-1).method,'course.english.answer')
 })
 
 
@@ -174,9 +192,9 @@ test('failed dictionary sentence falls back to one local English utterance and c
  const result=await play;assert.equal(result.playback_provider,'system');assert.equal(f.utterances.length,1);assert.equal(f.utterances[0].text,'I like tea')
  f.api.stopSpeech();assert.equal(f.cancels(),1)
 })
-test('training analysis and shortcuts are conditional and contain no Agent review route',()=>{
+test('training has separate reference, completion and input states without an Agent review route',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
- assert.ok(source.includes("error_count||0)>=2"));assert.ok(source.includes("analysisOpen&&reference&&phase!=='answer'"));assert.ok(source.includes('english-shortcuts'))
+ assert.ok(source.includes("error_count||0)>=2"));assert.ok(source.includes('english-reference-panel'));assert.ok(source.includes('english-completion-view'));assert.ok(source.includes('<TokenEditor ref="editor"'));assert.ok(source.includes('english-shortcuts'))
  assert.ok(!source.includes('交给Agent审核'));assert.ok(!source.includes('提交本项审核'));assert.ok(!source.includes('<AnswerReference'))
 })
 
@@ -195,10 +213,36 @@ test('settings shortcut legend matches the actual bindings instead of unreachabl
  assert.ok(page.includes("Ctrl+'：整句朗读 · Ctrl+Shift+'：单词朗读 · Ctrl+;：解析 · Ctrl+.：暂跳 · Ctrl+,：上一项"))
  for(const gone of ['当前词提示','本句提示','提示就在输入位置显示'])assert.ok(!page.includes(gone),gone)
 })
-test('correction analysis card is height-bounded so the input row stays reachable',()=>{
+test('correction analysis stays in its own scroll container so the input row cannot be covered',()=>{
  const css=fs.readFileSync(path.join(__dirname,'../src/features/english/training/english.css'),'utf8')
- const rule=css.match(/\.english-breakdown\{[^}]+\}/)[0]
- assert.match(rule,/max-height/);assert.match(rule,/overflow:auto/)
+ assert.match(css,/\.english-reference-panel>\.english-reference-scroll\{[^}]*overflow:auto/)
+ assert.match(css,/\.english-reference-panel\{[^}]*max-height/)
+})
+test('completion reference is shorter and denser than the input analysis panel',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'../src/features/english/training/english.css'),'utf8')
+ assert.match(css,/\.english-completion-reference\{[^}]*max-height:min\(36vh,300px\)/)
+ assert.match(css,/\.english-completion-reference>\.english-reference-scroll\{[^}]*padding:10px 16px/)
+ assert.match(css,/\.english-completion-reference button\.part-word\{[^}]*padding:3px 5px/)
+ assert.match(css,/\.english-completion-reference \.part-word strong\{[^}]*font-size:20px/)
+})
+test('reference panels grow from their content and wrap at a bounded width',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'../src/features/english/training/english.css'),'utf8')
+ assert.match(css,/\.english-reference-panel\{[^}]*width:min\(100%,960px\)/)
+ assert.match(css,/\.english-completion-reference\{[^}]*width:fit-content;[^}]*max-width:min\(100%,var\(--english-completion-reference-max-width\)\)/)
+ assert.match(css,/--english-completion-reference-max-width:760px/)
+ assert.match(css,/\.english-completion-reference>\.english-reference-scroll\{[^}]*width:fit-content;[^}]*max-width:100%/)
+ assert.match(css,/\.english-completion-reference \.english-breakdown\{[^}]*width:fit-content;[^}]*max-width:100%/)
+ assert.match(css,/\.breakdown-explanation\{[^}]*width:fit-content;[^}]*margin:14px auto 0;[^}]*max-width:min\(100%,700px\);[^}]*text-align:center/)
+})
+test('analysis does not use an absolute overlay that can cover the input',()=>{
+ const css=fs.readFileSync(path.join(__dirname,'../src/features/english/training/english.css'),'utf8')
+ assert.doesNotMatch(css,/\.english-breakdown\{[^}]*position:absolute/)
+ assert.match(css,/\.english-reference-panel \.english-breakdown\{[^}]*overflow:visible/)
+ assert.match(css,/\.english-training-feedback\{[^}]*position:absolute/)
+ assert.match(css,/\.english-training-feedback\{[^}]*background:transparent/)
+ assert.match(css,/\.english-training-feedback\{[^}]*filter:drop-shadow/)
+ assert.match(css,/\.english-speech-settings\{[^}]*position:absolute/)
+ assert.ok(css.includes('.english-token-row{padding-top:0;min-height:0}'))
 })
 test('english pages keep one secondary treatment per action level instead of mixing button classes',()=>{
  const training=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')

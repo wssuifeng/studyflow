@@ -6,8 +6,9 @@
 .reader-toolbar .reader-context{min-width:0;flex:1;margin:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;color:var(--muted)}
 .reader-actions{display:flex;align-items:center;gap:8px;margin-left:auto;flex:none}
 .reader-actions .text-button{font-size:11px}
-.reader-sound{display:flex;align-items:center;justify-content:center;width:30px;height:30px;padding:6px;border-radius:7px;color:var(--muted);background:transparent}
-.reader-sound svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.reader-icon-action{display:flex;align-items:center;justify-content:center;flex:none;width:30px;height:30px;padding:6px;border-radius:7px;color:var(--muted);background:transparent}
+.reader-icon-action svg{width:17px;height:17px;fill:none;stroke:currentColor;stroke-width:1.4;stroke-linecap:round;stroke-linejoin:round}
+.reader-icon-action:hover:not(:disabled){background:var(--theme-surface-active);color:var(--theme-accent-primary)}
 .reader-sound[aria-pressed='true']{color:var(--theme-accent-primary)}
 .learning-shell .reader-heading{display:flex;align-items:center;flex:1;min-width:0;margin:0;gap:16px}
 .learning-shell .reader-heading h2{font-size:14px;font-weight:600;margin:0;line-height:1.4;max-width:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

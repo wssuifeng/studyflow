@@ -9,19 +9,23 @@
 .english-group-list h3{margin:0;font-size:17px}
 .english-group-list p{margin:6px 0;color:var(--muted);font-size:13px}
 .english-group-list li>span{max-width:50%;font-size:13px;color:var(--muted)}
-.english-learning{height:calc(100dvh - 42px);min-height:380px;display:flex;flex-direction:column;overflow:hidden;background:var(--theme-surface-canvas);color:var(--ink)}
+.english-learning{position:relative;height:calc(100dvh - 42px);min-height:380px;display:flex;flex-direction:column;overflow:hidden;background:var(--theme-surface-canvas);color:var(--ink)}
 .english-training-header{display:flex;align-items:center;gap:24px;min-height:64px;padding:10px clamp(16px,3vw,48px);border-bottom:1px solid var(--line);flex-shrink:0}
 .english-header-title{display:flex;align-items:center;gap:18px;flex:1;min-width:0}
 .english-header-title strong{font-size:15px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .english-header-title span{font-size:12px;color:var(--muted)}
+.english-header-title .english-header-progress{font-size:12px;color:var(--theme-text-muted);font-weight:450;margin-left:8px}
 .english-header-tools,.english-audio-actions,.english-main-actions{display:flex;gap:14px;align-items:center;justify-content:center;flex-wrap:wrap}
 /* 页内次要动作统一走本规则（§8.4）：英语页同级次要按钮不混挂 text-button，disabled/focus 由下方规则统一。 */
 .english-learning button:not(.primary-button):not(.secondary-button),.mistake-workspace button:not(.primary-button):not(.secondary-button){border:0;background:transparent;color:inherit;padding:8px 12px;border-radius:8px;cursor:pointer}
 .english-learning button:hover:not(:disabled),.mistake-workspace button:hover{background:var(--theme-surface-hover)}
 .english-learning button:disabled{opacity:.42;cursor:default}
+.english-learning .english-icon-button{width:36px;height:36px;padding:0;display:grid;place-items:center;border:1px solid transparent;border-radius:9px;color:var(--theme-text-secondary)}
+.english-learning .english-icon-button:hover:not(:disabled){border-color:var(--theme-border-subtle);color:var(--theme-text-primary)}
+.english-icon-button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.45;stroke-linecap:round;stroke-linejoin:round}
 .english-work-surface{display:grid;grid-template-columns:minmax(0,1fr);min-height:0;flex:1}
 .english-work-surface.has-drawer{grid-template-columns:minmax(0,1fr) minmax(320px,370px)}
-.english-stage{min-width:0;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 6%;text-align:center}
+.english-stage{position:relative;min-width:0;overflow-y:auto;display:flex;flex-direction:column;justify-content:center;align-items:center;padding:40px 6%;text-align:center}
 .english-question h1,.english-result h1{font-size:clamp(24px,3vw,40px);font-weight:550;line-height:1.55;margin:8px 0 14px}
 .english-question p,.english-stage>p,.english-result>p{font-size:13px;color:var(--muted);line-height:1.8}
 .english-token-row{display:flex;justify-content:center;align-items:flex-start;gap:clamp(9px,1.5vw,22px);flex-wrap:wrap;max-width:980px;margin:34px 0 24px}
@@ -40,7 +44,7 @@
 .english-word-lookup{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;font-size:13px;margin:10px 0}
 .english-dictionary{max-width:650px;font-size:13px;text-align:left;line-height:1.7;margin-top:18px}
 .english-dictionary span{color:var(--muted);margin-right:8px}
-.english-drawer{border-left:1px solid var(--line);min-width:0;overflow-y:auto;padding:18px;background:var(--theme-surface-panel)}
+.english-drawer{border-left:1px solid var(--line);min-width:0;min-height:0;overflow:hidden;padding:18px;background:var(--theme-surface-panel)}
 .english-drawer>header,.mistake-evidence>header{display:flex;align-items:center;justify-content:space-between}
 .english-drawer h2{font-size:16px}
 .english-directory{list-style:none;padding:0}
@@ -51,7 +55,7 @@
 .english-directory i{font-size:11px;color:var(--theme-status-success)}
 .english-training-footer{display:flex;align-items:center;gap:14px;padding:10px 3%;min-height:52px;flex-shrink:0;border-top:1px solid var(--line);font-size:12px}
 .english-training-footer>span:last-child{margin-left:auto}
-.english-speech-settings{display:flex;gap:18px;padding:15px 3%;flex-wrap:wrap;align-items:center;font-size:12px;background:var(--theme-surface-raised)}
+.english-speech-settings{position:absolute;top:64px;right:3%;z-index:30;display:flex;gap:18px;width:min(470px,calc(100% - 24px));max-height:calc(100dvh - 150px);overflow:auto;box-sizing:border-box;padding:15px 18px;flex-wrap:wrap;align-items:center;font-size:12px;background:var(--theme-surface-canvas);border:1px solid var(--theme-border-subtle);border-radius:12px;box-shadow:0 12px 30px color-mix(in srgb,var(--theme-shadow-ink) 10%,transparent)}
 .english-speech-settings label{display:flex;align-items:center;gap:6px}
 .english-speech-settings small{width:100%;color:var(--muted)}
 .english-recovery{padding:12px 3%;font-size:13px;background:var(--theme-status-warning-soft);flex-shrink:0}
@@ -104,9 +108,9 @@
 
 /* In-place assistance: typing stays in the same stable work surface. */
 .english-token{position:relative}
-.english-token-row{padding-top:28px;min-height:88px}
-.english-word-hint{position:absolute;left:50%;bottom:calc(100% + 9px);transform:translateX(-50%);padding:5px 11px;border:1px solid var(--theme-border-subtle);border-radius:7px;background:var(--theme-accent-soft);color:var(--theme-accent-primary);font-size:15px;font-weight:600;line-height:1.35;white-space:nowrap;pointer-events:none}
-.english-word-hint::after{content:'';position:absolute;left:50%;top:100%;width:6px;height:6px;border-right:1px solid var(--theme-border-subtle);border-bottom:1px solid var(--theme-border-subtle);background:var(--theme-accent-soft);transform:translate(-50%,-50%) rotate(45deg)}
+.english-token-row{padding-top:0;min-height:0}
+.english-word-hint{position:absolute;left:50%;bottom:calc(100% + 9px);z-index:4;transform:translateX(-50%);padding:5px 11px;border:1px solid var(--theme-border-subtle);border-radius:7px;background:var(--theme-surface-canvas);color:var(--theme-text-primary);font-size:15px;font-weight:600;line-height:1.35;white-space:nowrap;pointer-events:none;box-shadow:0 8px 18px color-mix(in srgb,var(--theme-shadow-ink) 8%,transparent)}
+.english-word-hint::after{content:'';position:absolute;left:50%;top:100%;width:6px;height:6px;border-right:1px solid var(--theme-border-subtle);border-bottom:1px solid var(--theme-border-subtle);background:var(--theme-surface-canvas);transform:translate(-50%,-50%) rotate(45deg)}
 .english-sentence-hint{display:flex;align-items:center;gap:14px;max-width:720px;margin:16px 0 0;padding:11px 16px;border-radius:9px;background:var(--theme-accent-soft);border:1px solid var(--theme-border-subtle);text-align:left}
 .english-sentence-hint>span{flex:none;color:var(--theme-text-muted);font-size:11px}.english-sentence-hint>strong{font-size:17px;font-weight:550;line-height:1.6}.english-sentence-hint>button{margin-left:auto}
 .english-main-actions kbd{font:inherit;font-size:10px;margin-left:6px;color:var(--theme-text-muted)}
@@ -119,6 +123,8 @@
 .english-question{max-width:900px}
 .english-question h1{font-size:clamp(24px,2.2vw,36px);line-height:1.55;font-weight:550;text-wrap:balance}
 .english-main-actions{margin:8px 0;min-height:42px}
+.english-main-actions{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);width:min(100%,420px);gap:10px}
+.english-main-actions>.primary-button{grid-column:2}
 .english-main-actions .primary-button{box-shadow:none;padding:10px 20px;font-size:13px}
 .english-main-actions kbd{margin-left:8px;opacity:.8;font-size:11px;font-weight:400}
 .english-training-footer{min-height:62px;gap:8px;flex-wrap:wrap}
@@ -126,8 +132,25 @@
 .english-learning .english-shortcuts button{display:flex;align-items:center;gap:4px;font-size:11px;padding:5px 6px;color:var(--theme-text-secondary)}
 .english-shortcuts kbd{padding:2px 5px;border:1px solid var(--theme-border-subtle);border-radius:5px;background:var(--theme-surface-panel);font-size:10px;line-height:1.5;white-space:nowrap}
 .english-save-status{font-size:10px;color:var(--theme-text-muted);min-width:40px}
-/* 解析卡有界（§7.2）：correction 展开时输入行/动作区保持可达，长解析在卡内滚动。 */
-.english-breakdown{max-width:min(900px,100%);max-height:42vh;overflow:auto;margin:0 0 18px;padding:16px 20px;border:1px solid var(--theme-border-subtle);border-radius:18px;background:var(--theme-surface-raised);box-shadow:0 8px 24px color-mix(in srgb,var(--theme-shadow-ink) 6%,transparent)}
+/* 参考句解析保留在训练主区顶部，内容过长时只滚动自己的区域。 */
+.english-reference-panel{position:relative;width:min(100%,960px);max-height:min(34vh,310px);box-sizing:border-box;margin:0 auto 10px;flex:none;border:1px solid var(--theme-border-subtle);border-radius:14px;background:color-mix(in srgb,var(--theme-surface-panel) 94%,transparent);box-shadow:0 10px 26px color-mix(in srgb,var(--theme-shadow-ink) 10%,transparent);overflow:hidden}
+.english-reference-panel>.english-reference-scroll{max-height:inherit;overflow:auto;padding:14px 20px}
+.english-reference-panel .english-breakdown{width:100%;max-height:none;overflow:visible;margin:0;box-sizing:border-box;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none}
+.english-reference-panel>header{display:flex;align-items:center;justify-content:center;min-height:30px;padding:6px 42px 0;color:var(--theme-text-muted);font-size:11px}
+.english-reference-dismiss{position:absolute;top:6px;right:8px;z-index:1;width:28px!important;height:28px;padding:0!important;color:var(--theme-text-muted)!important;font-size:18px;line-height:1}
+.english-completion-view{display:flex;flex-direction:column;align-items:center;width:min(100%,1040px);min-width:0}
+.english-completion-reference{--english-completion-reference-max-width:760px;width:fit-content;max-width:min(100%,var(--english-completion-reference-max-width));max-height:min(36vh,300px);margin-bottom:12px}
+.english-completion-reference>.english-reference-scroll{width:fit-content;max-width:100%;padding:10px 16px}
+.english-completion-reference .english-breakdown{width:fit-content;max-width:100%}
+.english-completion-reference .sentence-parts{gap:8px}
+.english-completion-reference .sentence-part{padding:10px 6px 6px;gap:4px}
+.english-completion-reference button.part-word{gap:3px;padding:3px 5px}
+.english-completion-reference .part-word strong{font-size:20px;line-height:1.25;padding-bottom:2px}
+.english-completion-reference .part-word small{min-height:13px;font-size:10px}
+.english-completion-reference .part-word span,.english-completion-reference .part-word em{font-size:10px}
+.english-completion-reference .breakdown-explanation{margin-top:9px;padding-top:8px;line-height:1.55}
+.english-completion-prompt{margin:0;max-width:900px;font-size:clamp(22px,2.4vw,36px)!important;line-height:1.55!important;color:var(--theme-text-secondary)!important}
+.english-answer-fallback{font-size:clamp(30px,4vw,54px);line-height:1.5;font-weight:500;overflow-wrap:anywhere;margin:28px 0 10px}
 .sentence-parts{display:flex;justify-content:center;gap:12px;flex-wrap:wrap}
 .sentence-part{position:relative;display:flex;align-items:stretch;border:1px solid var(--part-color,var(--theme-border-strong));border-radius:13px;padding:14px 8px 8px;gap:6px}
 .role-subject{--part-color:color-mix(in srgb,var(--theme-status-warning) 70%,var(--theme-text-primary))}.role-predicate{--part-color:var(--theme-status-danger)}.role-object{--part-color:var(--theme-accent-primary)}.role-complement{--part-color:var(--theme-accent-strong)}.role-modifier{--part-color:var(--theme-status-success)}
@@ -142,8 +165,26 @@
 .fallback-phonetic{font-size:12px;line-height:1.6;color:var(--theme-text-muted);overflow-wrap:anywhere}
 .fallback-meaning{margin:0;font-size:14px;line-height:1.65;color:var(--theme-text-primary);overflow-wrap:anywhere}
 .breakdown-fallback+.breakdown-explanation{padding-top:12px;border-top:1px solid var(--theme-border-subtle)}
-.breakdown-explanation{margin:14px 0 0;max-width:700px;font-size:12px;line-height:1.75;color:var(--theme-text-secondary);text-align:left;white-space:pre-wrap}
-@media(max-width:900px){.english-shortcuts{gap:4px}.english-header-title span{font-size:10px}.english-stage{padding:24px 4%}.english-breakdown{padding:16px 10px}.sentence-parts{gap:9px}}
+.breakdown-explanation{width:fit-content;margin:14px auto 0;max-width:min(100%,700px);font-size:12px;line-height:1.75;color:var(--theme-text-secondary);text-align:center;white-space:pre-wrap;overflow-wrap:anywhere}
+.english-training-feedback{position:absolute;top:12px;left:50%;z-index:5;display:flex;align-items:baseline;gap:8px;transform:translateX(-50%);padding:3px 12px 5px;border-radius:10px;background:transparent;filter:drop-shadow(0 7px 12px color-mix(in srgb,var(--theme-shadow-ink) 24%,transparent));pointer-events:none;white-space:nowrap;animation:english-feedback-in .2s ease-out}
+.english-training-feedback strong{font-size:32px;font-style:italic;font-weight:700;letter-spacing:.01em;text-shadow:0 3px 10px color-mix(in srgb,var(--theme-shadow-ink) 20%,transparent)}
+.english-training-feedback span{font-size:24px;font-weight:700;text-shadow:0 3px 10px color-mix(in srgb,var(--theme-shadow-ink) 20%,transparent)}
+.english-training-feedback.tone-great{color:var(--theme-accent-primary)}
+.english-training-feedback.tone-nice{color:var(--theme-status-success)}
+.english-training-feedback.tone-recovered{color:var(--theme-status-warning)}
+@keyframes english-feedback-in{from{opacity:0;transform:translate(-50%, -4px)}to{opacity:1;transform:translate(-50%, 0)}}
+@media(max-width:900px){
+ .english-shortcuts{gap:4px}
+ .english-header-title span{font-size:10px}
+ .english-stage{padding:24px 4%}
+ .english-reference-panel>.english-reference-scroll{padding:12px 10px}
+ .sentence-parts{gap:9px}
+}
+@media(max-width:700px){
+ .english-training-feedback{top:10px;gap:6px;padding:2px 8px 4px}
+ .english-training-feedback strong{font-size:28px}
+ .english-training-feedback span{font-size:21px}
+}
 
 .english-main-actions .primary-button kbd{color:inherit;opacity:.85;background:transparent;border:0}
 
@@ -185,5 +226,8 @@
  .english-question h1{margin:6px 0 10px}
  .english-token-row{margin:18px 0 12px}
 }
+
+@media(max-width:700px){.english-speech-settings{top:60px;right:12px;left:12px;width:auto}}
+@media(prefers-reduced-motion:reduce){.english-training-feedback{animation:none}}
 
 button.english-save-status.is-problem{border:0;background:none;padding:0;color:var(--theme-text-muted);font:inherit;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer}

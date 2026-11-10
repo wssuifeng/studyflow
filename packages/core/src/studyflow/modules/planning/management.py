@@ -34,7 +34,14 @@ def edit_plan(service,plan_line_id,expected_version,idempotency_key,operation,va
             by_course={i.course_id:i for i in items}
             ordered=values.get("course_ids")
             if set(values)!={"course_ids"} or not isinstance(ordered,list) or len(ordered)!=len(items) or len(set(ordered))!=len(ordered) or set(ordered)!=set(by_course):raise DomainError("INVALID_ARGUMENT","重排必须包含计划内全部课程且不重复。")
+            # The position is unique within a plan track. Use a temporary negative
+            # range so a reorder such as 1,2 -> 2,1 never collides mid-flush.
+            for n,cid in enumerate(ordered,1):by_course[cid].sequence_number=-n
+            db.flush()
             for n,cid in enumerate(ordered,1):by_course[cid].sequence_number=n
+            for item in items:
+                for schedule in item.schedule_items:
+                    if schedule.status != "CANCELLED": schedule.position=item.sequence_number
         elif operation=="COURSE_POSITION":
             if set(values)-{"course_id","position","reason"}:raise DomainError("INVALID_ARGUMENT","未知课程位置字段。")
             item=by_course.get(values.get("course_id"))

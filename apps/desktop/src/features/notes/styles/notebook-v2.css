@@ -308,3 +308,54 @@
   .plan-notebook-v2 .scope-bar.is-plan-scope>.scope-status {flex-basis:100%;text-align:left;}
 }
 @media(prefers-reduced-motion:reduce) {.plan-notebook-v2 * {transition:none!important;animation:none!important;}}
+
+/* Keep the default knowledge-point view quiet while retaining the full plan outline on demand. */
+.plan-notebook-v2 .scope-bar {min-width:0;}
+.plan-notebook-v2 .scope-bar>.picker-wrap {min-width:0;flex:1 1 auto;max-width:none;}
+.plan-notebook-v2 .scope-button {width:100%;min-width:0;justify-content:flex-start;}
+.plan-notebook-v2 .scope-button>.ui-icon {margin-left:auto;}
+.plan-notebook-v2 .scope-status {flex:none;margin-left:auto;white-space:nowrap;}
+.plan-notebook-v2 .notebook-more-wrap {position:relative;flex:none;}
+.plan-notebook-v2 .notebook-more-menu {left:auto;right:0;top:calc(100% + 5px);width:158px;min-width:158px;}
+.plan-notebook-v2 .notebook-more-menu .picker-item {min-height:32px;padding:7px 9px;font-size:11px;}
+.plan-notebook-v2 [data-tooltip] {position:relative;}
+.plan-notebook-v2 [data-tooltip]::after {
+  content:attr(data-tooltip);position:absolute;z-index:90;left:50%;bottom:calc(100% + 5px);
+  max-width:160px;padding:4px 7px;transform:translate(-50%,2px);border:1px solid var(--line-2);
+  border-radius:4px;background:var(--surface);box-shadow:0 3px 10px color-mix(in srgb,var(--theme-shadow-ink) 12%,transparent);
+  color:var(--ink);font-size:10px;font-weight:500;line-height:1.3;white-space:nowrap;
+  opacity:0;pointer-events:none;transition:opacity .12s ease,transform .12s ease;
+}
+.plan-notebook-v2 [data-tooltip]:hover::after,.plan-notebook-v2 [data-tooltip]:focus-visible::after {
+  opacity:1;transform:translate(-50%,0);
+}
+.plan-notebook-v2 .entry-more[data-tooltip] {position:absolute;}
+.plan-notebook-v2 .source-popover [data-tooltip]::after {top:calc(100% + 4px);bottom:auto;}
+.plan-notebook-v2 .scope-picker-panel {max-height:min(360px,calc(100vh - 120px));}
+.plan-notebook-v2 .scope-course-options {padding-top:4px;margin-top:4px;border-top:1px solid var(--line);}
+.plan-notebook-v2 .scope-course-option {font-weight:600;}
+.plan-notebook-v2 .scope-course-option>span {flex:none;font-size:10px;color:var(--muted);font-weight:400;}
+.plan-notebook-v2 .scope-lesson-option {padding-left:24px;}
+.plan-notebook-v2.scope-course .course-shell,.plan-notebook-v2.scope-lesson .course-shell {
+  margin:0;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;
+}
+.plan-notebook-v2.scope-course .course-title,.plan-notebook-v2.scope-lesson .course-title {display:none;}
+.plan-notebook-v2.scope-lesson .lesson-title {display:none;}
+.plan-notebook-v2.scope-course .lesson-group,.plan-notebook-v2.scope-lesson .lesson-group {margin:0;padding:0;}
+.plan-notebook-v2.scope-lesson .entry-card,.plan-notebook-v2.scope-course .entry-card {
+  min-height:72px;margin:0;padding:10px 4px;border:0;border-bottom:1px solid var(--line);
+  border-radius:0;background:transparent;box-shadow:none;
+}
+.plan-notebook-v2.scope-lesson .entry-card:last-child,.plan-notebook-v2.scope-course .entry-card:last-child {border-bottom:0;}
+.plan-notebook-v2.scope-lesson .card-prose,.plan-notebook-v2.scope-course .card-prose {min-height:48px;}
+.plan-notebook-v2.scope-course .lesson-title {margin:0 0 4px;padding:12px 2px 7px;font-size:12px;}
+.plan-notebook-v2.scope-lesson .quiet-hint {margin-top:10px;}
+@container studyflow-notebook (max-width:380px) {
+  .plan-notebook-v2 .scope-bar {gap:3px;padding-inline:8px;}
+  .plan-notebook-v2 .scope-bar>.picker-wrap {flex:1 1 90px;}
+  .plan-notebook-v2 .scope-button {padding:6px 7px;gap:5px;font-size:11px;}
+  .plan-notebook-v2 .scope-status {font-size:9px;}
+  .plan-notebook-v2 .scope-bar .tool-actions {gap:0;}
+  .plan-notebook-v2 .scope-bar .icon-btn {width:27px;height:29px;}
+}
+@media(prefers-reduced-motion:reduce) {.plan-notebook-v2 [data-tooltip]::after {transition:none;}}

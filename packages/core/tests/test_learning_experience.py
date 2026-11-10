@@ -89,10 +89,25 @@ def test_installation_discovers_exact_paths_and_missing_resources(tmp_path,app_s
     engine=folder/'studyflow-engine.exe';engine.write_bytes(b'test')
     cli=folder/'studyflow.exe';cli.write_bytes(b'test')
     skill=folder/'studyflow-agent'/'SKILL.md';skill.parent.mkdir();skill.write_text('test',encoding='utf-8')
-    info=installation_info(app_service.settings,executable=engine,frozen=True)
+    workspace=tmp_path/'data';workspace.mkdir()
+    pointer=tmp_path/'home'/'.studyflow-agent'/'workspace.json'
+    from types import SimpleNamespace
+    settings=SimpleNamespace(workspace_root=workspace)
+    info=installation_info(settings,executable=engine,frozen=True,agent_workspace_pointer=pointer)
     assert info['cli_argv']==[str(cli)] and info['skill_path']==str(skill)
-    assert info['agent_ready'] and info['workspace']==str(app_service.settings.workspace_root.resolve())
-    skill.unlink();assert not installation_info(app_service.settings,executable=engine,frozen=True)['agent_ready']
+    assert info['agent_ready'] and info['workspace']==str(workspace.resolve())
+    assert info['agent_workspace_entry_status']=='missing' and info['agent_workspace_entry_path'] is None
+    agent_root=tmp_path/'agent';agent_root.mkdir();entry=agent_root/'AGENTS.md';entry.write_text('# Agent workspace',encoding='utf-8')
+    pointer.parent.mkdir(parents=True)
+    pointer.write_text(json.dumps({'format':1,'agent_workspace':str(agent_root)}),encoding='utf-8')
+    info=installation_info(settings,executable=engine,frozen=True,agent_workspace_pointer=pointer)
+    assert info['agent_workspace_entry_status']=='found' and info['agent_workspace_entry_path']==str(entry.resolve())
+    pointer.write_text('{broken',encoding='utf-8')
+    info=installation_info(settings,executable=engine,frozen=True,agent_workspace_pointer=pointer)
+    assert info['agent_workspace_entry_status']=='invalid' and info['agent_workspace_entry_path'] is None
+    pointer.write_text(json.dumps({'format':1,'agent_workspace':str(workspace)}),encoding='utf-8')
+    assert installation_info(settings,executable=engine,frozen=True,agent_workspace_pointer=pointer)['agent_workspace_entry_status']=='invalid'
+    skill.unlink();assert not installation_info(settings,executable=engine,frozen=True,agent_workspace_pointer=pointer)['agent_ready']
 
 
 def test_restart_preview_does_not_acquire_writer_lease(app_service,study_course,monkeypatch):
@@ -127,7 +142,13 @@ def test_restart_engine_schema_and_strict_unknown_field_rejection(app_service,st
     denied=engine.handle({'id':3,'method':'course.study.restart.preview','params':{'study_session_id':sid,'force':True}})
     assert not denied['ok'] and denied['error']['code']=='INVALID_ARGUMENT'
     assert engine.handle({'id':4,'method':'course.study.restart.preview','params':{'study_session_id':sid}})['data']['can_restart']
-    assert engine.handle({'id':5,'method':'system.installation'})['data']['agent_ready']
+    installation=engine.handle({'id':5,'method':'system.installation'})['data']
+    assert installation['agent_ready']
+    assert installation['agent_workspace_entry_status'] in {'found','missing','invalid'}
+    if installation['agent_workspace_entry_status']=='found':
+        assert Path(installation['agent_workspace_entry_path']).is_file()
+    else:
+        assert installation['agent_workspace_entry_path'] is None
     engine.close()
 
 

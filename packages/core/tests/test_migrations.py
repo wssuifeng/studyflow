@@ -52,7 +52,7 @@ def test_empty_database_runs_checked_in_alembic_chain(tmp_path):
     check = sqlite3.connect(db_path)
     tables = {row[0] for row in check.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()}
     assert {"plan_lines", "tasks", "courses", "exercises", "alembic_version", "course_write_receipts"}.issubset(tables)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0018_plan_course_sequence"
     assert "task_kind" in {row[1] for row in check.execute("PRAGMA table_info(tasks)")}
     assert "content_type" in {row[1] for row in check.execute("PRAGMA table_info(courses)")}
     assert "exercise_type" in {row[1] for row in check.execute("PRAGMA table_info(exercises)")}
@@ -84,7 +84,7 @@ def test_current_legacy_database_gets_version_stamp_without_data_loss(tmp_path):
     result = upgrade_sqlite(settings)
     assert result["status"] == "LEGACY_STAMPED_UPGRADED"
     check = sqlite3.connect(db_path)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0018_plan_course_sequence"
     assert check.execute("SELECT name FROM plan_lines WHERE id='p1'").fetchone()[0] == "Current Plan"
     assert "learning_progress" in {row[0] for row in check.execute("SELECT name FROM sqlite_master WHERE type='table'")}
     check.close()
@@ -101,7 +101,7 @@ def test_empty_alembic_version_table_is_stamped_without_rebuilding(tmp_path):
     result = upgrade_sqlite(settings)
     assert result["status"] == "LEGACY_STAMPED_UPGRADED"
     check = sqlite3.connect(db_path)
-    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
+    assert check.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0018_plan_course_sequence"
     assert check.execute("SELECT name FROM plan_lines WHERE id='p1'").fetchone()[0] == "Unstamped Plan"
     check.close()
 
@@ -141,7 +141,7 @@ def test_0005_upgrade_preserves_answers_and_original_migrations(tmp_path):
     con=sqlite3.connect(tmp_path/'old.db')
     assert con.execute("SELECT answer_text,status,study_session_id,batch_id FROM submissions WHERE id='s'").fetchone()==('legacy answer','WAITING_REVIEW',None,None)
     assert con.execute("SELECT count(*) FROM course_study_sessions").fetchone()[0]==0
-    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=='0017_course_experience'
+    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=='0018_plan_course_sequence'
     con.close()
 
 
@@ -155,7 +155,7 @@ def test_startup_upgrades_known_0005_with_backup_without_manual_service(tmp_path
     backups=list(tmp_path.glob("startup.backup-*.db"))
     assert len(backups)==1
     con=sqlite3.connect(tmp_path/'startup.db')
-    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0017_course_experience"
+    assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0]=="0018_plan_course_sequence"
     con.close();init_db(engine)
     assert len(list(tmp_path.glob("startup.backup-*.db")))==1
     engine.dispose()
@@ -181,13 +181,37 @@ def test_startup_upgrades_0014_with_backup_and_preserves_main_courses(tmp_path):
         assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0014_study_restart"
         assert con.execute("SELECT answer_text FROM submissions WHERE id='s'").fetchone()[0] == "Saved Answer"
     with sqlite3.connect(tmp_path / "old-0014.db") as con:
-        assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0017_course_experience"
+        assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0018_plan_course_sequence"
         assert con.execute("SELECT sequence_number,track FROM plan_course_items WHERE id='pc'").fetchone() == (1, "MAIN")
         assert con.execute("SELECT answer_text,status FROM submissions WHERE id='s'").fetchone() == ("Saved Answer", "DRAFT")
         assert con.execute("SELECT count(*) FROM english_remediation_courses").fetchone()[0] == 0
     init_db(engine)
     assert len(list(tmp_path.glob("old-0014.backup-*.db"))) == 1
     engine.dispose()
+
+
+def test_plan_course_sequence_migration_repairs_legacy_duplicates_and_adds_lock(tmp_path):
+    from alembic import command
+    from studyflow.infrastructure.persistence.migrations import _alembic_config, upgrade_sqlite
+
+    settings = Settings(workspace_root=tmp_path, database_url=f"sqlite:///{(tmp_path / 'duplicate-sequence.db').as_posix()}")
+    command.upgrade(_alembic_config(settings), "0017_course_experience")
+    with sqlite3.connect(tmp_path / "duplicate-sequence.db") as con:
+        con.execute("INSERT INTO plan_lines (id,name,priority,status) VALUES ('p-seq','Sequence Plan',1,'ACTIVE')")
+        con.execute("INSERT INTO courses (id,plan_line_id,title) VALUES ('c-seq-1','p-seq','Course 1')")
+        con.execute("INSERT INTO courses (id,plan_line_id,title) VALUES ('c-seq-2','p-seq','Course 2')")
+        con.execute("INSERT INTO courses (id,plan_line_id,title) VALUES ('c-seq-s','p-seq','Supplement')")
+        con.execute("INSERT INTO plan_course_items (id,plan_line_id,course_id,track,sequence_number,status) VALUES ('pc-seq-1','p-seq','c-seq-1','MAIN',1,'PLANNED')")
+        con.execute("INSERT INTO plan_course_items (id,plan_line_id,course_id,track,sequence_number,status) VALUES ('pc-seq-2','p-seq','c-seq-2','MAIN',3,'PLANNED')")
+        con.execute("INSERT INTO plan_course_items (id,plan_line_id,course_id,track,sequence_number,status) VALUES ('pc-seq-s','p-seq','c-seq-s','SUPPLEMENT',1,'PLANNED')")
+
+    result = upgrade_sqlite(settings)
+    assert result["upgraded"] is True
+    with sqlite3.connect(tmp_path / "duplicate-sequence.db") as con:
+        assert con.execute("SELECT version_num FROM alembic_version").fetchone()[0] == "0018_plan_course_sequence"
+        assert con.execute("SELECT sequence_number FROM plan_course_items WHERE track='MAIN' ORDER BY sequence_number").fetchall() == [(1,), (2,)]
+        assert con.execute("SELECT sequence_number FROM plan_course_items WHERE track='SUPPLEMENT'").fetchone() == (1,)
+        assert "uq_plan_course_item_position" in {row[1] for row in con.execute("PRAGMA index_list(plan_course_items)")}
 
 
 def test_current_remediation_revision_with_missing_provenance_fails_closed(tmp_path):

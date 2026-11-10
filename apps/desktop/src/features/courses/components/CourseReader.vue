@@ -157,6 +157,7 @@ const studyLayout = ref<HTMLElement | null>(null)
 const layoutHeight = ref(520)
 const actionBar = ref<HTMLElement | null>(null)
 const layoutOverflow = ref(false)
+const restartToggle=ref<HTMLButtonElement|null>(null)
 const restartDialog=ref<HTMLDialogElement|null>(null)
 const restartPreview=ref<StudyRestartPreview|null>(null),restartPending=ref<RestartParams|null>(null),restartBusy=ref(false),restartCacheUnavailable=ref(false)
 const restartCacheKey=windowStorageKey('study-restart:'+props.id)
@@ -164,7 +165,13 @@ watch(restartPreview,async value=>{await nextTick();if(value&&restartDialog.valu
 let restartHold:string|undefined
 function restartStorage(){try{return localStorage}catch{return null}}
 function cacheRestart(){const saved=storeRestartRequest(restartStorage(),restartCacheKey,data.value?.study.workspace_key||'',restartPending.value);restartCacheUnavailable.value=!!restartPending.value&&!saved}
-async function closeRestartDialog(){if(restartBusy.value)return;restartPreview.value=null;moving.value=false;if(restartHold){await releaseTools(restartHold);restartHold=undefined}}
+async function closeRestartDialog(){
+ if(restartBusy.value)return
+ const wasOpen=!!restartPreview.value
+ restartPreview.value=null;moving.value=false
+ if(restartHold){await releaseTools(restartHold);restartHold=undefined}
+ if(wasOpen){await nextTick();if(!disposed&&!safeExit.leaving.value&&!safeExit.dialog.value)restartToggle.value?.focus({preventScroll:true})}
+}
 async function previewRestart(){
  if(blocked.value||!data.value)return
  if(answers.pending.value||notes.pending.value||answers.recovery.value||notes.recovery.value||answers.saveFailed.value||notes.saveFailed.value||progressFailed.value){notify('请先处理保存或恢复状态，再重新开始。','info');return}
@@ -538,8 +545,8 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
 </script>
 
 <template>
- <Teleport to="body"><dialog v-if="restartPreview" ref="restartDialog" class="study-restart-dialog" aria-labelledby="study-restart-title" @cancel.prevent="closeRestartDialog">
-  <h3 id="study-restart-title">用最新版重新开始？</h3><p>将重置本课当前阅读进度、作答及待批改状态，从最新材料重新开始。原轮次、历史作答和已保存笔记会保留，其他课程不受影响。</p>
+ <Teleport to="body"><dialog v-if="restartPreview" id="study-restart-confirmation" ref="restartDialog" class="study-restart-dialog" aria-labelledby="study-restart-title" aria-describedby="study-restart-description" @cancel.prevent="closeRestartDialog">
+  <h3 id="study-restart-title">用最新版重新开始？</h3><p id="study-restart-description">将重置本课当前阅读进度、作答及待批改状态，从最新材料重新开始。原轮次、历史作答和已保存笔记会保留，其他课程不受影响。</p>
   <p v-if="restartPending" role="status">请求结果尚未确认，请使用原请求重试。也可以稍后处理，软件不会自动丢弃请求。</p>
   <div><button class="secondary-button" :disabled="restartBusy" @click="closeRestartDialog">{{restartPending?'稍后处理':'取消'}}</button><button class="primary-button" :disabled="restartBusy" @click="confirmRestart">{{restartBusy?'确认中…':restartPending?'重试原请求':'保留历史并重新开始'}}</button></div>
  </dialog></Teleport>
@@ -549,11 +556,10 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
   <div v-else-if="!data" class="error-state"><p>课程暂时无法打开，没有覆盖学习记录。</p><button class="secondary-button" @click="load()">重新打开</button></div>
   <div v-else :class="['study-workspace', {'layout-overflow': layoutOverflow}]">
     <Teleport v-if="shellPanel?.navigationVisible?.value" defer to="#course-sidebar-content"><CourseOutline :plan-title="data.course.plan_line || '我的计划'" :course-title="data.course.title" :position="planPosition.current" :total="planPosition.total" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :headings="documentHeadings" :active-heading="activeHeading" :busy="blocked" :reading-percent="readingPercent" @select="selectLesson" @heading="jumpToHeading" @back="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"/></Teleport>
-    <div class="reader-toolbar"><button type="button" class="course-navigation-action" :title="data.course.plan_line || '我的计划'" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>{{data.course.plan_line || '我的计划'}}</span></button><p class="reader-context" :title="data.course.title">{{data.course.title}}</p><div class="reader-actions"><button type="button" class="reader-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button type="button" class="text-button" :disabled="blocked" @click="syncFeedback">同步反馈 ↻</button><button ref="toolsToggle" type="button" class="tools-toggle" :aria-expanded="sidebarOpen" aria-controls="workspace-tool-panel" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
+    <div class="reader-toolbar"><button type="button" class="course-navigation-action" :title="data.course.plan_line || '我的计划'" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>{{data.course.plan_line || '我的计划'}}</span></button><p class="reader-context" :title="data.course.title">{{data.course.title}}</p><div class="reader-actions"><button v-if="!restartPending&&!['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')" ref="restartToggle" type="button" class="reader-icon-action reader-reset" aria-label="用最新版重新开始" title="用最新版重新开始" aria-haspopup="dialog" aria-controls="study-restart-confirmation" :disabled="blocked" @click="previewRestart"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8a6.5 6.5 0 1 1 .7 6M3 3v5h5"/></svg></button><button type="button" class="reader-icon-action reader-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button type="button" class="text-button" :disabled="blocked" @click="syncFeedback">同步反馈 ↻</button><button ref="toolsToggle" type="button" class="tools-toggle" :aria-expanded="sidebarOpen" aria-controls="workspace-tool-panel" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
     <div v-if="['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')&&!data.study.source_changed" class="study-version-note"><span>本轮已通过。可以只回看，或明确开启一轮新的复习；旧答案保留。</span><button class="text-button" @click="newVersionConfirm=true">开启复习轮次</button><span v-if="newVersionConfirm"><button class="text-button" @click="async()=>{if(await flushCurrent()){newVersionConfirm=false;await load(false,true)}}">确认重新学习与作答</button><button class="text-button" @click="newVersionConfirm=false">取消</button></span></div>
     <div v-if="materialSuperseded||answers.superseded.value" class="study-version-note" role="status"><span>课程内容已更新，本轮已收口保留为历史，学习进度已重置。重新读取课程将从最新材料开始。</span><button class="text-button" @click="reloadAfterReset">重新读取课程</button></div>
     <div v-if="restartPending" class="study-version-note" role="status"><span>重新开始的结果待确认，原请求已保留。请勿重复创建轮次。</span><span v-if="restartCacheUnavailable">本机缓存不可用；原请求仅在本窗口保留。离开前可导出未保存数据。</span><button class="text-button" :disabled="restartBusy" @click="confirmRestart">{{restartBusy?'确认中…':'重试原请求'}}</button></div>
-    <div v-else-if="!['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')" class="study-restart-entry"><button class="text-button" :disabled="blocked" @click="previewRestart">用最新版重新开始</button><span>当前进度与作答重置 · 历史与笔记保留</span></div>
     <div v-if="data.study.source_changed" class="study-version-note"><span>{{data.study.source_available ? '材料已更新，本次学习仍使用开始时的版本。' : '源文件暂时不可读，仍可使用本次学习的固定材料。'}}</span><button v-if="data.study.source_available && ['PASSED','READ_COMPLETED'].includes(data.course.study_status || '')" class="text-button" @click="newVersionConfirm=true">开始新版学习</button><span v-if="newVersionConfirm">旧答案和反馈将保留。<button class="text-button" @click="startNewVersion">确认开始</button><button class="text-button" @click="newVersionConfirm=false">取消</button></span></div>
     <StudyRecovery :answers="answers" :notebook="notes" :progress-failed="progressFailed" @retry="retrySaving" @notes="sidebarOpen=true;tab='notes'"/>
     <div v-if="answers.failed.value" class="error-state"><p>作答状态读取失败，没有覆盖已有答案。</p><button class="secondary-button" @click="answers.load">重新读取作答</button></div>

@@ -79,7 +79,10 @@ class PlanCourseItem(TimestampMixin, Base):
     plan_line: Mapped[PlanLine] = relationship(back_populates="plan_course_items")
     course: Mapped[Course] = relationship(back_populates="plan_course_items")
     schedule_items: Mapped[list[CourseScheduleItem]] = relationship(back_populates="plan_course_item", cascade="all, delete-orphan", order_by="CourseScheduleItem.position")
-    __table_args__ = (UniqueConstraint("plan_line_id", "course_id", name="uq_plan_course_item_course"),)
+    __table_args__ = (
+        UniqueConstraint("plan_line_id", "course_id", name="uq_plan_course_item_course"),
+        UniqueConstraint("plan_line_id", "track", "sequence_number", name="uq_plan_course_item_position"),
+    )
 
 
 class CourseScheduleItem(TimestampMixin, Base):

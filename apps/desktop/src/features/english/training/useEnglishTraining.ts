@@ -171,6 +171,16 @@ export function useEnglishTraining(studyId: string) {
     if (!await save() || !item.value) return
     await write('course.english.reveal', {exercise_id: item.value.exercise_id}, 'english-reveal', mode)
   }
+  async function loadReference() {
+    if (!item.value || disposed || suspended) return false
+    try {
+      reference.value = await engineCall<EnglishReference>('course.english.answer', {study_session_id: studyId, exercise_id: item.value.exercise_id})
+      return true
+    } catch {
+      reference.value = null
+      return false
+    }
+  }
   async function move(next: number) {
     if (!data.value || next < 0 || next >= data.value.items.length || !await save()) return false
     return write('course.english.navigate', {position: next, expected_version: data.value.state_version}, 'english-move')
@@ -229,5 +239,5 @@ export function useEnglishTraining(studyId: string) {
   function resumeInput() {reference.value = null; hintMode.value = null; phase.value = 'input'}
   function suspend() {suspended = true; clearTimeout(timer); cache()}
   onBeforeUnmount(() => {disposed = true; clearTimeout(timer); cache()})
-  return {data, item, tokens, position, navigationNotice, validationNotice, busy: actionBusy, actionRunning: actionInFlight, inputLocked: computed(() => actionInFlight.value && actionIntent.value !== 'reveal'), saving: busy, failed, superseded, reference, hintMode, phase, pending, recovery, dirty, load, edited, save, check: exclusive(check, 'check'), reveal: exclusive(reveal, 'reveal'), move: exclusive(move, 'move'), submit: exclusive(submit, 'submit'), requestReview: exclusive(requestReview, 'review'), retryPending, restore, discardRecovery, exportInput, resumeInput, hideHint, suspend}
+  return {data, item, tokens, position, navigationNotice, validationNotice, busy: actionBusy, actionRunning: actionInFlight, inputLocked: computed(() => actionInFlight.value && actionIntent.value !== 'reveal'), saving: busy, failed, superseded, reference, hintMode, phase, pending, recovery, dirty, load, loadReference, edited, save, check: exclusive(check, 'check'), reveal: exclusive(reveal, 'reveal'), move: exclusive(move, 'move'), submit: exclusive(submit, 'submit'), requestReview: exclusive(requestReview, 'review'), retryPending, restore, discardRecovery, exportInput, resumeInput, hideHint, suspend}
 }

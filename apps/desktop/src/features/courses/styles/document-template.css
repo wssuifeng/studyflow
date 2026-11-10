@@ -32,7 +32,6 @@
 @media(max-width:700px){:root .teaching-content.document-template .teaching-kind{white-space:normal}:root .teaching-content.document-template .teaching-details,:root .teaching-content.document-template .teaching-example{padding:16px}.teaching-disclosure>summary small{display:none}}
 @media(prefers-reduced-motion:reduce){.teaching-disclosure>summary svg{transition:none}}
 
-.study-restart-entry{display:flex;align-items:center;gap:12px;margin:8px 0;font-size:11px;color:var(--theme-text-muted)}
 .study-restart-dialog{position:fixed;inset:0;z-index:300;margin:auto;width:min(480px,calc(100vw - 40px));max-height:80vh;overflow:auto;padding:26px;border:1px solid var(--theme-border-subtle);border-radius:14px;background:var(--theme-surface-raised);color:var(--theme-text-primary);box-shadow:0 20px 60px color-mix(in srgb,var(--theme-shadow-ink) 18%,transparent)}
 .study-restart-dialog h3{font-size:19px;margin:0 0 14px}.study-restart-dialog p{font-size:14px;line-height:1.8;margin:0 0 18px}.study-restart-dialog>div{display:flex;justify-content:flex-end;gap:10px}
 

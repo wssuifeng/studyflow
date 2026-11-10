@@ -26,6 +26,9 @@ const noteContext=computed<ToolContext|null>(()=>data.value?.course.plan_line_id
 const noteWindow=useEnglishNotesWindow(noteContext,notesDetached,notes)
 const stageLabels:Record<string,string>={vocabulary:'必要词汇',chunk:'短语组合',pattern:'句型应用',variation:'句型变式',transfer:'无提示迁移'}
 const drawer=ref<'notes'|null>(null),directoryOpen=ref(false),lessonOpen=ref(false)
+type FeedbackTone='great'|'nice'|'recovered'
+const completionFeedback=ref<{label:string;streak:number;tone:FeedbackTone}|null>(null)
+const answerStartedAt=ref(Date.now()),correctStreak=ref(0)
 const directoryDialog=ref<HTMLDialogElement|null>(null)
 watch(directoryOpen,async open=>{await nextTick();if(open&&directoryDialog.value&&!directoryDialog.value.open)directoryDialog.value.showModal();else directoryDialog.value?.close()})
 const settings=ref(false),loading=ref(true),speechNotice=ref(''),dictionary=ref<DictionaryInfo|null>(null),analysisOpen=ref(false)
@@ -40,6 +43,8 @@ const pendingReviews=computed(()=>data.value?.items.filter(i=>i.status==='WAITIN
 const exit=useSafeStudyExit({busy:()=>busy.value||notes.busy.value,hasProblem:()=>!!(failed.value||training.pending.value||recovery.value||notes.saveFailed.value||notes.pending.value||notes.recovery.value),flush:async()=>await (training.superseded.value?true:training.save())&&await notes.save(),retry:async()=>{await training.retryPending();await notes.retry()},suspend:()=>{training.suspend();notes.suspendAutosave();stopSpeech();if(exit.dialog.value?.path==='close-window')window.dispatchEvent(new CustomEvent('studyflow-discard-close'))}})
 async function check(){
  const checkedId=item.value?.exercise_id
+ const hadMistake=phase.value==='correction'||(item.value?.error_count||0)>0
+ const startedAt=answerStartedAt.value
  const result=await training.check()
  if(item.value?.exercise_id!==checkedId)return
  if(!result){
@@ -48,16 +53,28 @@ async function check(){
   return
  }
  if(speechAuto.value)void play()
- if(result.matched){analysisOpen.value=false;training.hideHint();interactionFeedback('complete');await nextTick();if(drawer.value!=='notes')actions.value?.querySelector<HTMLButtonElement>('.primary-button')?.focus()}
- else{await nextTick();editor.value?.focusWord(result.differences[0]?.index||0);if((item.value?.error_count||0)>=2)await openAnalysis()}
+ if(result.matched){
+  analysisOpen.value=false;training.hideHint();correctStreak.value=hadMistake?1:correctStreak.value+1
+  const elapsed=(Date.now()-startedAt)/1000
+  completionFeedback.value={label:hadMistake?'Good':elapsed<=5?'Great':'Nice',streak:correctStreak.value,tone:hadMistake?'recovered':elapsed<=5?'great':'nice'}
+  interactionFeedback('complete');await nextTick();if(drawer.value!=='notes')actions.value?.querySelector<HTMLButtonElement>('.primary-button')?.focus()
+ }else{correctStreak.value=0;completionFeedback.value=null;await nextTick();editor.value?.focusWord(result.differences[0]?.index||0);if((item.value?.error_count||0)>=2)await openAnalysis()}
 }
 function focusFirstEmpty(){
  const firstEmpty=tokens.value.findIndex(t=>!t.trim())
  editor.value?.focusWord(firstEmpty<0?0:firstEmpty)
 }
 async function move(index:number){
+ const wasAnswer=phase.value==='answer',origin=position.value
+ const continuingStreak=wasAnswer&&index===origin+1
  stopSpeech();audioGeneration++;dictionary.value=null;speechNotice.value='';analysisOpen.value=false;directoryOpen.value=false;lessonOpen.value=false
- if(await training.move(index)){interactionFeedback('move');await nextTick();editor.value?.focusWord(0);if(speechAuto.value)void play()}
+ if(await training.move(index)){
+  completionFeedback.value=null
+  if(!continuingStreak)correctStreak.value=0
+  answerStartedAt.value=Date.now()
+  if(phase.value==='answer')await training.loadReference()
+  interactionFeedback('move');await nextTick();editor.value?.focusWord(0);if(speechAuto.value)void play()
+ }
 }
 async function finish(){await training.submit();if(training.navigationNotice.value){analysisOpen.value=false;notify(training.navigationNotice.value,'info');await nextTick();editor.value?.focusWord(0);if(speechAuto.value)void play()}}
 async function skip(){if(await training.save(true))await move(position.value+1)}
@@ -70,9 +87,13 @@ async function play(wordIndex?:number){
 async function openAnalysis(){
  if(phase.value==='answer'||locked.value)return
  await training.reveal('answer')
- if(reference.value)analysisOpen.value=true
+ if(reference.value){drawer.value=null;analysisOpen.value=true}
 }
 async function toggleAnalysis(){if(analysisOpen.value){analysisOpen.value=false;training.hideHint()}else await openAnalysis()}
+function toggleNotes(){
+ drawer.value=drawer.value==='notes'?null:'notes'
+ if(drawer.value==='notes'){analysisOpen.value=false;training.hideHint()}
+}
 function keydown(event:KeyboardEvent) {
  if(event.defaultPrevented||settings.value||directoryOpen.value||lessonOpen.value||((event.target as HTMLElement|null)?.closest('.english-drawer')))return
  const target=event.target as HTMLElement|null
@@ -93,7 +114,7 @@ async function importKeySound(event:Event) {
 }
 watch([keyboardEnabled,keyboardVolume],saveKeyboardPreferences)
 watch([speechAccent,speechVolume,speechMuted,speechAuto],()=>{stopSpeech();saveSpeechPreferences()})
-onMounted(async()=>{try{await training.load()}catch(e){failed.value=(e as Error).message}finally{loading.value=false};await nextTick();editor.value?.focusWord(0);if(item.value&&speechAuto.value)void play()})
+onMounted(async()=>{try{await training.load();if(phase.value==='answer')await training.loadReference()}catch(e){failed.value=(e as Error).message}finally{loading.value=false};await nextTick();editor.value?.focusWord(0);if(item.value&&speechAuto.value)void play()})
 onBeforeUnmount(()=>{audioGeneration++;stopSpeech()})
 </script>
 <template>
@@ -101,19 +122,39 @@ onBeforeUnmount(()=>{audioGeneration++;stopSpeech()})
  <LeaveStudyDialog v-if="exit.dialog.value" :closing="exit.dialog.value.path==='close-window'" :reason="exit.dialog.value.reason" :retrying="exit.dialog.value.retrying" @retry="exit.retry" @discard="exit.finish(true,true)" @cancel="exit.finish(false)" @export="training.exportInput"/>
  <div v-if="loading" class="loading-state">正在恢复英语训练…</div>
  <section v-else-if="data&&item" class="english-learning" aria-label="英语专注训练" @keydown="keydown">
-  <header class="english-training-header"><button @click="navigate('/course/'+data.course.id)">← 返回课程</button><div class="english-header-title"><strong>{{data.course.title}}</strong><span>{{position+1}} / {{data.items.length}}<template v-if="item.progression"> · {{stageLabels[item.progression.stage]}}</template> · 已检查通过 {{completed}}<template v-if="pendingReviews"> · 待审核 {{pendingReviews}}</template></span></div><div class="english-header-tools"><button :aria-expanded="settings" @click="settings=!settings">训练设置</button><button :aria-expanded="drawer==='notes'" @click="drawer=drawer==='notes'?null:'notes'">笔记</button></div></header>
+   <header class="english-training-header">
+    <button class="english-icon-button" title="返回课程" aria-label="返回课程" @click="navigate('/course/'+data.course.id)"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M12.5 4.5 7 10l5.5 5.5M7.5 10H17"/></svg></button>
+    <div class="english-header-title"><strong>{{data.course.sequence ? `第 ${data.course.sequence} 课` : '本课训练'}} <span class="english-header-progress">{{position+1}} / {{data.items.length}}</span></strong><span v-if="item.progression">{{stageLabels[item.progression.stage]}}</span></div>
+    <div class="english-header-tools">
+     <button class="english-icon-button" title="训练设置" aria-label="训练设置" :aria-expanded="settings" @click="settings=!settings"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12.22 2h-.44a2 2 0 0 0-1.99 1.74l-.09.66a2 2 0 0 1-1 1.4l-.56.33a2 2 0 0 1-1.7.09l-.6-.25a2 2 0 0 0-2.45.89l-.22.38a2 2 0 0 0 .46 2.56l.51.4a2 2 0 0 1 .72 1.64v.65a2 2 0 0 1-.72 1.64l-.51.4a2 2 0 0 0-.46 2.56l.22.38a2 2 0 0 0 2.45.89l.6-.25a2 2 0 0 1 1.7.09l.56.33a2 2 0 0 1 1 1.4l.09.66A2 2 0 0 0 11.78 22h.44a2 2 0 0 0 1.99-1.74l.09-.66a2 2 0 0 1 1-1.4l.56-.33a2 2 0 0 1 1.7-.09l.6.25a2 2 0 0 0 2.45-.89l.22-.38a2 2 0 0 0-.46-2.56l-.51-.4a2 2 0 0 1-.72-1.64v-.65a2 2 0 0 1 .72-1.64l.51-.4a2 2 0 0 0 .46-2.56l-.22-.38a2 2 0 0 0-2.45-.89l-.6.25a2 2 0 0 1-1.7-.09l-.56-.33a2 2 0 0 1-1-1.4l-.09-.66A2 2 0 0 0 12.22 2Z"/><circle cx="12" cy="12" r="3"/></svg></button>
+     <button class="english-icon-button" title="打开计划笔记" aria-label="打开计划笔记" :aria-expanded="drawer==='notes'" @click="toggleNotes"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M5 3.5h8.5A1.5 1.5 0 0 1 15 5v11.5H6.5A1.5 1.5 0 0 1 5 15z"/><path d="M5 4.5h7M8 7.5h4M8 10.5h4M8 13.5h3"/></svg></button>
+    </div>
+   </header>
   <div v-if="settings" class="english-speech-settings"><label>口音请求 <select v-model="speechAccent"><option value="en-US">美式</option><option value="en-GB">英式</option></select></label><label>语音音量 {{speechVolume}}% <input v-model.number="speechVolume" type="range" min="0" max="100"/></label><label><input v-model="speechMuted" type="checkbox"/>静音</label><label><input v-model="speechAuto" type="checkbox"/>检查通过后朗读</label><label><input v-model="keyboardEnabled" type="checkbox"/>输入键音</label><label>键音音量 {{keyboardVolume}}% <input v-model.number="keyboardVolume" type="range" min="0" max="100"/></label><div class="english-keyboard-asset"><span>{{keyboardAudioName}}</span><button @click="keyboardFile?.click()">导入键音</button><button @click="resetKeyboardAudio">恢复内置</button><input ref="keyboardFile" class="sr-only" type="file" accept=".mp3,.wav,.ogg" @change="importKeySound"/></div><p v-if="audioImportNotice" role="status">{{audioImportNotice}}</p><small>Ctrl+'：整句朗读 · Ctrl+Shift+'：单词朗读 · Ctrl+;：解析 · Ctrl+.：暂跳 · Ctrl+,：上一项。网络发音失败不阻塞训练。</small></div>
   <div v-if="training.superseded.value" class="english-recovery" role="status">课程内容已更新，本轮已收口保留为历史，学习进度已重置。{{training.dirty.value?'本机未提交输入已保留，可先导出。':''}}<button @click="navigate('/course/'+data.course.id)">重新打开课程</button><button v-if="training.dirty.value" @click="training.exportInput">导出输入</button></div>
   <div v-if="recovery" class="english-recovery" role="status">发现此轮的本机未保存输入。<button @click="training.restore">恢复输入</button><button @click="training.discardRecovery">保留工作区版本</button><button @click="training.exportInput">导出</button></div>
   <div class="english-work-surface" :class="{'has-drawer':drawer}">
    <main class="english-stage">
-    <template v-if="phase!=='result'">
-     <SentenceBreakdown v-if="analysisOpen&&reference&&phase!=='answer'" :reference="reference" :show-roles="!item.progression||!['vocabulary','chunk'].includes(item.progression.stage)" @word="play"/>
-     <div class="english-question"><h1>{{item.prompt}}</h1></div>
-     <p v-if="item.status==='WAITING_REVIEW'" class="english-assistance" role="status">此项已有待审核记录，答案保持不变。无需重复作答，可继续训练或完成本课；待审核不计为检查通过。</p>
-     <TokenEditor v-if="phase!=='answer'" ref="editor" v-model="tokens" :minimum="item.min_token_count||item.token_count" :maximum="item.max_token_count||item.token_count" :disabled="training.inputLocked.value||locked" :differences="phase==='correction'?item.differences:[]" @edited="training.edited" @check="check"/>
-     <div v-else class="english-answer"><p class="english-target">{{item.answer_text}}</p></div>
-     <p v-if="training.validationNotice.value" class="english-assistance" role="status">{{training.validationNotice.value}}</p>
+     <template v-if="phase!=='result'">
+     <div v-if="completionFeedback" :class="['english-training-feedback','tone-'+completionFeedback.tone]" role="status" aria-live="polite"><strong>{{completionFeedback.label}}</strong><span>× {{completionFeedback.streak}}</span></div>
+     <div v-if="phase==='answer'" class="english-completion-view" aria-label="本题完成">
+      <section v-if="reference" class="english-reference-panel english-completion-reference" aria-label="句子解析">
+       <div class="english-reference-scroll"><SentenceBreakdown :reference="reference" :show-roles="!item.progression||!['vocabulary','chunk'].includes(item.progression.stage)" @word="play"/></div>
+      </section>
+      <p v-else class="english-answer-fallback">{{item.answer_text}}</p>
+      <p class="english-completion-prompt">{{item.prompt}}</p>
+      <p class="sr-only" role="status" aria-live="polite">答案正确</p>
+     </div>
+     <template v-else>
+      <section v-if="analysisOpen&&reference" class="english-reference-panel" aria-label="句子解析">
+       <button class="english-reference-dismiss" type="button" @click="toggleAnalysis" aria-label="关闭句子解析" title="关闭句子解析">×</button>
+       <div class="english-reference-scroll"><SentenceBreakdown :reference="reference" :show-roles="!item.progression||!['vocabulary','chunk'].includes(item.progression.stage)" @word="play"/></div>
+      </section>
+      <div class="english-question"><h1>{{item.prompt}}</h1></div>
+      <p v-if="item.status==='WAITING_REVIEW'" class="english-assistance" role="status">此项已有待审核记录，答案保持不变。无需重复作答，可继续训练或完成本课；待审核不计为检查通过。</p>
+      <TokenEditor ref="editor" v-model="tokens" :minimum="item.min_token_count||item.token_count" :maximum="item.max_token_count||item.token_count" :disabled="training.inputLocked.value||locked" :differences="phase==='correction'?item.differences:[]" @edited="training.edited" @check="check"/>
+      <p v-if="training.validationNotice.value" class="english-assistance" role="status">{{training.validationNotice.value}}</p>
+     </template>
      <div ref="actions" class="english-main-actions">
       <button v-if="phase!=='answer'&&!locked" class="primary-button" :disabled="training.actionRunning.value" @click="check">检查答案 <kbd>Enter</kbd></button>
       <button v-else-if="position<data.items.length-1" class="primary-button" :disabled="training.actionRunning.value" @click="move(position+1)">下一项 →</button>
