@@ -148,13 +148,16 @@ export function applyDisplay(theme: Theme): void {
 }
 
 const HEADING_STACKS: Record<ThemeDisplay['heading_family'], string> = {
-  editorial: "'Noto Serif CJK SC','Source Han Serif SC','SimSun',serif",
+  // 'Noto Serif SC' 是本机已安装的思源宋体变量字体族名；放在 SimSun 之前，
+  // 避免 editorial 标题在缺少 CJK OTF 的机器上落到宋体（visual-v5 失败根因①）。
+  editorial: "'Noto Serif CJK SC','Source Han Serif SC','Noto Serif SC','SimSun',serif",
   modern: "'Segoe UI Variable Display','Segoe UI','Microsoft YaHei UI',sans-serif",
   technical: "'Segoe UI Variable Text','Segoe UI','Microsoft YaHei UI',sans-serif",
 }
 const BODY_STACKS: Record<ThemeDisplay['body_family'], string> = {
   ui: "'Segoe UI Variable Text','Segoe UI','Microsoft YaHei UI',sans-serif",
-  humanist: "'Noto Sans CJK SC','Source Han Sans SC','Microsoft YaHei UI',sans-serif",
+  // 同理补上本机安装的 'Noto Sans SC'，humanist 正文不再直接落 YaHei。
+  humanist: "'Noto Sans CJK SC','Source Han Sans SC','Noto Sans SC','Microsoft YaHei UI',sans-serif",
   system: "system-ui,'Segoe UI','Microsoft YaHei UI',sans-serif",
 }
 function headingStack(family: ThemeDisplay['heading_family']): string {

@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270" viewBox="0 0 480 270">
+  <!-- 素纸纤维：中性冷灰低透明度噪点，只做装饰底，runtime 以 .22 opacity 叠加 -->
+  <defs>
+    <filter id="paper-fiber" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.82" numOctaves="3" stitchTiles="stitch" seed="7"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.30  0 0 0 0 0.32  0 0 0 0 0.36  0 0 0 0.07 0"/>
+    </filter>
+    <filter id="paper-streak" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.012 0.28" numOctaves="2" stitchTiles="stitch" seed="11"/>
+      <feColorMatrix type="matrix" values="0 0 0 0 0.42  0 0 0 0 0.44  0 0 0 0 0.48  0 0 0 0.04 0"/>
+    </filter>
+  </defs>
+  <rect width="480" height="270" filter="url(#paper-fiber)"/>
+  <rect width="480" height="270" filter="url(#paper-streak)"/>
+</svg>

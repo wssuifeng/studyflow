@@ -30,7 +30,7 @@
 .english-question p,.english-stage>p,.english-result>p{font-size:13px;color:var(--muted);line-height:1.8}
 .english-token-row{display:flex;justify-content:center;align-items:flex-start;gap:clamp(9px,1.5vw,22px);flex-wrap:wrap;max-width:980px;margin:34px 0 24px}
 .english-token{position:relative;padding-bottom:25px;max-width:100%}
-.english-token input{font-size:clamp(24px,3vw,38px);font-weight:500;letter-spacing:.01em;text-align:center;color:inherit;background:transparent;border:0;border-bottom:2px solid var(--theme-border-strong);border-radius:0;max-width:100%;padding:8px 3px;outline-offset:6px;transition:border-color .15s}
+.english-token input{font-size:clamp(24px,3vw,38px);font-weight:500;letter-spacing:.01em;text-align:center;color:inherit;background:transparent;border:0;border-bottom:2px solid var(--theme-border-strong);border-radius:0;max-width:100%;padding:8px 3px;outline-offset:6px;transition:border-color .15s,width .12s ease}
 .english-token input:focus{outline:0;border-bottom-color:var(--accent);box-shadow:0 3px 0 -1px var(--accent-soft)}
 .english-token.incorrect input{border-bottom-color:var(--theme-status-danger)}
 .english-token small{font-size:11px;color:var(--theme-status-danger);position:absolute;left:50%;transform:translateX(-50%);bottom:3px;white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis}

@@ -1,0 +1,83 @@
+{
+  "schema_version": "studyflow.theme/1",
+  "id": "cinnabar-paper",
+  "name": "国风朱红",
+  "description": "纯白底、中国红批注、玄墨正文；红白为主、墨黑为辅，明亮简洁，取国风朱红之意，衬线标题与回纹纸饰。",
+  "appearance": "light",
+  "tokens": {
+    "surface.canvas": "#ffffff",
+    "surface.panel": "#ffffff",
+    "surface.raised": "#faf7f7",
+    "surface.input": "#ffffff",
+    "surface.hover": "#f8f2f3",
+    "surface.active": "#f5eaec",
+    "border.subtle": "#e9e4e5",
+    "border.strong": "#d6ced0",
+    "text.primary": "#17181a",
+    "text.secondary": "#3b3d42",
+    "text.muted": "#595c63",
+    "text.inverse": "#ffffff",
+    "accent.primary": "#c8102e",
+    "accent.strong": "#a60d26",
+    "accent.soft": "#fdeef0",
+    "status.success": "#1f7a4d",
+    "status.success-soft": "#ecf7f0",
+    "status.info": "#2f6bb0",
+    "status.info-soft": "#edf3fa",
+    "status.warning": "#8f620e",
+    "status.warning-soft": "#faf3e3",
+    "status.danger": "#a32638",
+    "status.danger-soft": "#fbeef0",
+    "focus.ring": "#e03444",
+    "code.background": "#f7f7f8",
+    "code.text": "#26282e",
+    "shadow.ink": "#1a1a1a",
+    "overlay.ink": "#111111"
+  },
+  "presentation": {
+    "density": "comfortable",
+    "heading": "editorial",
+    "teaching": "paper"
+  },
+  "motion_profile": "gentle",
+  "sound_profile": "glass",
+  "display": {
+    "layout": "rail",
+    "navigation_width": 252,
+    "reading_width": 900,
+    "tools_width": 400,
+    "reading_shell": "sheet",
+    "teaching_style": "paper",
+    "note_style": "margin",
+    "type_scale": 1.05,
+    "heading_family": "editorial",
+    "body_family": "humanist",
+    "surface_treatment": "paper",
+    "radius": 6,
+    "elevation": "subtle",
+    "outline": "hairline",
+    "assets": [
+      {
+        "key": "paper-grain",
+        "role": "background",
+        "aspect_ratio": "16:9",
+        "safe_area": 0.1,
+        "fallback": "#f2ecec"
+      },
+      {
+        "key": "desk-meander",
+        "role": "texture",
+        "aspect_ratio": "4:1",
+        "safe_area": 0.2,
+        "fallback": "#f0e6e7"
+      },
+      {
+        "key": "study-seal",
+        "role": "illustration",
+        "aspect_ratio": "1:1",
+        "safe_area": 0.12,
+        "fallback": "#f6e3e6"
+      }
+    ]
+  }
+}

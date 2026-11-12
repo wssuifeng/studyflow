@@ -49,7 +49,7 @@ input::placeholder,textarea::placeholder {color:var(--theme-text-muted);opacity:
 :focus-visible {outline:3px solid var(--theme-focus-ring);outline-offset:3px}
 ::selection {background:var(--theme-surface-active);color:var(--theme-text-primary)}
 /* Whitelisted presentation presets do not change component keys or reading preferences. */
-:root[data-theme-heading='editorial'] {--theme-heading-font:'Noto Serif CJK SC','Source Han Serif SC','SimSun',serif}
+:root[data-theme-heading='editorial'] {--theme-heading-font:'Noto Serif CJK SC','Source Han Serif SC','Noto Serif SC','SimSun',serif}
 :root[data-theme-heading='technical'] {--theme-heading-font:'Segoe UI Variable Display','Segoe UI','Microsoft YaHei UI',sans-serif}
 .study-unit-heading h3,.teaching-block-heading h4 {font-family:var(--theme-heading-font)}
 :root[data-theme-teaching='clean'] .teaching-example {border:0;border-left:2px solid var(--theme-accent-primary);border-radius:0}

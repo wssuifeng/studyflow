@@ -10,7 +10,7 @@ function fixture(origin='window-a',initial=null,failWrite=false,failRead=false){
 /** 带展示偏好的控制器夹具：验证排版/图像强度与主题选择互不干扰。 */
 function displayFixture(origin='window-a',initialDisplay=null){let saved=null,savedDisplay=initialDisplay,time=2000,applied=[],sent=[],sentDisplay=[];const api=createThemeController(builtin,{origin,now:()=>++time,read:()=>saved,write:text=>{saved=text},readDisplay:()=>savedDisplay,writeDisplay:text=>{savedDisplay=text},apply:t=>applied.push(t.id),publish:x=>sent.push(clone(x)),publishDisplay:x=>sentDisplay.push(clone(x))});return {api,applied,sent,sentDisplay,saved:()=>saved,savedDisplay:()=>savedDisplay}}
 
-test('内置主题仅包含用户采纳的序光与白紫，默认白紫',()=>{assert.deepEqual(builtin.map(t=>t.id).sort(),['sequence-light','white-violet']);assert.equal(sequence.name,'序光');assert.equal(white.name,'白紫轻学');assert.equal(contract.DEFAULT_THEME.id,white.id);for(const t of builtin){assert.equal(t.appearance,'light');assert.equal(t.schema_version,'studyflow.theme/1');assert.equal(Object.keys(t.tokens).length,Object.keys(contract.TOKEN_PROPERTIES).length)}})
+test('内置主题包含用户采纳的序光、白紫与国风朱红，默认白紫',()=>{assert.deepEqual(builtin.map(t=>t.id).sort(),['cinnabar-paper','sequence-light','white-violet']);assert.equal(sequence.name,'序光');assert.equal(white.name,'白紫轻学');assert.equal(builtin.find(x=>x.id==='cinnabar-paper').name,'国风朱红');assert.equal(contract.DEFAULT_THEME.id,white.id);for(const t of builtin){assert.equal(t.appearance,'light');assert.equal(t.schema_version,'studyflow.theme/1');assert.equal(Object.keys(t.tokens).length,Object.keys(contract.TOKEN_PROPERTIES).length)}})
 test('已移除主题偏好只回退选择，保留自定义主题并持久化迁移',()=>{
  for(const id of ['paper-warm','graphite-dark','sea-glass']){
   const custom={...clone(white),id:'user-theme',name:'自定义'}

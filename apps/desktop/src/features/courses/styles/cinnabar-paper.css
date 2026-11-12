@@ -1,0 +1,334 @@
+/* 国风朱红（cinnabar-paper）：国风内置主题，安装后即在设置页可选。
+   宣纸白底为面、朱砂红为批、墨色为骨；衬线标题、回纹锦绫与朱文方印是它的识别符号。
+   全部规则以主题身份作用域限定；几何与滚动所有权仍归共享壳层契约 v2，
+   本文件只改表面、色彩、排印与登记过的装饰槽，不新增布局越权。 */
+:root[data-theme-id="cinnabar-paper"] {
+  --cinnabar-reading: var(--reading-width, 900px);
+  --cinnabar-paper-shadow: 0 2px 12px color-mix(in srgb, var(--theme-shadow-ink) 6%, transparent);
+  --cinnabar-rule: color-mix(in srgb, var(--theme-border-subtle) 82%, transparent);
+  --sf-hover: var(--theme-surface-hover);
+  --sf-active: var(--theme-surface-active);
+  --paper: var(--theme-surface-panel);
+}
+:root[data-theme-id="cinnabar-paper"] body { background: var(--theme-surface-canvas) }
+
+/* ---------- 题签与印章：桌面标题栏 ---------- */
+:root[data-theme-id="cinnabar-paper"] .window-titlebar { background: var(--theme-surface-panel); border-bottom: 1px solid var(--theme-border-subtle); color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .window-brand { background: transparent; font-size: 13px; color: var(--theme-text-primary) }
+:root[data-theme-id="cinnabar-paper"] .window-context { font-size: 11px; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .window-mark,
+:root[data-theme-id="cinnabar-paper"] .brand-mark {
+  background: var(--theme-accent-primary); color: var(--theme-text-inverse);
+  font-family: var(--theme-heading-font); font-weight: 700; font-size: 14px;
+  width: 26px; height: 26px; border-radius: 5px;
+  box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--theme-text-inverse) 62%, transparent), 0 2px 7px color-mix(in srgb, var(--theme-accent-primary) 26%, transparent);
+}
+
+/* ---------- 侧栏：宣纸屏風 + 回纹锦绫 ---------- */
+:root[data-theme-id="cinnabar-paper"] .app-shell.learning-shell > .sidebar,
+:root[data-theme-id="cinnabar-paper"] .app-shell.workspace-shell > .sidebar {
+  padding: 16px 0 0; border-right: 1px solid var(--theme-border-subtle); isolation: isolate;
+  background-color: var(--theme-surface-panel);
+  background-image: linear-gradient(180deg, color-mix(in srgb, var(--theme-surface-input) 55%, var(--theme-surface-panel)), var(--theme-surface-panel) 46%, color-mix(in srgb, var(--theme-surface-raised) 42%, var(--theme-surface-panel)));
+}
+/* 装饰槽：侧栏底边回纹带，pointer-events:none，缺图时纯色回退不可见也不报错。 */
+:root[data-theme-id="cinnabar-paper"] .sidebar::after {
+  content: ''; position: absolute; z-index: -1; left: 0; right: 0; bottom: 44px; height: 74px;
+  background-image: var(--sidebar-landscape); background-position: center bottom; background-size: 100% auto; background-repeat: no-repeat;
+  pointer-events: none; opacity: .5;
+}
+:root[data-theme-id="cinnabar-paper"] .sidebar.subtle-artwork::after { opacity: .22 }
+:root[data-theme-id="cinnabar-paper"] .sidebar .brand { padding: 0 18px 14px; flex: none }
+:root[data-theme-id="cinnabar-paper"] .sidebar .brand strong { font-family: var(--theme-heading-font); font-size: 16px; letter-spacing: .04em; color: var(--theme-text-primary) }
+:root[data-theme-id="cinnabar-paper"] .sidebar .brand span { font-size: 10px; letter-spacing: .06em; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-caption { margin: 0; padding: 4px 20px 9px; font-size: 9px; letter-spacing: .22em; color: var(--theme-text-muted); flex: none }
+:root[data-theme-id="cinnabar-paper"] .sidebar nav[aria-label='主导航'] { display: grid; gap: 3px; padding: 0 12px 14px; flex: none; border-bottom: 1px solid var(--theme-border-subtle) }
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-item { padding: 9px 12px; min-height: 36px; border-radius: 6px; gap: 9px; font-size: 12.5px; letter-spacing: .03em; line-height: 1.5; transition: background .16s, box-shadow .16s, color .16s }
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-icon { display: flex; align-items: center; justify-content: center; width: 16px; flex: none }
+/* 线描 SVG 图标variant；字形variant隐藏（两个均已登记的装饰槽）。 */
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-icon-svg { display: inline-flex; height: 16px; width: 16px }
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-icon-glyph { display: none }
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-item.active { box-shadow: inset 2px 0 var(--theme-accent-primary); background: var(--theme-surface-active); color: var(--theme-accent-primary); font-weight: 650 }
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-item:hover:not(.active) { background: var(--theme-surface-hover) }
+:root[data-theme-id="cinnabar-paper"] .sidebar .nav-badge { background: var(--theme-accent-soft); color: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .sidebar .sidebar-bottom { padding: 8px 18px 14px; margin: 0; flex: none }
+:root[data-theme-id="cinnabar-paper"] .sidebar .connection { font-size: 10px; margin: 0; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .sidebar .connection.connected i { background: var(--theme-status-success); box-shadow: none }
+:root[data-theme-id="cinnabar-paper"] .sidebar .sidebar-bottom .small { font-size: 9px; letter-spacing: .02em }
+/* 签名条装饰槽：主题自有的落款文案。 */
+:root[data-theme-id="cinnabar-paper"] .sidebar-signature { display: block; padding: 14px 20px 8px; margin-top: auto; font-size: 10px; letter-spacing: .14em; color: var(--theme-text-secondary); flex: none }
+:root[data-theme-id="cinnabar-paper"] .sidebar-signature::after { content: '朱红 · 开卷有益' }
+
+/* ---------- 课程大纲：同一 CourseOutline，纸面签条 ---------- */
+:root[data-theme-id="cinnabar-paper"] .course-sidebar-slot { display: flex; flex-direction: column; min-height: 0; flex: 0 1 auto; max-height: calc(100% - 210px) }
+:root[data-theme-id="cinnabar-paper"] .sequence-course-outline { display: flex; flex-direction: column; min-height: 0; padding-bottom: 12px }
+:root[data-theme-id="cinnabar-paper"] .sequence-plan-summary { padding: 16px 18px 12px; flex: none }
+:root[data-theme-id="cinnabar-paper"] .sequence-kicker { font-size: 9px; letter-spacing: .18em; color: var(--theme-text-muted); margin: 0 0 7px }
+:root[data-theme-id="cinnabar-paper"] .sequence-plan-row { display: flex; align-items: center; gap: 8px; justify-content: space-between }
+:root[data-theme-id="cinnabar-paper"] .sequence-plan-row > strong { font-family: var(--theme-heading-font); font-size: 14px; line-height: 1.55; min-width: 0; overflow: clip; text-overflow: ellipsis; white-space: nowrap }
+:root[data-theme-id="cinnabar-paper"] .sequence-mini-progress { width: 72px; flex: none }
+:root[data-theme-id="cinnabar-paper"] .sequence-mini-progress > span { display: flex; align-items: center; justify-content: space-between; font-size: 8px; color: var(--theme-text-muted); gap: 5px }
+:root[data-theme-id="cinnabar-paper"] .sequence-mini-progress b { font-size: 10px; color: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .sequence-mini-progress [role=progressbar] { height: 3px; background: var(--theme-border-subtle); border-radius: 10px; margin-top: 4px }
+:root[data-theme-id="cinnabar-paper"] .sequence-mini-progress i { display: block; height: 100%; background: var(--theme-accent-primary); border-radius: inherit }
+:root[data-theme-id="cinnabar-paper"] .sequence-course-meta { font-size: 10px; color: var(--theme-text-muted); line-height: 1.5; margin: 5px 0 0; overflow: clip; text-overflow: ellipsis; white-space: nowrap }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-switch { display: flex; margin: 0 14px 12px; padding: 3px; border-radius: 7px; background: var(--theme-surface-active); flex: none }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-switch button { flex: 1; padding: 7px 0; font-size: 11px; letter-spacing: .05em; background: transparent; border-radius: 5px; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-switch button[aria-selected=true] { background: var(--theme-surface-input); color: var(--theme-accent-primary); font-weight: 650; box-shadow: 0 1px 4px color-mix(in srgb, var(--theme-shadow-ink) 10%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-caption { margin: 7px 20px 8px; font-size: 10px; letter-spacing: .08em; color: var(--theme-text-muted); flex: none }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-list { padding: 0 12px; overflow-y: auto; min-height: 0; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--theme-border-subtle) transparent }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-item { display: flex; align-items: center; gap: 9px; width: 100%; min-height: 36px; padding: 8px 10px; margin: 2px 0; border-radius: 6px; text-align: left; font-size: 11px; line-height: 1.6; color: var(--theme-text-secondary); background: transparent; transition: background .15s, color .15s }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-copy { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-copy strong { overflow: clip; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; line-height: 1.45; font-weight: 550 }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-copy small { color: var(--state-ink, var(--theme-text-muted)); font-size: 9px; line-height: 1.35 }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-index { width: 18px; text-align: right; font-size: 9px; color: var(--theme-text-muted); flex: none }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-item .knowledge-status-icon { width: 13px; height: 13px; color: var(--state-ink, var(--theme-text-muted)); flex: none }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-item.current { color: var(--theme-accent-primary); background: var(--theme-surface-active); box-shadow: inset 2px 0 var(--theme-accent-primary); font-weight: 600 }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-item.current .sequence-outline-copy strong { color: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-item:hover:not(:disabled) { background: var(--theme-surface-hover) }
+:root[data-theme-id="cinnabar-paper"] .section-link > i { width: 4px; height: 4px; border-radius: 50%; background: var(--theme-border-strong); flex: none }
+:root[data-theme-id="cinnabar-paper"] .section-link.current > i { background: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .sequence-outline-empty { font-size: 11px; padding: 8px; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .sequence-return { text-align: left; margin: 10px 20px 0; padding: 8px 0; display: flex; gap: 7px; color: var(--theme-text-muted); font-size: 10px; letter-spacing: .05em; flex: none }
+
+/* ---------- 阅读面：长卷纸面与朱红题首 ---------- */
+:root[data-theme-id="cinnabar-paper"] .app-shell.learning-shell .main-content,
+:root[data-theme-id="cinnabar-paper"] .app-shell.focus-shell .main-content { max-width: none; margin: 0; scrollbar-gutter: stable }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-toolbar { min-height: 48px; gap: 16px; padding: 8px clamp(20px, 3vw, 44px); border-bottom: 1px solid var(--cinnabar-rule); color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-toolbar .course-navigation-action { padding: 7px 0; color: var(--theme-text-secondary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-context { font-size: 11px; letter-spacing: .03em }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-actions { gap: 7px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-actions > button { display: flex; align-items: center; justify-content: center; min-width: 30px; height: 30px; padding: 6px; border-radius: 6px; color: var(--theme-text-muted); background: transparent }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-actions > button:hover { background: var(--theme-surface-active); color: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-actions .tools-toggle { padding: 6px 10px; gap: 7px; font-size: 11px; letter-spacing: .04em }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .reader-sound[aria-pressed=true] { color: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-material { padding: 0; margin: 0; border: 0; border-radius: 0; background: transparent; box-shadow: none }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-material-body { padding: 36px clamp(24px, 4vw, 72px) 30px; scrollbar-gutter: stable both-edges; scroll-padding-top: 28px; overscroll-behavior: contain }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-material-body > * { width: 100%; max-width: var(--cinnabar-reading); margin-left: auto; margin-right: auto }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-unit-heading { position: relative; display: block; margin: 0 auto 30px; padding: 0 0 24px; border-bottom: 1px solid var(--theme-border-subtle) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-unit-heading .eyebrow { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: .2em; color: var(--theme-accent-primary); font-weight: 650; margin: 0 0 12px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-unit-heading .eyebrow::before { content: ''; width: 7px; height: 7px; border-radius: 2px; background: var(--theme-accent-primary); box-shadow: 0 1px 3px color-mix(in srgb, var(--theme-accent-primary) 35%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-unit-heading h3 { font-size: clamp(24px, 1.7vw, 31px); line-height: 1.5; font-weight: 700; letter-spacing: .02em; max-width: 100%; color: var(--theme-text-primary); text-wrap: pretty }
+/* 装饰槽：题首朱文方印，pointer-events:none + user-select:none。 */
+:root[data-theme-id="cinnabar-paper"] .theme-reading-artwork { position: absolute; right: 0; top: -10px; width: 88px; margin: 0; pointer-events: none; user-select: none; opacity: .9 }
+:root[data-theme-id="cinnabar-paper"] .theme-reading-artwork img { display: block; width: 100%; height: 100%; object-fit: contain }
+:root[data-theme-id="cinnabar-paper"] .theme-reading-artwork.is-subtle { opacity: .45 }
+:root[data-theme-id="cinnabar-paper"] .study-unit-heading:has(.theme-reading-artwork) { position: relative; padding-right: 108px }
+:root[data-theme-id="cinnabar-paper"] .sequence-lesson-summary { font-size: 12.5px; line-height: 1.9; color: var(--theme-text-muted); margin: 10px 0 0 }
+:root[data-theme-id="cinnabar-paper"] .sequence-reading-status { display: inline-flex; align-items: center; gap: 6px; margin-top: 14px; font-size: 10px; letter-spacing: .06em; color: var(--theme-status-success) }
+:root[data-theme-id="cinnabar-paper"] .sequence-reading-status::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: currentColor }
+
+/* ---------- 教学组件：纸面块 + 朱红眉栏 ---------- */
+:root[data-theme-id="cinnabar-paper"] .teaching-content { font-size: var(--reading-font, 15px) }
+:root[data-theme-id="cinnabar-paper"] .teaching-group { display: block }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-block { padding: 0; margin: 0 0 32px; border: 0; border-radius: 0; background: transparent; box-shadow: none; scroll-margin-top: 24px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-block-heading { position: relative; align-items: center; justify-content: flex-start; gap: 10px; margin: 0 0 13px; padding: 0 0 0 13px; border-left: 3px solid var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-block-heading h4 { order: 0; padding: 0; font-size: 18px; font-weight: 700; line-height: 1.5; letter-spacing: .02em; color: var(--theme-text-primary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-kind { order: 1; margin-left: auto; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; color: var(--theme-accent-primary); font-size: 10px; letter-spacing: .08em; font-weight: 600 }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-kind-icon { display: inline-block; width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.4; stroke-linecap: round; stroke-linejoin: round }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-richtext { max-width: none; color: var(--theme-text-secondary); font-size: var(--reading-font, 15px); line-height: var(--reading-line-height, 1.9) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-richtext p { margin-bottom: 14px; line-height: inherit }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-concept { padding: 17px 20px; border: 1px solid color-mix(in srgb, var(--theme-accent-primary) 13%, var(--theme-border-subtle)); border-left: 3px solid var(--theme-accent-primary); border-radius: 6px; background: color-mix(in srgb, var(--theme-accent-soft) 52%, var(--theme-surface-raised)) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-concept .teaching-block-heading { margin-bottom: 9px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-comparison { padding: 0; border: 0; background: transparent }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-table-scroll { border: 1px solid var(--theme-border-subtle); border-radius: 6px; background: var(--theme-surface-raised) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-table-scroll table { font-size: 13px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-table-scroll thead th { background: color-mix(in srgb, var(--theme-accent-soft) 62%, var(--theme-surface-raised)); color: var(--theme-text-primary); letter-spacing: .03em }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-table-scroll tbody th { color: var(--theme-accent-primary); background: color-mix(in srgb, var(--theme-accent-soft) 40%, var(--theme-surface-raised)) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-steps li { gap: 14px; padding-bottom: 20px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-step-index { width: 30px; height: 30px; border: 1px solid color-mix(in srgb, var(--theme-accent-primary) 22%, var(--theme-border-subtle)); border-radius: 6px; background: var(--theme-accent-soft); color: var(--theme-accent-primary); font-weight: 700; font-family: var(--theme-heading-font) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-steps h5 { font-size: 15px; margin-top: 2px; letter-spacing: .02em }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-example { padding: 18px 20px; border: 1px solid var(--theme-border-subtle); border-left: 3px solid var(--theme-status-success); border-radius: 6px; background: var(--theme-surface-panel); box-shadow: var(--cinnabar-paper-shadow) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-example .example-label { margin-bottom: 7px; color: var(--theme-status-success); font-size: 10px; font-weight: 650; letter-spacing: .1em }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-callout { padding: 15px 18px; border-left: 3px solid var(--theme-focus-ring); border-radius: 0 6px 6px 0; background: var(--theme-accent-soft) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-callout.tone-warning { border-left-color: var(--theme-status-warning); background: var(--theme-status-warning-soft) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-callout.tone-mistake { border-left-color: var(--theme-status-danger); background: var(--theme-status-danger-soft) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-callout .teaching-block-heading { margin-bottom: 7px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-summary { padding: 13px 17px; border-top: 1px solid var(--cinnabar-rule); border-bottom: 1px solid var(--cinnabar-rule); background: transparent }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-summary .teaching-block-heading { margin-bottom: 7px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-takeaways { padding: 0 }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-takeaways li { padding: 7px 0 7px 20px; border-bottom: 1px solid var(--cinnabar-rule) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-takeaways li:last-child { border-bottom: 0 }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-takeaways li::before { background: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-practice { padding: 16px 18px; border: 1px solid color-mix(in srgb, var(--theme-accent-primary) 16%, var(--theme-border-subtle)); border-radius: 6px; background: color-mix(in srgb, var(--theme-accent-soft) 44%, var(--theme-surface-raised)) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-practice .teaching-block-heading { margin-bottom: 10px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-practice-links button { min-height: 36px; border-color: color-mix(in srgb, var(--theme-accent-primary) 20%, var(--theme-border-subtle)); border-radius: 6px; background: var(--theme-surface-panel) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-practice-links button:hover:not(:disabled) { background: var(--theme-accent-soft); transform: translateX(2px) }
+
+/* ---------- 旧 Markdown 兼容正文 ---------- */
+:root[data-theme-id="cinnabar-paper"] .markdown-body,
+:root[data-theme-id="cinnabar-paper"] .legacy-teaching-content { font-size: var(--reading-font, 15px); line-height: var(--reading-line-height, 1.9); color: var(--theme-text-secondary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .legacy-teaching-content { max-width: var(--cinnabar-reading) }
+:root[data-theme-id="cinnabar-paper"] .legacy-teaching-content > h2 { font-family: var(--theme-heading-font); font-size: 20px; border: 0; border-left: 3px solid var(--theme-accent-primary); padding: 0 0 0 12px; margin: 34px 0 15px; scroll-margin-top: 28px; color: var(--theme-text-primary); letter-spacing: .02em }
+:root[data-theme-id="cinnabar-paper"] .legacy-teaching-content > h3 { font-family: var(--theme-heading-font); font-size: 17px; color: var(--theme-text-primary); margin: 25px 0 12px; scroll-margin-top: 28px; letter-spacing: .02em }
+:root[data-theme-id="cinnabar-paper"] .legacy-teaching-content p { line-height: inherit; margin: 0 0 16px }
+:root[data-theme-id="cinnabar-paper"] .markdown-body pre { border: 1px solid var(--theme-border-subtle); border-radius: 6px; background: var(--theme-code-background); padding: 18px 20px; font-size: 13px; line-height: 1.8 }
+:root[data-theme-id="cinnabar-paper"] .markdown-body code { color: var(--theme-code-text) }
+:root[data-theme-id="cinnabar-paper"] .markdown-body blockquote { border-left: 3px solid var(--theme-focus-ring); border-radius: 0 6px 6px 0; background: var(--theme-accent-soft); padding: 14px 18px }
+
+/* ---------- 练习入口 / 翻页 / 动作条 ---------- */
+:root[data-theme-id="cinnabar-paper"] .sequence-practice-entry { padding: 20px 22px; margin-top: 26px; margin-bottom: 26px; border: 1px solid var(--theme-border-subtle); border-radius: 8px; background: var(--theme-surface-raised); box-shadow: var(--cinnabar-paper-shadow) }
+:root[data-theme-id="cinnabar-paper"] .sequence-practice-entry > div { display: flex; align-items: center; gap: 10px }
+:root[data-theme-id="cinnabar-paper"] .sequence-practice-entry h4 { font-family: var(--theme-heading-font); font-size: 16px; margin: 0; letter-spacing: .03em }
+:root[data-theme-id="cinnabar-paper"] .sequence-practice-entry > div > span:last-child { margin-left: auto; font-size: 10px; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .sequence-practice-icon { width: 28px; height: 28px; display: grid; place-items: center; color: var(--theme-accent-primary); border-radius: 6px; background: var(--theme-accent-soft) }
+:root[data-theme-id="cinnabar-paper"] .sequence-practice-entry p { font-size: 12px; color: var(--theme-text-muted); line-height: 1.85; margin: 12px 0 }
+:root[data-theme-id="cinnabar-paper"] .sequence-practice-entry button { font-size: 12px }
+:root[data-theme-id="cinnabar-paper"] .sequence-page-turn { display: flex; align-items: center; gap: 16px; padding: 20px 0 10px; border-top: 1px solid var(--theme-border-subtle); margin-top: 28px }
+:root[data-theme-id="cinnabar-paper"] .sequence-page-turn button { width: 42%; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; padding: 6px 0; text-align: left; color: var(--theme-text-secondary); min-width: 0; background: transparent }
+:root[data-theme-id="cinnabar-paper"] .sequence-page-turn button:last-child { text-align: right; align-items: flex-end; margin-left: auto }
+:root[data-theme-id="cinnabar-paper"] .sequence-page-turn small { font-size: 10px; letter-spacing: .06em; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .sequence-page-turn button > span { font-size: 12.5px; max-width: 100%; overflow: clip; text-overflow: ellipsis; white-space: nowrap }
+:root[data-theme-id="cinnabar-paper"] .sequence-page-number { font-size: 10px; white-space: nowrap; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .sequence-page-number b { font-family: var(--theme-heading-font); font-size: 17px; color: var(--theme-accent-primary); margin-right: 4px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-action-bar { max-width: none; margin: 0; padding: 10px clamp(20px, 3vw, 44px); border-top: 1px solid var(--theme-border-subtle); background: var(--theme-surface-panel); border-radius: 0; box-shadow: none; min-height: 58px; position: relative; bottom: auto }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-save-status strong { font-size: 10px; font-weight: 500; color: var(--theme-text-secondary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-save-status span { font-size: 9px }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-actions { gap: 10px; flex: none }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .study-actions button { font-size: 11px; padding: 9px 14px }
+
+/* ---------- 学习工具：同一练习/笔记结构，纸面签筒 ---------- */
+:root[data-theme-id="cinnabar-paper"] .workspace-tool-panel { border-left: 1px solid var(--theme-border-subtle); background: var(--theme-surface-panel) }
+:root[data-theme-id="cinnabar-paper"] .workspace-tool-panel > .course-tools { border: 0; background: transparent }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel { background: var(--theme-surface-canvas); border-left-color: color-mix(in srgb, var(--theme-border-strong) 62%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-heading { min-height: 72px; height: 72px; padding: 14px 20px 12px; background: color-mix(in srgb, var(--theme-surface-panel) 86%, var(--theme-surface-canvas)) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-heading-copy > span { font-size: 10px; letter-spacing: .14em; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-heading-copy > strong { font-family: var(--theme-heading-font); font-size: 15px; font-weight: 700; letter-spacing: .03em; color: var(--theme-text-primary) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-icon-action { width: 30px; height: 30px; border-radius: 7px; font-size: 16px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-tabs { height: 48px; min-height: 48px; gap: 10px; padding: 0 18px; background: var(--theme-surface-panel) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-tabs > button[role="tab"] { gap: 8px; padding: 0 9px; font-size: 12.5px; font-weight: 550; letter-spacing: .04em }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tab-icon { font-size: 13px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tab-count { min-width: 19px; padding: 2px 6px; font-size: 10px; background: var(--theme-accent-soft); color: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-scroll { padding: 20px 20px 24px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-section { padding-bottom: 20px; margin-bottom: 20px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-section-heading h3 { font-family: var(--theme-heading-font); font-size: 14px; letter-spacing: .05em; color: var(--theme-text-secondary) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-caption { font-size: 10px; max-width: 62% }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-answer-section .knowledge-question { padding: 15px; margin-bottom: 14px; border-radius: 8px; border-color: color-mix(in srgb, var(--theme-accent-primary) 12%, var(--theme-border-subtle)); background: var(--theme-surface-raised); box-shadow: 0 5px 18px color-mix(in srgb, var(--theme-shadow-ink) 5%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-answer-section .exercise-prompt { margin: 9px 0 13px; font-size: 12px; line-height: 1.8; color: var(--theme-text-secondary) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-answer-section .answer-label { margin: 12px 0 7px; font-size: 10px; letter-spacing: .05em; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-answer-section .knowledge-question textarea { min-height: 112px; padding: 12px 13px; border-radius: 6px; font-size: 13px; line-height: 1.8; color: var(--theme-text-primary) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-answer-section .inline-feedback { font-size: 11.5px; line-height: 1.7 }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-answer-section .history-link { font-size: 10.5px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-progress-card { gap: 14px; padding: 15px; border-radius: 8px; background: var(--theme-surface-raised); box-shadow: 0 5px 18px color-mix(in srgb, var(--theme-shadow-ink) 4%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-progress-copy strong { font-size: 12px; line-height: 1.6; color: var(--theme-text-primary) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-progress-copy span { font-size: 10.5px; color: var(--theme-text-muted) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-next-card { padding: 15px; border-radius: 8px; background: linear-gradient(135deg, color-mix(in srgb, var(--theme-status-info-soft) 78%, var(--theme-surface-raised)), var(--theme-surface-raised)) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-next-card small { font-size: 10px; letter-spacing: .08em; margin-bottom: 6px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-next-card strong { font-size: 12.5px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-next-card button { margin-top: 12px; padding: 9px 12px; border-radius: 6px; font-size: 11.5px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-window-card { gap: 11px; padding: 13px; border-radius: 8px; background: var(--theme-surface-raised) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-window-mark { width: 30px; height: 30px; border-radius: 6px; font-size: 14px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-window-card strong { font-size: 11.5px; color: var(--theme-text-primary) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-window-card span:not(.sequence-window-mark) { font-size: 10.5px; line-height: 1.55 }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-window-card button { padding: 7px 10px; border-radius: 6px; font-size: 10.5px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-save-protection p { font-size: 10.5px; line-height: 1.75 }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-save-mark { padding: 3px 8px; font-size: 10px; letter-spacing: .04em }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-footer { min-height: 42px; padding: 8px 18px; background: var(--theme-surface-panel) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-footer strong { font-size: 10.5px; letter-spacing: .02em }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-menu { min-width: 210px; padding: 6px; border-radius: 8px; background: var(--theme-surface-input); box-shadow: 0 14px 38px color-mix(in srgb, var(--theme-shadow-ink) 18%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-menu button { padding: 10px 12px; font-size: 11.5px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-menu button span { font-size: 10.5px }
+:root[data-theme-id="cinnabar-paper"] .knowledge-question { background: var(--theme-surface-raised); border: 1px solid var(--theme-border-subtle); border-radius: 8px; padding: 16px; margin-bottom: 16px }
+:root[data-theme-id="cinnabar-paper"] .practice-heading h3 { font-family: var(--theme-heading-font); font-size: 16px; letter-spacing: .04em }
+:root[data-theme-id="cinnabar-paper"] .knowledge-question h4 { font-size: 13px; line-height: 1.7 }
+:root[data-theme-id="cinnabar-paper"] .knowledge-question textarea { background: var(--theme-surface-input); border: 1px solid var(--theme-border-subtle); border-radius: 6px; padding: 12px; font-size: 13px; line-height: 1.8 }
+:root[data-theme-id="cinnabar-paper"] .knowledge-question textarea:focus { border-color: var(--theme-accent-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent-primary) 10%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .notebook-document { border-radius: 8px; background: var(--theme-surface-raised) }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-heading h3 { font-family: var(--theme-heading-font); font-size: 16px; letter-spacing: .04em }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-kicker { font-size: 10px; letter-spacing: .12em }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-action { font-size: 11.5px; padding: 8px 11px; border-radius: 6px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-scope { font-size: 11px; padding-bottom: 15px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-scope select { font-size: 12px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-editor { font-size: 13px; line-height: 1.9 }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-block { padding: 18px 0 15px }
+:root[data-theme-id="cinnabar-paper"] .unified-tools-panel .notebook-quote { font-size: 12px; line-height: 1.8; border-radius: 0 6px 6px 0; border-left-color: var(--theme-focus-ring); background: var(--theme-accent-soft) }
+
+/* ---------- 普通工作区页面：纸面卡片 ---------- */
+:root[data-theme-id="cinnabar-paper"] .workspace-panel,
+:root[data-theme-id="cinnabar-paper"] .plan-card,
+:root[data-theme-id="cinnabar-paper"] .today-plan-card { background: var(--theme-surface-panel); border: 1px solid var(--theme-border-subtle); box-shadow: var(--cinnabar-paper-shadow) }
+:root[data-theme-id="cinnabar-paper"] .workspace-panel h2,
+:root[data-theme-id="cinnabar-paper"] .plan-card h3,
+:root[data-theme-id="cinnabar-paper"] .today-plan-card h3 { font-family: var(--theme-heading-font); letter-spacing: .03em }
+:root[data-theme-id="cinnabar-paper"] .theme-option { border-radius: 8px }
+:root[data-theme-id="cinnabar-paper"] .theme-option.selected { background: color-mix(in srgb, var(--theme-accent-soft) 34%, var(--theme-surface-panel)) }
+:root[data-theme-id="cinnabar-paper"] .theme-option-heading strong { font-family: var(--theme-heading-font); letter-spacing: .04em }
+
+/* ---------- 按钮与交互反馈 ---------- */
+:root[data-theme-id="cinnabar-paper"] button { transition: background .15s, color .15s, box-shadow .15s, border-color .15s; cursor: pointer }
+:root[data-theme-id="cinnabar-paper"] button:disabled { cursor: not-allowed }
+:root[data-theme-id="cinnabar-paper"] button:active:not(:disabled) { transform: translateY(1px) }
+:root[data-theme-id="cinnabar-paper"] button.primary-button { box-shadow: 0 3px 10px color-mix(in srgb, var(--theme-accent-primary) 24%, transparent) }
+:root[data-theme-id="cinnabar-paper"] button.primary-button:hover:not(:disabled) { box-shadow: 0 6px 18px color-mix(in srgb, var(--theme-accent-primary) 30%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .status-banner { z-index: 20 }
+
+/* ---------- 保存失败 / 离开保护 / 独立工具窗 ---------- */
+:root[data-theme-id="cinnabar-paper"] .learning-shell .recovery-note,
+:root[data-theme-id="cinnabar-paper"] .learning-shell .dock-recovery .recovery-note { border: 1px solid color-mix(in srgb, var(--theme-status-warning) 26%, var(--theme-border-subtle)); border-radius: 8px; background: var(--theme-status-warning-soft); color: var(--theme-text-secondary) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .leave-study-dialog { border-radius: 10px; background: var(--theme-surface-input); border-color: var(--theme-border-subtle); box-shadow: 0 24px 70px color-mix(in srgb, var(--theme-shadow-ink) 24%, transparent) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .native-tool-window { background: var(--theme-surface-canvas) }
+:root[data-theme-id="cinnabar-paper"] .learning-shell .native-tool-strip,
+:root[data-theme-id="cinnabar-paper"] .learning-shell .native-tool-footer { background: var(--theme-surface-panel); border-color: var(--theme-border-subtle) }
+
+/* ---------- 英语专注训练：同一纸面语言 ---------- */
+:root[data-theme-id="cinnabar-paper"] .english-learning { background: var(--theme-surface-canvas) }
+:root[data-theme-id="cinnabar-paper"] .english-training-header { border-bottom: 1px solid var(--theme-border-subtle); background: var(--theme-surface-panel) }
+:root[data-theme-id="cinnabar-paper"] .english-header-title strong { font-family: var(--theme-heading-font); letter-spacing: .03em }
+:root[data-theme-id="cinnabar-paper"] .english-icon-button:hover { background: var(--theme-accent-soft); color: var(--theme-accent-primary) }
+:root[data-theme-id="cinnabar-paper"] .english-training-footer { border-top: 1px solid var(--theme-border-subtle); background: var(--theme-surface-panel) }
+:root[data-theme-id="cinnabar-paper"] .english-breakdown { border: 1px solid var(--theme-border-subtle); border-radius: 8px; background: var(--theme-surface-raised) }
+:root[data-theme-id="cinnabar-paper"] .english-answer { background: var(--theme-surface-input); border-color: var(--theme-border-subtle) }
+:root[data-theme-id="cinnabar-paper"] .english-answer:focus { border-color: var(--theme-accent-primary); box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-accent-primary) 10%, transparent) }
+
+/* ---------- 滚动条：墨色细签 ---------- */
+:root[data-theme-id="cinnabar-paper"] ::-webkit-scrollbar { width: 5px; height: 5px }
+:root[data-theme-id="cinnabar-paper"] ::-webkit-scrollbar-thumb { border-radius: 9px; background: color-mix(in srgb, var(--theme-border-strong) 58%, transparent) }
+:root[data-theme-id="cinnabar-paper"] ::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--theme-accent-primary) 46%, transparent) }
+
+/* ---------- 窄窗：压缩排印，不夺滚动所有权 ---------- */
+@media (max-width: 1100px) {
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .reader-toolbar { padding: 8px 18px; gap: 10px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .reader-context { font-size: 10px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .study-material-body { padding: 26px 24px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .study-unit-heading h3 { font-size: 24px }
+  :root[data-theme-id="cinnabar-paper"] .study-unit-heading:has(.theme-reading-artwork) { padding-right: 96px }
+  :root[data-theme-id="cinnabar-paper"] .theme-reading-artwork { width: 76px; top: -4px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .study-save-status { max-width: 40% }
+  :root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-scroll { padding-left: 16px; padding-right: 16px }
+  :root[data-theme-id="cinnabar-paper"] .unified-tools-panel .sequence-tool-heading { padding-left: 16px; padding-right: 16px }
+}
+@media (max-width: 899px) {
+  :root[data-theme-id="cinnabar-paper"] .sidebar .nav-item { font-size: 0; padding: 9px; justify-content: center }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .nav-item .nav-icon { font-size: 16px }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .nav-caption { font-size: 0; padding: 0 0 8px }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .brand { padding: 0 8px 12px; gap: 0 }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .brand strong { font-size: 0 }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .brand span { font-size: 0 }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .sidebar-bottom .small { font-size: 0 }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .connection { font-size: 0 }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .connection.connected i { width: 7px; height: 7px }
+  /* 装饰槽在窄窗收起（sidebar-signature 已登记）。 */
+  :root[data-theme-id="cinnabar-paper"] .sidebar-signature { display: none }
+  :root[data-theme-id="cinnabar-paper"] .sidebar nav[aria-label='主导航'] { padding: 0 8px 12px }
+  :root[data-theme-id="cinnabar-paper"] .sidebar .nav-badge { margin-left: 22px; font-size: 8px }
+  /* 窄窗图标轨不承载大纲文本（与两套正式主题的窄窗行为一致）：
+     用 visibility+max-height 收起，滚动所有权仍归共享层，不新增 display:none 债务。 */
+  :root[data-theme-id="cinnabar-paper"] .course-sidebar-slot { max-height: 0; visibility: hidden }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .reader-context { font-size: 0 }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .study-material-body { padding: 22px 18px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .study-action-bar { padding: 10px 14px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .study-actions { gap: 5px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .study-save-status strong { font-size: 9px }
+}
+@media (max-width: 760px) {
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-block-heading h4 { font-size: 16px }
+  :root[data-theme-id="cinnabar-paper"] .learning-shell .teaching-kind { font-size: 9px }
+  :root[data-theme-id="cinnabar-paper"] .study-unit-heading:has(.theme-reading-artwork) { padding-right: 0 }
+  /* 装饰槽：窄窗收起题首印章（theme-reading-artwork 已登记）。 */
+  :root[data-theme-id="cinnabar-paper"] .theme-reading-artwork { display: none }
+}
+@media (prefers-reduced-motion: reduce) {
+  :root[data-theme-id="cinnabar-paper"] *,
+  :root[data-theme-id="cinnabar-paper"] *::before,
+  :root[data-theme-id="cinnabar-paper"] *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important }
+}

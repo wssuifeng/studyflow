@@ -86,3 +86,13 @@ test-results/
 pip-*/
 pytest-of-*/
 test-results-white-after.png
+
+# Local tool caches (architecture/preview tooling), never published.
+.archify/
+.playwright-cli/
+
+# Machine-specific architecture delivery manifests contain local absolute paths;
+# the public deliverables are the StudyFlow-*.html diagrams. Keep manifests local.
+docs/30_系统设计/studyflow-*.delivery.json
+docs/30_系统设计/studyflow-*.browser-check.json
+docs/30_系统设计/studyflow-*.finalize*.json

@@ -172,7 +172,7 @@ onBeforeUnmount(()=>{audioGeneration++;stopSpeech()})
    <div class="english-shortcuts" aria-label="训练快捷键">
     <button @click="play()"><kbd>Ctrl</kbd><kbd>'</kbd>整句朗读</button>
     <button @click="play(editor?.focusedIndex??0)"><kbd>Ctrl</kbd><kbd>Shift</kbd><kbd>'</kbd>单词朗读</button>
-    <span><kbd>Space</kbd>下一词 <kbd>Enter</kbd>检查</span>
+    <span><kbd>Space</kbd>下一词 <kbd>Enter</kbd>检查 <kbd>←</kbd><kbd>→</kbd>移词 <kbd>退格</kbd>回退 <kbd>Ctrl</kbd><kbd>←</kbd><kbd>→</kbd>跳词 <kbd>Ctrl</kbd><kbd>Home</kbd><kbd>End</kbd>首末</span>
     <button :disabled="phase==='answer'||locked" @click="toggleAnalysis"><kbd>Ctrl</kbd><kbd>;</kbd>解析</button>
     <button :disabled="position>=data.items.length-1||training.actionRunning.value" @click="phase==='answer'||locked?move(position+1):skip()"><kbd>Ctrl</kbd><kbd>.</kbd>{{phase==='answer'||locked?'下一项':'暂跳'}}</button>
    </div>

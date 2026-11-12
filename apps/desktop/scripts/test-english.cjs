@@ -179,6 +179,71 @@ test('Enter from a repaired earlier word checks once all required input is prese
  assert.equal(context.exports.inputAdvance('Enter',0,['I','','the','food']),1)
  assert.equal(context.exports.inputAdvance('Enter',4,['He',"doesn't",'have','a','plan',''],5),'check')
 })
+test('token boundary navigation moves focus freely without destroying input',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/shortcuts.ts'),'utf8'),context={exports:{}}
+ vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,context)
+ const nav=(...a)=>{const r=context.exports.tokenNavigate(...a);return r?{index:r.index,caret:r.caret}:null}
+ // ArrowLeft：词首回上一词（光标落词尾）；框内/首词不触发。
+ assert.deepEqual(nav('ArrowLeft',2,'the',0,0,4),{index:1,caret:'end'})
+ assert.equal(nav('ArrowLeft',2,'the',1,1,4),null)
+ assert.equal(nav('ArrowLeft',0,'I',0,0,4),null)
+ // ArrowRight：词尾进下一词（光标落词首）；框内/末词不触发。
+ assert.deepEqual(nav('ArrowRight',1,'like',4,4,4),{index:2,caret:'start'})
+ assert.equal(nav('ArrowRight',1,'like',2,2,4),null)
+ assert.equal(nav('ArrowRight',3,'food',4,4,4),null)
+ // Backspace：空框或词首回上一词且不删除；框内删除/首词保留原生。
+ assert.deepEqual(nav('Backspace',2,'',0,0,4),{index:1,caret:'end'})
+ assert.deepEqual(nav('Backspace',2,'the',0,0,4),{index:1,caret:'end'})
+ assert.equal(nav('Backspace',2,'the',1,1,4),null)
+ assert.equal(nav('Backspace',0,'',0,0,4),null)
+ // Delete：词尾对称进下一词；框内/末词不触发。
+ assert.deepEqual(nav('Delete',1,'like',4,4,4),{index:2,caret:'start'})
+ assert.equal(nav('Delete',1,'like',2,2,4),null)
+ assert.equal(nav('Delete',3,'food',4,4,4),null)
+ // 选区（非折叠光标）保留原生折叠/删除，不跳词。
+ assert.equal(nav('ArrowLeft',2,'the',0,3,4),null)
+ assert.equal(nav('ArrowRight',2,'the',0,3,4),null)
+ assert.equal(nav('Backspace',2,'the',0,3,4),null)
+ // 空框左右仍可自由穿行。
+ assert.deepEqual(nav('ArrowRight',1,'',0,0,4),{index:2,caret:'start'})
+ assert.deepEqual(nav('ArrowLeft',1,'',0,0,4),{index:0,caret:'end'})
+})
+test('Ctrl-modified token jump moves focus regardless of caret position',()=>{
+ const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/shortcuts.ts'),'utf8'),context={exports:{}}
+ vm.runInNewContext(ts.transpileModule(source,{compilerOptions:{module:ts.ModuleKind.CommonJS}}).outputText,context)
+ const jump=(...a)=>{const r=context.exports.tokenJump(...a);return r?{index:r.index,caret:r.caret}:null}
+ // Ctrl+方向键无视光标位置直接跳词；首/末词不越界。
+ assert.deepEqual(jump('ArrowLeft',2,4),{index:1,caret:'end'})
+ assert.deepEqual(jump('ArrowRight',1,4),{index:2,caret:'start'})
+ assert.equal(jump('ArrowLeft',0,4),null)
+ assert.equal(jump('ArrowRight',3,4),null)
+ // Ctrl+Home/End 跳首/末词框；单词框自身也合法。
+ assert.deepEqual(jump('Home',3,4),{index:0,caret:'start'})
+ assert.deepEqual(jump('End',0,4),{index:3,caret:'end'})
+ assert.deepEqual(jump('Home',0,1),{index:0,caret:'start'})
+ assert.deepEqual(jump('End',0,1),{index:0,caret:'end'})
+ // 其他键与空词序列不触发。
+ assert.equal(jump('Backspace',2,4),null)
+ assert.equal(jump('a',2,4),null)
+ assert.equal(jump('Home',0,0),null)
+})
+test('TokenEditor wires boundary navigation with caret placement and keeps IME/modifier guards',()=>{
+ const editor=fs.readFileSync(path.join(__dirname,'../src/features/english/training/TokenEditor.vue'),'utf8').replace(/\r\n/g,'\n')
+ assert.ok(editor.includes('tokenNavigate'));assert.ok(editor.includes("event.key==='ArrowLeft'"));assert.ok(editor.includes("event.key==='Delete'"))
+ assert.ok(editor.includes('el.setSelectionRange(pos,pos)'));assert.ok(editor.includes("caret:'start'|'end'"))
+ assert.ok(editor.includes("event.isComposing||event.key==='Process'"))
+ // Ctrl/Meta 走 tokenJump 快速跳词；Alt 仍交还原生；IME 守卫先行。
+ assert.ok(editor.includes('tokenJump'));assert.ok(editor.includes('if(event.ctrlKey||event.metaKey){'));assert.ok(editor.includes('if(!event.altKey){const jump=tokenJump'));assert.ok(editor.includes('if(event.altKey)return'))
+ // 导航型 Backspace（跨框且不删内容）不触发键音；实际删除与输入保留。
+ assert.ok(editor.includes("if(!(event.key==='Backspace'&&move))playKeyboardSound(event)"))
+ // Enter/Space 仍防连发；导航键允许按住连续移词。
+ assert.ok(editor.includes("if(event.key==='Enter'||event.key===' '){\n  if(event.repeat)return"))
+ const page=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
+ assert.ok(page.includes('<kbd>←</kbd><kbd>→</kbd>移词'));assert.ok(page.includes('<kbd>退格</kbd>回退'))
+ assert.ok(page.includes('<kbd>Ctrl</kbd><kbd>←</kbd><kbd>→</kbd>跳词'));assert.ok(page.includes('<kbd>Ctrl</kbd><kbd>Home</kbd><kbd>End</kbd>首末'))
+ const css=fs.readFileSync(path.join(__dirname,'../src/features/english/training/english.css'),'utf8')
+ assert.ok(css.includes('transition:border-color .15s,width .12s ease'))
+})
 test('whole-course completion navigates the first missing item instead of opening a save error',async()=>{
  const f=fixture();await f.api.load();await f.api.move(1);f.api.tokens.value=['I','like','tea'];await f.api.check();await f.api.submit()
  assert.equal(f.api.position.value,0);assert.match(f.api.navigationNotice.value,/第 1 项/)

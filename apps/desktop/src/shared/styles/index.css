@@ -38,6 +38,9 @@
 
 @import "../../features/courses/styles/sequence-light.css";
 
+/* 内置主题「国风朱红」：身份作用域样式，选中该主题后生效。 */
+@import "../../features/courses/styles/cinnabar-paper.css";
+
 /* Shared document structure wins over theme presentation without !important. */
 @import "../../features/courses/styles/document-template.css";
 

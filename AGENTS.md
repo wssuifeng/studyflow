@@ -30,7 +30,7 @@
 
 ## 三、项目信息
 
-- 最新安装包构建（2026-11-01）：StudyFlow App/Core 1.8.18，MSI内 Skill 2.9.13；未签名候选 `MsiVerifyPackageW=0`，45个文件载荷中42个Skill文件逐项匹配源，CLI/Engine匹配，桌面EXE版本为1.8.18且仅含已识别的MSI bundle标记替换。MSI SHA-256：`8FB07B628D6B2414E318666585925ACDF002872D59185B3D874D0E63D097E11C`。候选未安装、未复制维护区；公共Skill仍2.9.11。原生 smoke 本轮未运行；未改真实学习数据、未提交/推送。安装后待用户让外部 Agent 检查设置页复制指令与跨会话入口效果。详见`docs/40_开发实施/2026-11-01-1.8.18-Agent会话启动指令安装包构建记录.md`。
+- 最新安装包构建（2026-11-12）：StudyFlow App/Core/CLI/Engine 1.8.21，MSI内 Skill 2.9.13；内置主题序光/白紫/国风朱红三套（默认白紫；国风朱红原名朱批纸白，2026-11-12经用户确认改名并由候选提升内置，安装即可选，技术ID仍cinnabar-paper），并含英语词框边界自由导航与三项手感优化（Ctrl+Home/End跳首末、Ctrl+方向键直接跳词、导航型Backspace静音）。未签名候选 `MsiVerifyPackageW=0`，45个文件载荷中42个Skill文件逐项匹配源，CLI/Engine匹配，桌面EXE版本为1.8.21且仅含已识别的MSI bundle标记替换。MSI SHA-256：`6D4589D6580F09E70C60979E19D99C755BFBCA0134B4230A9C34E5AA69D44BCB`。主题97/学习136/英语59/build/内置主题浏览器30/键盘21/冻结Engine48+CLI闭环/实际release原生smoke44项通过；发布前边界清理（工具缓存与archify交付清单gitignore、7份文档个人路径脱敏、白名单+test-cinnabar-paper.cjs），--worktree 718文件0问题。本轮经用户授权提交推送main并创建GitHub Release v1.8.21上传MSI；公共Skill仍2.9.11未同步，未改真实学习数据。安装后待用户直选国风朱红验收观感并让外部 Agent 检查设置页复制指令与跨会话入口效果。详见`docs/40_开发实施/2026-11-12-1.8.21-国风朱红主题改名与发布记录.md`。
 
 - Vue/TypeScript 唯一正式 UI 在 `apps/desktop/src/`；Tauri/Rust只承载窗口和Engine。旧FastAPI/Jinja2是兼容开发层，不新建第二套前端。
 - Python Core/CLI/Engine和测试在 `packages/core/`；默认SQLite自动管理，可选MySQL只读环境变量。

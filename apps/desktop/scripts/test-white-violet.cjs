@@ -17,22 +17,26 @@ test('three concepts remain individual sections, and semantic boundaries stay in
  assert.deepEqual(JSON.parse(JSON.stringify(groups.map(g=>g.blocks.length))),[1,1,1,1,1])
  assert.equal(new Set(groups.map(g=>g.key)).size,groups.length)
 })
-test('white-violet uses validated theme/display data alongside sequence-light only',()=>{
+test('white-violet uses validated theme/display data alongside sequence-light and cinnabar-paper',()=>{
  const display=load('shared/themes/display.ts'),contract=load('shared/themes/contract.ts',{'./display':display})
  const dir=path.join(root,'shared/themes/builtin'),themes=fs.readdirSync(dir).filter(n=>n.endsWith('.json')).map(n=>contract.parseTheme(JSON.parse(fs.readFileSync(path.join(dir,n),'utf8'))))
  const white=themes.find(t=>t.id==='white-violet');assert.ok(white)
- assert.deepEqual(themes.map(t=>t.id).sort(),['sequence-light','white-violet'])
+ assert.deepEqual(themes.map(t=>t.id).sort(),['cinnabar-paper','sequence-light','white-violet'])
  assert.equal(contract.DEFAULT_THEME.id,'white-violet');assert.equal(white.display.teaching_style,'paired')
  assert.equal(white.display.reading_width,1000);assert.equal(white.sound_profile,'soft-tap')
  assert.deepEqual(JSON.parse(JSON.stringify(white.display.assets.map(a=>a.role))),['illustration','background'])
 })
 test('formal assets survive an empty overlay registry; missing/disabled images safely return null',()=>{
- const builtins=load('shared/themes/builtin-assets.ts',{'./assets/white-violet-book.png':{default:'/assets/book.png'},'./assets/white-violet-edge.svg':{default:'/assets/edge.svg'},'./assets/sequence-light-landscape.png':{default:'/assets/sequence-light-landscape.png'},'./assets/sequence-light-origami.png':{default:'/assets/sequence-light-origami.png'}})
+ const builtins=load('shared/themes/builtin-assets.ts',{'./assets/white-violet-book.png':{default:'/assets/book.png'},'./assets/white-violet-edge.svg':{default:'/assets/edge.svg'},'./assets/sequence-light-landscape.png':{default:'/assets/sequence-light-landscape.png'},'./assets/sequence-light-origami.png':{default:'/assets/sequence-light-origami.png'},'./assets/cinnabar-paper-grain.svg':{default:'/assets/cinnabar-grain.svg'},'./assets/cinnabar-paper-meander.svg':{default:'/assets/cinnabar-meander.svg'},'./assets/cinnabar-paper-seal.svg':{default:'/assets/cinnabar-seal.svg'}})
  const assets=load('shared/themes/asset-registry.ts',{'./display-registry.generated':{generatedDisplayRegistry:{assets:{}}},'./builtin-assets':builtins})
  const spec={key:'reading-book',role:'illustration',aspect_ratio:'3:2',safe_area:.12,fallback:'#ffffff'}
  assert.equal(assets.resolveDisplayAsset('white-violet',spec)?.url,'/assets/book.png')
  assert.equal(assets.resolveDisplayAsset('white-violet',spec,'none'),null)
  assert.equal(assets.resolveDisplayAsset('unknown',spec),null)
+ // 候选主题素材走同一解析入口：未导入主题不影响正式资产，导入后按标识解析。
+ const seal={key:'study-seal',role:'illustration',aspect_ratio:'1:1',safe_area:.12,fallback:'#f0e2cf'}
+ assert.equal(assets.resolveDisplayAsset('cinnabar-paper',seal)?.url,'/assets/cinnabar-seal.svg')
+ assert.equal(assets.resolveDisplayAsset('cinnabar-paper',seal,'none'),null)
 })
 test('knowledge point titles are real lesson data, not fabricated navigation or limit fields',()=>{
  const pager=fs.readFileSync(path.join(root,'features/courses/components/KnowledgePointPager.vue'),'utf8')

@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="120" height="120" viewBox="0 0 120 120">
+  <!-- 朱文方印：阅读面题首装饰，纯白文、中国红底，缺图时由主题回退色兜底 -->
+  <rect x="10" y="10" width="100" height="100" rx="10" fill="#c8102e"/>
+  <rect x="17" y="17" width="86" height="86" rx="6" fill="none" stroke="#ffffff" stroke-width="2.5" stroke-opacity="0.9"/>
+  <text x="60" y="82" text-anchor="middle" font-family="'Noto Serif SC','Source Han Serif SC','SimSun',serif" font-size="58" font-weight="700" fill="#ffffff">学</text>
+  <rect x="10" y="10" width="100" height="100" rx="10" fill="none" stroke="#a60d26" stroke-width="1.5" stroke-opacity="0.6"/>
+</svg>
