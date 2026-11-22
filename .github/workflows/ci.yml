@@ -48,7 +48,8 @@ jobs:
       - run: cargo test --locked -p studyflow-core -p studyflow-runtime
   windows-rust-desktop:
     name: windows-rust-desktop
-    runs-on: windows-latest
+    # WebView2 automation can fail on the Server 2025 image (actions/runner-images#14738).
+    runs-on: windows-2022
     timeout-minutes: 35
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
@@ -79,7 +80,7 @@ jobs:
           New-Item -ItemType Directory -Path $fixture | Out-Null
           pwsh -NoProfile -File ./apps/desktop/scripts/verify-rust-desktop.ps1 -Mode BuildTree -DesktopPath $desktop -WorkspacePath $fixture -EvidencePath $evidence -ExerciseBusinessFlows
           $result = $LASTEXITCODE
-          Get-ChildItem -LiteralPath $evidence -Filter '*.log' | ForEach-Object { Get-Content -LiteralPath $_.FullName }
+          Get-ChildItem -LiteralPath $evidence -Filter '*.log' -Recurse | ForEach-Object { Get-Content -LiteralPath $_.FullName }
           exit $result
 
   rust-backend-required:

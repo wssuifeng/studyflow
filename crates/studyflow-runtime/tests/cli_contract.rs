@@ -295,7 +295,10 @@ fn resolves_packaged_cli_and_rejects_invalid_agent_pointers() {
             .unwrap()
     };
     let missing = inspect();
-    assert_eq!(Path::new(missing["cli_path"].as_str().unwrap()), cli);
+    assert_eq!(
+        fs::canonicalize(missing["cli_path"].as_str().unwrap()).unwrap(),
+        fs::canonicalize(&cli).unwrap()
+    );
     assert_eq!(missing["skill_kind"], "installed");
     assert_eq!(missing["agent_ready"], true);
     assert_eq!(missing["agent_workspace_entry_status"], "missing");

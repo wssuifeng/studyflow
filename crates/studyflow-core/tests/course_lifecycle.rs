@@ -89,12 +89,11 @@ fn purge_respects_workspace_lease_and_a_document_shared_with_a_retained_course()
 
     let fixture =
         Fixture(std::env::temp_dir().join(format!("studyflow-purge-{}", uuid::Uuid::new_v4())));
-    let root = fixture.0.join("workspace");
-    fs::create_dir_all(&root).unwrap();
-    let workspace = Workspace::new(Settings {
-        workspace: root.clone(),
-        database: root.join(".studyflow/studyflow.db"),
-    });
+    fs::create_dir_all(&fixture.0).unwrap();
+    let workspace = Workspace::new(
+        Settings::resolve(&fixture.0, std::path::Path::new("workspace"), None, None).unwrap(),
+    );
+    let root = &workspace.settings().workspace;
     workspace.upgrade().unwrap();
     let db = workspace.open().unwrap().connection;
     planning::create_plan(&mut workspace.open().unwrap().connection, "Purge tests", 1).unwrap();
@@ -119,7 +118,7 @@ fn purge_respects_workspace_lease_and_a_document_shared_with_a_retained_course()
     assert_eq!(initial["protected_document_paths"], json!([shared]));
     let backup = fixture.0.join("before-purge.zip");
     archive::export(workspace.settings(), &backup).unwrap();
-    let in_use = Lease::shared(&root).unwrap();
+    let in_use = Lease::shared(root).unwrap();
     assert_eq!(
         purge::purge(&workspace, Some(&ids), &backup)
             .unwrap_err()

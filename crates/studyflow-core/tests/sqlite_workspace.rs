@@ -85,7 +85,7 @@ fn standalone_legacy_database_is_used_only_in_the_default_directory() {
     let legacy = scratch.0.join("studyflow.db");
     fs::write(&legacy, []).unwrap();
     let default = Settings::resolve(&scratch.0, Path::new("."), None, None).unwrap();
-    assert_eq!(default.database, legacy);
+    assert_eq!(default.database, dunce::canonicalize(legacy).unwrap());
     let other = scratch.work();
     assert_eq!(
         other.settings().database,
