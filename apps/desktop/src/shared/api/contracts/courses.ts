@@ -12,6 +12,7 @@ export type CourseProgress = {
   can_start_new_round?:boolean
   new_round_blocker?:string
   learning_mode?: 'general'|'english'
+  legacy_practice?: boolean
   id: string
   title: string
   sequence: number | null
@@ -51,6 +52,7 @@ export type LessonDetail = {
     prompt: string
     requirements: string
     type: string
+    essay?: {suggested_words?: [number, number]; points?: string[]}
     position: number
     latest_submission: ExerciseSubmission | null
     draft: ExerciseSubmission | null
@@ -67,6 +69,7 @@ export type CourseDetailData = {
 }
 
 export type CourseStudyDetailData = CourseDetailData & {
+  scope_notice?: string
   study: { workspace_key?:string; abandoned_at?:string|null; id: string; revision: number; content_hash: string; progress_version: number; source_changed: boolean; source_available: boolean; is_current: boolean }
 }
 

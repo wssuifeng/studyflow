@@ -18,7 +18,7 @@ onMounted(async () => {previousFocus = document.activeElement as HTMLElement; aw
 onBeforeUnmount(() => previousFocus?.focus())
 </script>
 <template>
-  <Teleport to="body"><div class="leave-study-backdrop" @click.self="emit('cancel')"><section ref="panel" class="leave-study-dialog" role="alertdialog" aria-modal="true" aria-labelledby="leave-study-title" aria-describedby="leave-study-description" @keydown="keydown">
+  <Teleport to="body"><div class="leave-study-backdrop" @click.self="emit('cancel')"><section ref="panel" class="leave-study-dialog surface-enter" role="alertdialog" aria-modal="true" aria-labelledby="leave-study-title" aria-describedby="leave-study-description" @keydown="keydown">
     <div class="leave-dialog-symbol" aria-hidden="true">!</div><h2 id="leave-study-title">{{closing ? '有内容尚未保存，仍要退出吗？' : '有内容尚未保存，仍要离开吗？'}}</h2>
     <div id="leave-study-description"><p>{{reason}}</p><p>已保存的记录不会被删除。不保存离开将停止后续自动保存，但正在处理的请求可能已写入；下次打开时请以工作区返回的状态为准。</p><p class="leave-loss-warning">未保存内容可能丢失。本机缓存只是尽力保留，磁盘满或缓存不可写时不能保证恢复。</p></div>
     <button class="leave-export text-button" @click="emit('export')">先导出未保存的答案与笔记 ↗</button>

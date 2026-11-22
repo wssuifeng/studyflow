@@ -69,9 +69,11 @@ button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visibl
 .learning-shell.panel-open .brand {gap:8px;padding:0;}
 .learning-shell.panel-open .brand strong {font-size:19px;}
 .learning-shell.panel-open .brand span {display:none;}
+.learning-shell.navigation-collapsed>.sidebar {display:none;}
 .learning-shell.panel-expanded>.main-content {display:none;}
 .learning-shell.panel-expanded {grid-template-columns:var(--panel-nav-width) minmax(0,1fr);}
 .learning-shell.focus-shell.panel-expanded {grid-template-columns:minmax(0,1fr);}
+.learning-shell.panel-expanded:not(.focus-shell)>.workspace-tool-panel {grid-column:2;}
 .focus-shell:has(.native-tool-window)>.status-banner {top:auto;bottom:18px;right:16px;max-width:calc(100vw - 32px);}
 .feedback-preferences {margin-top:20px;}
 .sound-preference {display:flex;align-items:center;gap:10px;margin:20px 0;cursor:pointer;font-size:13px;}
@@ -133,3 +135,6 @@ button.secondary-button:hover:not(:disabled) {background:var(--sf-hover);border-
    full-width so the exercise/note content cannot collapse to its intrinsic width. */
 .learning-shell.focus-shell > .main-content {width:100%;min-width:0;max-width:none;margin:0;padding:0;}
 .learning-shell.focus-shell .page-content:has(.native-tool-window) {width:100%;min-width:0;max-width:none;height:calc(100dvh - 44px);}
+
+.workspace-shell .topbar {flex-wrap:wrap;gap:10px 16px;margin-bottom:clamp(16px,3vw,27px)}
+.workspace-shell .topbar > div {min-width:0;overflow-wrap:anywhere}

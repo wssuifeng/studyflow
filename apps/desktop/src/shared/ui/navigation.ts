@@ -14,11 +14,12 @@ export async function confirmNavigation(path: string) {
   if(approvedPath === path) {approvedPath = null; return true}
   return navigationGuard ? navigationGuard(path) : true
 }
-export async function navigate(path: string) {
+export async function navigate(path: string, replace = false) {
   if(window.location.hash.slice(1) === path) return
   if(!await confirmNavigation(path)) return
   approvedPath = path
-  window.location.hash = path
+  if (replace) window.location.replace('#'+path)
+  else window.location.hash = path
   try{localStorage.setItem(windowStorageKey('last-route'),path)}catch{/* Navigation is never gated by optional storage. */}
 }
 export function makeRequestKey(operation: string) { return operation + ':' + crypto.randomUUID() }

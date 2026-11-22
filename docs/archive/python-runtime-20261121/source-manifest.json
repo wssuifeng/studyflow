@@ -1,0 +1,1460 @@
+{
+  "files": [
+    {
+      "path": "apps/desktop/scripts/native_acceptance_cases.py",
+      "bytes": 42137,
+      "sha256": "8a1a304c2a9a9be54e5d51bf9bc68b9a31c982517a7c1f8578b28059cf9c1467"
+    },
+    {
+      "path": "apps/desktop/scripts/native_clipboard_guard.py",
+      "bytes": 2002,
+      "sha256": "432940610d099e9a4e67eb915fad8bcf653ceec7ceebc115430bac8066b40341"
+    },
+    {
+      "path": "apps/desktop/scripts/native_fault_proxy.py",
+      "bytes": 2965,
+      "sha256": "d2be6f7f8e5337a8e78abfd2d608f4397f85b12bf75757446ad59cf25b470d02"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-agent-discovery.py",
+      "bytes": 2977,
+      "sha256": "4396d26b3b9b764bfe497f7f0fa3a0cd9eda2faf4c7ce41ffd516dac76bef85c"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-app-panel.py",
+      "bytes": 8115,
+      "sha256": "6494b67f7aea49f7a0fc2a3c7e4e8d115e56eec4002d30416c81a175421d79c0"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-cinnabar-paper.py",
+      "bytes": 18872,
+      "sha256": "f6b43dafb28929f5f5e0809ba745e65ee639c41787517b90cad06b9ec9e55f5b"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-course-authoring.py",
+      "bytes": 10797,
+      "sha256": "edfe18c96ee56fa9d74f57baada6b7a680d074190a5c670ff189b706ebcc800a"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-course-reset.py",
+      "bytes": 4303,
+      "sha256": "4481caefdede2802d575e03e812b30eab45ffa1f2ff6f55867799c788606d693"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-english-annotation.py",
+      "bytes": 9381,
+      "sha256": "2ebbfb338a0348a865e13ee5d0e5e6453ab61199ac479e87216e88be6a58cd0b"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-english-feedback.py",
+      "bytes": 5927,
+      "sha256": "76aa838225b9692a7c75f5d7f2cdc44dee6deb203b1cc571b2e6106158ba7c1a"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-english-keyboard.py",
+      "bytes": 11685,
+      "sha256": "e133823744d35d805c7d5e11635939ace8302989b933f441b83c145ce97053e9"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-english-light.py",
+      "bytes": 11661,
+      "sha256": "a40be64041166457139bf49a31bfe29ed0ffe364d4b7abd957289795f873fd15"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-english-practice.py",
+      "bytes": 17523,
+      "sha256": "929a20ba6cebf05a802439a32d176f245abfa67b44867beff038f6356ddec09d"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-english-remediation.py",
+      "bytes": 9356,
+      "sha256": "e72b5b1ae8995dfaf51c9ca981948de4827636526ea257b4ba5500025e3dd423"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-english.py",
+      "bytes": 12112,
+      "sha256": "fcd3e66bdb58fd8ff90fe1140865e3bd8c085df425d17478de5cc52b7e983a84"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-iteration.py",
+      "bytes": 8258,
+      "sha256": "f2d6d965ef7636c26fe74dd5e910bd63b434b05278c731e6e24c5e87a7fca96a"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-learning-experience.py",
+      "bytes": 14003,
+      "sha256": "a2a2ac5722671f662c9dbe339d3a5b5dcd097cb602d018a56ec09ae19b0430d4"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-native-tools.py",
+      "bytes": 19866,
+      "sha256": "3a6cb9369ccf21beb265e9db9d0aeccf13be29c2c35c55f77b73799f228980a1"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-notebook-pressure.py",
+      "bytes": 6119,
+      "sha256": "b574a925d5801efb7bdbc17ba1e7c73040839d65e4cf0b4ea9c3231c5e515fec"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-notebook-sources.py",
+      "bytes": 4481,
+      "sha256": "a02cde297956d1a9506a7320af31b375e1ccf34188cebad1bc9a6b95453a2fbc"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-notebook-v2.py",
+      "bytes": 13863,
+      "sha256": "c7427eeead5220e86c9be1ba642c965a20e8429ee7bd4fc340a38a6ed962885b"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-q234.py",
+      "bytes": 6208,
+      "sha256": "eb8263946638b9212dc96cd78d2f24a6cc9bfe0d9577598f3defd5b68a95f3cc"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-teaching.py",
+      "bytes": 6941,
+      "sha256": "adc7db720203ef3341b2455392bea6b2ab49ab6a9b49da9534eca6d20ec42ba7"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-themes.py",
+      "bytes": 14888,
+      "sha256": "a13af67a529b4c3a746e98abc4f756e5b056dbeebe34ea4cf4ad2167fe2d884f"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-tool-bridge.py",
+      "bytes": 12281,
+      "sha256": "e66554972a3636280024e3d610d6169127002295ec22948fc0bd479e2e094dea"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-training-comfort.py",
+      "bytes": 18309,
+      "sha256": "b077a9a74bce36a07e37ba45da83c52a6e27070d1d638061f94109c340094fee"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke-workbench.py",
+      "bytes": 9709,
+      "sha256": "041a1c4c0ffc468b43d189d329d36fffcc1cad33354165e0a4db9ecb81cb0c0a"
+    },
+    {
+      "path": "apps/desktop/scripts/smoke_workbench_support.py",
+      "bytes": 507,
+      "sha256": "6b97a605a08b9a87c5132b9b5d47c6620f7e6be774c63359f7ac66c78269d029"
+    },
+    {
+      "path": "apps/desktop/scripts/test_ui_contract.py",
+      "bytes": 37298,
+      "sha256": "104c892e74f00b623c60586db457e82856f92bb0dc9fc01d663e00401c06f471"
+    },
+    {
+      "path": "apps/desktop/scripts/w0c-browser-verify.py",
+      "bytes": 6800,
+      "sha256": "c847afc8d37f9f92f2d96851a336180278641de30d62c858669750782af8e6fa"
+    },
+    {
+      "path": "packages/core/.env.example",
+      "bytes": 434,
+      "sha256": "a96ff33bd9fee9b86a0c11bbadc041ad7104faf174fdb5fff610bb3866dbbe5b"
+    },
+    {
+      "path": "packages/core/README.md",
+      "bytes": 904,
+      "sha256": "666d16d365bbcc434839f7d0a4e14ef767ae64ff27e62307185c567a2b9a0130"
+    },
+    {
+      "path": "packages/core/engine_entry.py",
+      "bytes": 470,
+      "sha256": "4d8aa718d006564fa4ade58776acf5133320e4e4514409a1c6a76917411c83af"
+    },
+    {
+      "path": "packages/core/pyproject.toml",
+      "bytes": 1214,
+      "sha256": "8720d49d614c61b8823fc60ff82b735f285381acaf3a23d6494598444a1cef91"
+    },
+    {
+      "path": "packages/core/src/studyflow/__init__.py",
+      "bytes": 24,
+      "sha256": "8b7f64a32214cab18de8b211776778deded6f52b18d2682dda482a5a3997d8f5"
+    },
+    {
+      "path": "packages/core/src/studyflow/__main__.py",
+      "bytes": 59,
+      "sha256": "41df9ff33d90dafa6210fdb1e8f045b09ae900258357114a424f36d0c845987a"
+    },
+    {
+      "path": "packages/core/src/studyflow/application/__init__.py",
+      "bytes": 30,
+      "sha256": "d011ef13ad875b8adf3524ec4756cb82ee1dc7c2accb31e878184d8df404ec39"
+    },
+    {
+      "path": "packages/core/src/studyflow/application/demo.py",
+      "bytes": 8084,
+      "sha256": "2b9bad7688ab8a267c9804f2c8aed1cf727e1089600736652b19ac59d9c19177"
+    },
+    {
+      "path": "packages/core/src/studyflow/application/english.py",
+      "bytes": 5117,
+      "sha256": "69f99d3a55d83966ddc45b06240ef69acede08ff1c3c790df17fe6aa7efca354"
+    },
+    {
+      "path": "packages/core/src/studyflow/application/english_remediation.py",
+      "bytes": 9403,
+      "sha256": "0ad4084536f10fd51f622d40d309b1cdde255f8c536738b0c34c2a59b4a69283"
+    },
+    {
+      "path": "packages/core/src/studyflow/application/facade.py",
+      "bytes": 13222,
+      "sha256": "da175e55b876fbb66c3e3b11fc917f9405bf174ade8f43534a86dee7326a4ce1"
+    },
+    {
+      "path": "packages/core/src/studyflow/application/queries.py",
+      "bytes": 8523,
+      "sha256": "3470baed387dffdda41cdc66926789ceb1fca5c85560ce71c4c3f22edd972067"
+    },
+    {
+      "path": "packages/core/src/studyflow/cli.py",
+      "bytes": 253,
+      "sha256": "bce332d43f1f491a7bbccc4736f05e03a5c148001b72afb6fdb670c1567755c5"
+    },
+    {
+      "path": "packages/core/src/studyflow/config.py",
+      "bytes": 166,
+      "sha256": "510342f2adbe7e726d5e802f318f91f5f5a3b10124d4bb8d5687fdc1ed3a5233"
+    },
+    {
+      "path": "packages/core/src/studyflow/course_answers.py",
+      "bytes": 256,
+      "sha256": "fe3d60242da8bf24ab308324169fdd47240e6ef80a1a3ab8a7123be97975627f"
+    },
+    {
+      "path": "packages/core/src/studyflow/db.py",
+      "bytes": 366,
+      "sha256": "1dd59c056b54793a7d8d9550ffddc55684f85a67ca4915f3442af7c2367bbc08"
+    },
+    {
+      "path": "packages/core/src/studyflow/diagnostics.py",
+      "bytes": 198,
+      "sha256": "21f246de6c0f90bfdede21697e3623d1f45275b5bcd82845138ff34143c7727b"
+    },
+    {
+      "path": "packages/core/src/studyflow/domain.py",
+      "bytes": 698,
+      "sha256": "fae7d5f2947e896f118ebb5de7caeb391095f4962f5d502edc91fe1e119da020"
+    },
+    {
+      "path": "packages/core/src/studyflow/engine.py",
+      "bytes": 325,
+      "sha256": "7360b3f1f3f970af7f36d4ca9920f70ef911ecb79f88bc5b53fde258477719e9"
+    },
+    {
+      "path": "packages/core/src/studyflow/engine_protocol.py",
+      "bytes": 532,
+      "sha256": "8009ae82d662713a5fd55a848a7f5952804b3febced20893c7bd256170348f37"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/__init__.py",
+      "bytes": 33,
+      "sha256": "66cb0d762748d2b65fd3ac4f7e813416734620e9603f46155106a11061d57c82"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/config.py",
+      "bytes": 3746,
+      "sha256": "e3052e9330503effe6a9d30476535a4438df866c57b491c5ad44a206cb25213b"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/diagnostics.py",
+      "bytes": 1946,
+      "sha256": "2df7d9b191c9c2801cad53d3334750b07802d7f112afc6433e69c5eb072e594b"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/errors.py",
+      "bytes": 2079,
+      "sha256": "2dbfccca534cdcf24b178cfd2a9b630028d1509f30faadd7c9afaaea2cac7870"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/file_write_lock.py",
+      "bytes": 1177,
+      "sha256": "a95e78f4caae75c98e8f17492508e3c633a875a9a49b4df32213a97eb5b426e8"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/health.py",
+      "bytes": 2117,
+      "sha256": "b19802fc51a49f9f608fdd57cae1e0064251631d81a1e6e054ffe8ac97d9be3d"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/installation.py",
+      "bytes": 3700,
+      "sha256": "0547a60035e5f4aed0733d50d67479b47e1371c845a58fb33bd4413cbc271971"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/leases.py",
+      "bytes": 1984,
+      "sha256": "d7e6ed5f117f353ed2f4563ce4a39057271263bb5020ff0f3caf60c6514d23c4"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/markdown.py",
+      "bytes": 5749,
+      "sha256": "1791eb74f485350f4c1ec5126bda145739aafc4432d9a0d4df3f65b9b7cd5eba"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/persistence/__init__.py",
+      "bytes": 45,
+      "sha256": "3dfabb092d088a859fc283c11e0f33e924002c73209803e56cb2f0f471010105"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/persistence/base.py",
+      "bytes": 1103,
+      "sha256": "5a4998ef1457a6f2b247de9c3f1f775c07c884d52ddaf249ef86e92036f37c3c"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/persistence/database.py",
+      "bytes": 10659,
+      "sha256": "7cde3f274f606814932cb124a05b62706b40d64be2b1254256cda435724f52bf"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/persistence/migrations.py",
+      "bytes": 12241,
+      "sha256": "2460cb732debc426226c8d4fd81f9035721d5010e07ac61f3134ddbaf59b2cdc"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/persistence/readonly.py",
+      "bytes": 2805,
+      "sha256": "dc3c0015d520a1eb499d43654dd8e054173b62cb4e8c4d3bc0a2a132e5d351b1"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/persistence/registry.py",
+      "bytes": 1604,
+      "sha256": "175812aaa77feac9563c53fe2a0e4d8824a4d9e998a01cda99dda74eb23c62eb"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/resources.py",
+      "bytes": 1657,
+      "sha256": "8400c4ee02bf389a94b2064fd1d186fea1c2a8cf47e16e4e75016e1e4b1da1f4"
+    },
+    {
+      "path": "packages/core/src/studyflow/infrastructure/runtime.py",
+      "bytes": 2517,
+      "sha256": "0708fb0238d5daaf62ca3043d97348f2951a2509fb868f58c84f182617cb0952"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/__init__.py",
+      "bytes": 34,
+      "sha256": "e93720f4136eb195e3e70affcc0b3eba9512543daf71b15876d9e22ce004603e"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/__init__.py",
+      "bytes": 230,
+      "sha256": "08e25bd841bcc136ae89c9dd31437a8e8343b4ac2867bc00f52fce95e0fa9e13"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/__init__.py",
+      "bytes": 61,
+      "sha256": "c2d52d8774693e12e0be8ad7d4b1e4c57f7c8489c9c9457c105900d0a13d1663"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/api.py",
+      "bytes": 2643,
+      "sha256": "2e63fbc76bd699ec91529db38ee88d261e45b58467176ee0d9093ebfc5a0658b"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/course_maintenance.py",
+      "bytes": 2760,
+      "sha256": "608df07c5f962f98d05c60d40ad1696e949545cc8275232c7c517902d26dfd04"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/courses.py",
+      "bytes": 14497,
+      "sha256": "ddd8eac818c78d7fe8c90941cb55fb500d180f9295b201694d748de06f917394"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/documents.py",
+      "bytes": 874,
+      "sha256": "824a350e321d658aa7702d53cd658379f316d80b38f95fdfbb7492cc51c0f542"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/learning.py",
+      "bytes": 2751,
+      "sha256": "bc6594e0dde0b5a5d073e1031d1c2c36d16a763506fb039d4bfd67330c4e53c4"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/planning.py",
+      "bytes": 8157,
+      "sha256": "00c30759f217ecf24839cbc1a8be5699c5d5f491df69bf2a576de91952ab5a40"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/reviews.py",
+      "bytes": 2103,
+      "sha256": "f013da79200eb26b13130088b2441c6b4608412afb68bb473e5d4e72f58f763f"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/system.py",
+      "bytes": 5020,
+      "sha256": "238a1238b1b2f809f6afc8e706a3db935711fcee0377a642bd61eef8297244ca"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/commands/workspace.py",
+      "bytes": 5001,
+      "sha256": "7a60ed5fba6e13fa7c7bf8ac79ad60bad4b8bfa4c1ba2fd53a1e017c40c76294"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/registry.py",
+      "bytes": 1045,
+      "sha256": "8138b76d8cb108972e6474a6e070247b30176b07bf0cdbe9a5d087fe582a7cd6"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/cli/runtime.py",
+      "bytes": 17203,
+      "sha256": "ddea96a782633fea7e38305a57b559e73c5f333d1db9369cfa20ad454ae50c27"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/__init__.py",
+      "bytes": 39,
+      "sha256": "fcee9c6da8cf825334370b12694f7d448fbe0d724234e47391fae326360ce99e"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/__main__.py",
+      "bytes": 67,
+      "sha256": "dc82e87eb7176f925240919d012b1f2999233732d89f57abc5a0130610faa787"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/dispatcher.py",
+      "bytes": 19324,
+      "sha256": "3c03370d54802240475c9b01c22e751d1975e11736a4c070842d02b8a46ded67"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/english.py",
+      "bytes": 4925,
+      "sha256": "4a3a4971a22dc57bd8d994c3cd8a41d30c2a1b3745c930967fcbae1834778160"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/extensions.py",
+      "bytes": 5907,
+      "sha256": "7df9999029132c52afcb635fd8b1757a0c39490bde9cf7102246767407f4995d"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/practice.py",
+      "bytes": 3105,
+      "sha256": "2c483932d3e49ebd6697cdc4a0234653cdefdae27e543756755fddf1c1bddfe1"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/protocol.py",
+      "bytes": 10036,
+      "sha256": "8ed37c54475b051d880d44a3c230403b18128c34fef72a2afbc1646a17187b93"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/remediation.py",
+      "bytes": 1420,
+      "sha256": "8641d370600c3f12678ee63d259887f58143da6722eaa3380f03c64e0b90b8ac"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/schemas.py",
+      "bytes": 9028,
+      "sha256": "d2aa7703690e99e8588d0db3b6c5eccd0b41f55daac3f033a84cab24deb82e25"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/speech.py",
+      "bytes": 2527,
+      "sha256": "385500a9770a22e7857c05a5080129573c6999c9560250fe56f90a9bcccab275"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/engine/stdio.py",
+      "bytes": 1046,
+      "sha256": "b43461a6f2b8ec5663cf8a19bd7d95524d667660da4c06afb34f2d1dc4d126b9"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/web_compat/__init__.py",
+      "bytes": 61,
+      "sha256": "d73fbe2972a116b161e4c51eedccff435c6a4f0674a2830af5957b804b0f7d36"
+    },
+    {
+      "path": "packages/core/src/studyflow/interfaces/web_compat/app.py",
+      "bytes": 8715,
+      "sha256": "9f9c075fe9836db2f114ee2489f4fb3d42b3b75cb424e8e69806b2e51f024370"
+    },
+    {
+      "path": "packages/core/src/studyflow/markdown.py",
+      "bytes": 506,
+      "sha256": "654185392ab725bac92636fb2a51ca07a7ea3be4e4d2eb4c5767853b37146145"
+    },
+    {
+      "path": "packages/core/src/studyflow/migrations.py",
+      "bytes": 542,
+      "sha256": "fb30615cfa3b3ec02567ab831cf42c611c3236cdd122374febe9e8a55c00ee10"
+    },
+    {
+      "path": "packages/core/src/studyflow/models.py",
+      "bytes": 686,
+      "sha256": "6bb3a2656741eb5b6307a19925f9561fb4e8788d493958a97f6f3e36c8d1ce9b"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/__init__.py",
+      "bytes": 26,
+      "sha256": "aef4036d701c5730384e3156e5e9e12db64dbb937394aaa526b8b2e9bc04d9c1"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/audio/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/audio/assets.py",
+      "bytes": 4523,
+      "sha256": "0b27b6614b8de7495546a036d4fa1497c80fb3ac937e9daf9ad2f84114b00a22"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/audio/dictionary/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/audio/dictionary/provider.py",
+      "bytes": 6084,
+      "sha256": "5ef538a89f1bcba3622768acce5f8a77f90fc0c7af0e94497e3c0c63dbf7e350"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/audio/resolution/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/audio/resolution/service.py",
+      "bytes": 3211,
+      "sha256": "80b49e1e993cf34460b56780f49f3779d814d4bcb9c60526d3ce577e3938eb50"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/__init__.py",
+      "bytes": 34,
+      "sha256": "2c91aedd0ca642e40bb2d7241aef750b25bb5ba1a42ee6ec96e2db33a6e326cd"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/authoring_quality/__init__.py",
+      "bytes": 534,
+      "sha256": "14c024384724c0f48ba0081af20e3ba51c1a14f341cf33ca0d8b33aaadfad454"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/authoring_quality/chains.py",
+      "bytes": 1501,
+      "sha256": "a1ff86975145d2231988102a6a0ce36553b101e6d4aafdb6d9a1d7887b3a62ab"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/authoring_quality/report.py",
+      "bytes": 18795,
+      "sha256": "e020d313eb559fff0a5c44bfbc9720b726b2c3450e103e79b8bb174b23ff55d5"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/authoring_quality/rules.py",
+      "bytes": 5353,
+      "sha256": "3ec1244287bea430f6874550f096a5d4da8d46b88e83a00c10cf8c08ea13c917"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/cloze.py",
+      "bytes": 1746,
+      "sha256": "54e0496216f9fd6ed01506bd59867cdd96ee6f391cc64ccc174f3add9141a35f"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/content.py",
+      "bytes": 15444,
+      "sha256": "2b5d1e12620c5ce5cbe931d78c82e415f0888af8234ea3f04f3480e9d21c9bdd"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/english/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/english/contract.py",
+      "bytes": 3163,
+      "sha256": "f35c578677187b5b41c22db6d58158a06cab0388f1398044015a9cc5c102b630"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/english/models.py",
+      "bytes": 345,
+      "sha256": "00cdbcf357ae2e3afd049ebc440d2dfc912d7ccadc802d829cd894b3e7fac370"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/english/progression.py",
+      "bytes": 1591,
+      "sha256": "7809532631f27d9a5035b2537194d712405d16f6fff2553414277e50af184b4a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/listening.py",
+      "bytes": 2456,
+      "sha256": "d16ef2bf433f3ecbf90706a28198b351b8aa8e8ad8b35c10275ad0e51629afc4"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/models.py",
+      "bytes": 4176,
+      "sha256": "592aecb5e687f6d2c43d016223882aa1c30cb16e106e54418c0e038353c2efb8"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/packages.py",
+      "bytes": 7962,
+      "sha256": "cb74712022672846266553994ef196dcf7022815e542136b06fbdf933923741c"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/presentation.py",
+      "bytes": 3912,
+      "sha256": "b366e840e174ab92e254859618536563cb2ccc38b3c94797311f42d90222d273"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/publication/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/publication/purge_extensions.py",
+      "bytes": 3102,
+      "sha256": "85bab0396ee986f02282eada41f8a3726416546aaee0d00f11c01ac09e731e8e"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/reading.py",
+      "bytes": 2815,
+      "sha256": "9fe9dfd7b56427c33527d88205dbba92fb363b2ae870e0eb553c551b466f395d"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/references/__init__.py",
+      "bytes": 79,
+      "sha256": "81f880e58d5164113ccf9c2d62298ccd82f5d45cc754d62e193f3555a7faa20c"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/references/contract.py",
+      "bytes": 1183,
+      "sha256": "29dad446bc26deac64e4f30e5542235e336750a6a2492ff8a65ed68de0c6a4ac"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/references/service.py",
+      "bytes": 4583,
+      "sha256": "3823e80c0059df5bf6d187026278764ea3b2552689544d0f2e5f6ea91b42906a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/revisions.py",
+      "bytes": 14470,
+      "sha256": "ac15749ca9965f344ece2ba25686996997aea899658c030260ca371434c2e5c6"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/sections.py",
+      "bytes": 2235,
+      "sha256": "519bd5b8415d2b9e125da76b592b7cf3b4edcb302e7f935edcb578ad2cef6d19"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/courses/service.py",
+      "bytes": 22619,
+      "sha256": "4ec9552a9cdb65d05ad64b5a74df1eca348f97a08e4c667a1fb92e4c608d6a55"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/documents/__init__.py",
+      "bytes": 36,
+      "sha256": "67ab7872e54360552e003ac86b988548e2739934d63d9353670bfd94953be78e"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/documents/models.py",
+      "bytes": 1014,
+      "sha256": "815d356fced096366b3c0a99f10ed01e9f24d6e9bf76b312a0bf7381a773b702"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/documents/service.py",
+      "bytes": 3912,
+      "sha256": "d372691d508c000aa1693f8ab9ca60e56250b17d8ff78c79c77735adea90f5d8"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/__init__.py",
+      "bytes": 35,
+      "sha256": "d7853f50f4792ec4c2a6121eaf221baa68f1634da00b4376c202375e7f1ccad7"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/branches.py",
+      "bytes": 1485,
+      "sha256": "593ecd5ac10d028c31c80c0cbcf89f161a62dda1a307813394239ccfb94832e0"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/course_answers.py",
+      "bytes": 17290,
+      "sha256": "f78b069701f0ad11d4045e7f77556a467f8d3b794c9f7fb8bb709f2b46e75976"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/english/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/english/checker.py",
+      "bytes": 1802,
+      "sha256": "a63ec0827e75a842e596189d61ace4f0e3350b0318a7e7aac42cbd0227898360"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/english/models.py",
+      "bytes": 2154,
+      "sha256": "1c9cd704c891ea6ff89365859ecc10089000ca85b592633452db8196954b33cf"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/english/retest.py",
+      "bytes": 6406,
+      "sha256": "268f0908d6024b9eae4a34921511c43ece910488807d8eadb602675908bbaf96"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/english/service.py",
+      "bytes": 15693,
+      "sha256": "efc8bb8b0a46e5135d759745dafd2eeeb735da8891d4f524bc1ffc25a1e2141d"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/evidence.py",
+      "bytes": 3360,
+      "sha256": "329e2c97dbde08786b710043605d3e68eceec8cc91e4e19de50d1993f4bc902c"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/legacy_cleanup.py",
+      "bytes": 2999,
+      "sha256": "98a2189c2af34e37391ae3dc49d2982c4c4600b80ac21f12c03b7dcad608e453"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/models.py",
+      "bytes": 8758,
+      "sha256": "390b9e3b52f0ef1253e2aefcb69f1c42fcdb21b1995674c8b326c7853067ed34"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notebook/__init__.py",
+      "bytes": 83,
+      "sha256": "4a8fbf9619fd973a259c459d54cf0a620a2328a42e8858556ed7e21810c8ae2a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notebook/commands.py",
+      "bytes": 7722,
+      "sha256": "9cf6b58cb587e9e5d4ec11946438dd7edde76471663e6e92e467eb2beab4a152"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notebook/document.py",
+      "bytes": 8063,
+      "sha256": "20508925162d719f998994570fe9973f1b6943268dfe349bc1f15ddafca2d060"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notebook/queries.py",
+      "bytes": 3397,
+      "sha256": "7dd789a8a5f94d4dd2db66addee08615abb4c20b77a8f7cdf89d81a77a07b711"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notebook/sources.py",
+      "bytes": 6201,
+      "sha256": "79887e68062ef8de0319410033a45227c7734af2f95ba7639e232442f9316c34"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notebook_queries.py",
+      "bytes": 3840,
+      "sha256": "96c990dda4578a33e04f44d0dd0b1a8cd5cc4bddead384fce0234e3563fecb5a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notebooks.py",
+      "bytes": 9067,
+      "sha256": "5fdc334e1aae2dd11a8287bf578dbfb5452ec99d70daa9a137a3756c473d514d"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/notes.py",
+      "bytes": 3954,
+      "sha256": "9fcefb6c97f1eb5133cfb6292bf1b87cf9c301a545b818794871b4f4ee0b55bb"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/practice_groups.py",
+      "bytes": 10027,
+      "sha256": "41275cc5f5ec2bc469b9e9577fb8d7a4f94888133c5c5dfe8bfa1d7f952b60b8"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/presentation.py",
+      "bytes": 2743,
+      "sha256": "f0d8ce9f55526b9471f48a59aa5e220cc93748e52408b1a9fab2b93110849516"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/repository.py",
+      "bytes": 4105,
+      "sha256": "7a79a6a8e4746bd4edea2ace541efe99e2c19e1e8b9b171b9bfee20bfdf6280b"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/reset.py",
+      "bytes": 10547,
+      "sha256": "b5d2bd6d5fff373bf5b7a32d3bdb6208fe351c33cd5f67a38137386d625ede55"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/restart.py",
+      "bytes": 10224,
+      "sha256": "198c855bb478774654a81153c3150fb87cf231c7b3322cff9a58462bd26f938a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/round_policy.py",
+      "bytes": 1787,
+      "sha256": "1fe7330f7dd39019a3acc725d47fbd619b66eeb5cff96c7a8380d43e3f45c09c"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/schemas.py",
+      "bytes": 254,
+      "sha256": "b7545a68856e5f85f409a117a27e3d4e3bac9cde992967fe7c44632c507bb99a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/service.py",
+      "bytes": 18602,
+      "sha256": "7db248dc11d03b1214c3437b0041c30a2c77ab0662bb8f8f32011aa3a28516ca"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/study_sessions.py",
+      "bytes": 22893,
+      "sha256": "af9f4a7fce7ffde7fce649eb557bdc4cccf11219d28c598f803cc8c0f2dc61c6"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/learning/write_contract.py",
+      "bytes": 3853,
+      "sha256": "6f3d5e753507beb42b98cf12ff5b61f8ae53dd06b03c452a7fb33a21d1fa960a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/archive/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/archive/service.py",
+      "bytes": 1274,
+      "sha256": "25f5d69be04a841408bd9d367d5fdee5eb628c22c3605cbe055128cc21c3ee6f"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/english/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/english/models.py",
+      "bytes": 2519,
+      "sha256": "ff41cb39751115d2680ddefcce3b23698c76b711a7389ee04619fc56295daeab"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/english/projection.py",
+      "bytes": 2839,
+      "sha256": "0c1591c141163a3358a3a40747d0b0429b79bf651fa758c6271b24e8310bb332"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/english/retest.py",
+      "bytes": 3376,
+      "sha256": "1036a62eaea76f8e1b9525f76c680b5a55d3d1e9621f469eadb51fb30e20b20b"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/general/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/general/models.py",
+      "bytes": 1444,
+      "sha256": "6674dc8b3d173affa941e58c1100cd3d093c1980aede5bfe2e96487529bcf564"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/general/projection.py",
+      "bytes": 4517,
+      "sha256": "f6456d9941e9c41c4badc54f3a6ccf057378b5ad86313c347cc319200556f323"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/query/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/query/cursor.py",
+      "bytes": 1491,
+      "sha256": "d5c69d1aa5ea6b077ecef9453d6e4e86ae394e4dd4c2d3599ba10ec87b70bf93"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/query/models.py",
+      "bytes": 611,
+      "sha256": "774ee8da480896f0cd59e967eac57178639a18febf412b3a4ca682def48582f4"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/query/scope.py",
+      "bytes": 700,
+      "sha256": "bec55e4174bf21936d7077f2cd6d9c4dd437195f488c95b21b977f156f971581"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/query/service.py",
+      "bytes": 15609,
+      "sha256": "ee5a9addd0be2a9b9ef088ed5456634ccfbd86972f1c03de0c6adc02a6da65ce"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/remediation/__init__.py",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/remediation/models.py",
+      "bytes": 1437,
+      "sha256": "fd8ed6fbe65db888ab355b2f97a29ea2a3074b9373da773815b445c5371df3ea"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/mistakes/remediation/query.py",
+      "bytes": 4802,
+      "sha256": "c66b13bde83aa4d5dd8150bc2d8cc95e6f6ff0be019b1269af1027380e81d301"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/planning/__init__.py",
+      "bytes": 35,
+      "sha256": "180749cd4d23aed78dec72299243d82d6c9b1ac7162dea42756afe80d968fa34"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/planning/course_state.py",
+      "bytes": 2142,
+      "sha256": "031adfcbec4ca8877d8b49999db867f03763ef536232f4f07a777b73027f9dd0"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/planning/management.py",
+      "bytes": 8790,
+      "sha256": "e0c50528b86cc5ba00a502ce4fefca6c3fe187223bbb2470287a1cc0cbb4a4eb"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/planning/models.py",
+      "bytes": 6683,
+      "sha256": "0b43a876f6ed39e4304a8b4b71eca87848e30c0ca712fe45e760bd16df40de4f"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/planning/repository.py",
+      "bytes": 4025,
+      "sha256": "2331abdbb863ad353de872c20818e18b0e282d641e14363411c7370b24d6da9b"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/planning/service.py",
+      "bytes": 6330,
+      "sha256": "a96b9eb79fab5b43fc5c442865db14fffe0a296965d1e3d00e28390cd5188842"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/reviews/__init__.py",
+      "bytes": 34,
+      "sha256": "4ed3202b64ad42b7797b6a3be016626f27315956f8be9a8461abd85c52a1423a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/reviews/models.py",
+      "bytes": 2578,
+      "sha256": "448a21ef9809680d6011e7a14bf174bea3cf4d1a22fa1dd922b3207a527bf519"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/reviews/queue_queries.py",
+      "bytes": 6708,
+      "sha256": "0219fb664714c5ce97b46b961a9feacacacb36eea02b73d295464498499dcd90"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/reviews/repository.py",
+      "bytes": 2090,
+      "sha256": "4b3a81033b28c036245dcc0c44d8cfa491afbd52877816e84666963dad97324a"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/reviews/retests.py",
+      "bytes": 3226,
+      "sha256": "3285db5d11146ece674ba00f72a4629f8e935dde508e51b77184a2cebd600e1c"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/reviews/schemas.py",
+      "bytes": 328,
+      "sha256": "d14fe5025870e86c04496e4c17a43de331e80738984b31e79ccd075050d4395e"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/reviews/service.py",
+      "bytes": 11191,
+      "sha256": "3ceef1e5b04ce08dc8dbb89ea143b4969542be82b9b334a19166cc2772b6e3f1"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/speech_generation/__init__.py",
+      "bytes": 63,
+      "sha256": "806b62ad441b2bdef8f6b79f5b5e645c3bf1a4251c3ea7b4d495d00caaa0e225"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/speech_generation/credentials.py",
+      "bytes": 1060,
+      "sha256": "d1fb1257bf880e377de168ac00014788da9f6eaec508c6ba81429514e019cf92"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/speech_generation/providers.py",
+      "bytes": 2574,
+      "sha256": "3bce57173e3da7f223b51a643461882d8460d2845391f606a7c9661dba5b8e27"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/speech_generation/service.py",
+      "bytes": 12750,
+      "sha256": "c1158bb6892c929d47f2cf44437bcaa88f639f04901e67d645d51d9a48ea17fb"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/workspace/__init__.py",
+      "bytes": 36,
+      "sha256": "c07f7daa0d999e7beb022bcca83d68620f18b043b8f8ab2d3d758be550652ea4"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/workspace/models.py",
+      "bytes": 835,
+      "sha256": "90d1e736ef5e6a14f77bc78939c9d315facbb347e00b29f4147cc3d8e2312915"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/workspace/repository.py",
+      "bytes": 19409,
+      "sha256": "e33e3a968a1b7775180b2f0bab320639dc14457bafec18d457492fb9201139b5"
+    },
+    {
+      "path": "packages/core/src/studyflow/modules/workspace/service.py",
+      "bytes": 1737,
+      "sha256": "00d18956d4569e60a28b02b1c7cbe932ee28db28cf49d5e0e6142acf22c579ac"
+    },
+    {
+      "path": "packages/core/src/studyflow/presentation.py",
+      "bytes": 216,
+      "sha256": "82e3b3a1bea6d428f1857cd528ffd9a7fcc5610422d3005d3e425fdd3cec32d7"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/alembic.ini",
+      "bytes": 637,
+      "sha256": "92428e4b6e519151f20c6dcf84a7b2508d7bdad047bf25457646d68de2afd196"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/content/lessons/java-reference.md",
+      "bytes": 948,
+      "sha256": "ac28c1b983bf03a4994699b65e36a8c56e14b2618ad66746b70ace47f0e099f5"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/README.md",
+      "bytes": 921,
+      "sha256": "5d7ebe419a47270d5690cab464d482e7af52532f2b05459afd3ee1f066add61e"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/env.py",
+      "bytes": 1617,
+      "sha256": "2154af77cbe119a12f356770a4c972e219b176edbea89734b394239943095b30"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/script.py.mako",
+      "bytes": 619,
+      "sha256": "49b61228b9c5ba685388a355b8622dc08c335609dfb12c9a6f33576f595a4c7c"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0001_mvp_baseline.py",
+      "bytes": 10628,
+      "sha256": "d06e16c693a974f1f58b0ff580eb912be4b252b64c2d834c28455b35f651fa01"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0002_generic_metadata.py",
+      "bytes": 1528,
+      "sha256": "23ef65f3781dbfb148ea5ad589b5eaf2361699266e019cac827853f4bcc811f8"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0003_learning_console_lifecycle.py",
+      "bytes": 5999,
+      "sha256": "7746df62b9033703e247402fc2e17fd3bf2f261183c71ea96fc47c12592a1ed5"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0004_learning_progress.py",
+      "bytes": 2744,
+      "sha256": "263dc4be1184fbc7fa1587475a5149d5fd68096d20d9c10307ad5fc348d0e3ea"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0005_course_answers.py",
+      "bytes": 1264,
+      "sha256": "5f4610c95eb3a2fbe6106eedbe64fb7c31cda1179cedb3284b87baf0906fa451"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0006_course_study.py",
+      "bytes": 2331,
+      "sha256": "4f532227a7f81952f2bcfd75434a60abc27e3d7e03d17232223a2fa6310cd1b4"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0007_learning_tools.py",
+      "bytes": 2746,
+      "sha256": "dbd41327309c29ec98c7f41696e915279bd5f91b01c91e46a18d0a3c9b54475f"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0008_plan_notebooks.py",
+      "bytes": 1819,
+      "sha256": "2956ef7986373094bde4b5793b04ab24c68f75cf6da263af983bddce9e111137"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0009_write_contract.py",
+      "bytes": 804,
+      "sha256": "3d49947a9f94bad7db1837d42d039ed443f03c4dec630c4e1b95a9f689d8257c"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0010_review_tasks.py",
+      "bytes": 774,
+      "sha256": "1684c933b16b0517298d025728dd2def0251727a2775383a94649e0ffca6c75a"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0011_course_revisions.py",
+      "bytes": 870,
+      "sha256": "1a3abc7b6acc9655abf43f2e8f00e9a6b8b1b4cdd85a86879a234a2f97d1486e"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0012_plan_management.py",
+      "bytes": 826,
+      "sha256": "be799470075681d69d2b2bb144b1b7c90435a780836875807a47bc474313ae25"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0013_english_specialty.py",
+      "bytes": 10086,
+      "sha256": "ceab1465f561a61eb574da9347d18bb9006f547c455df1e9fb045f385f74c85a"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0014_study_restart.py",
+      "bytes": 616,
+      "sha256": "d03d70c0b0018904a127bec408d5995f8d6548258391517403238658ce640e70"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0015_english_remediation.py",
+      "bytes": 889,
+      "sha256": "ee816b442e65d97ff61718c2f886b6aafdd365589860dd467cd815bfa949f489"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0016_notebook_document.py",
+      "bytes": 970,
+      "sha256": "a05487e17413d0bed7616f82a3d425ed274aadad0fbe89ba95414830e3f4a0c5"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0017_course_experience.py",
+      "bytes": 1274,
+      "sha256": "cc18d96678a878ef2c6a602c02a2ac5b70a332668faf2fd1b930d417721d70cf"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/migrations/versions/0018_plan_course_sequence.py",
+      "bytes": 1827,
+      "sha256": "755575aa9546d58f6b4cef40f9542eedfba0c9b677022fb1b80d71b5baba8a50"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/static/app.css",
+      "bytes": 28552,
+      "sha256": "cf10132930570119fefd1b398a9a846f9070ef77bd19774ffbb4bec8fefd3ed4"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/base.html",
+      "bytes": 2048,
+      "sha256": "cd83769b52d1623c2538ac008f318a6ef23f703299e5ef1767f54e9e74af3908"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/course.html",
+      "bytes": 2913,
+      "sha256": "e2fbfa27ad405fba030397b8e498c9ee8d29645da288484ec0371c18d547421c"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/documents.html",
+      "bytes": 944,
+      "sha256": "c86dcdce869fa8241ff45dd7fa52db7f427747d41640ed093740ecdb2d937db2"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/error.html",
+      "bytes": 345,
+      "sha256": "4419362ad2cecc254e537b21f40c70fb6b82cf43be5e59465ae55ff4224d9706"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/plan_detail.html",
+      "bytes": 2481,
+      "sha256": "24a5327a3273277e84d38573b5beb66d7a1d73aa87b310a636458f07c402f8cf"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/plans.html",
+      "bytes": 1458,
+      "sha256": "e36c5acd7109744b62836944c225eec1d6eeddc952a83b9043ecbbae042a916c"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/submission.html",
+      "bytes": 3095,
+      "sha256": "6a20b6c60a9975a132ee4621a2f99e65ac67705e293d9a5c9258d7b431ce9e62"
+    },
+    {
+      "path": "packages/core/src/studyflow/resources/templates/today.html",
+      "bytes": 4569,
+      "sha256": "939655e887f7469017cd4c940008d28113ee89699fce8df0f1d4ff00cd7a59b4"
+    },
+    {
+      "path": "packages/core/src/studyflow/schemas.py",
+      "bytes": 252,
+      "sha256": "5a9297e6c17f0129144db826fb17b4005b3a8c953a55fe7001e1c06581fbd1c3"
+    },
+    {
+      "path": "packages/core/src/studyflow/seed.py",
+      "bytes": 542,
+      "sha256": "3a1512a760b10383e9e1ead822486cab6e755480a5e732aff361239a3a5847f7"
+    },
+    {
+      "path": "packages/core/src/studyflow/services.py",
+      "bytes": 318,
+      "sha256": "acff06eeed6ea2172791a8a4914993d7247d42f768aa9c52568e9445bcc94eb5"
+    },
+    {
+      "path": "packages/core/src/studyflow/shared/__init__.py",
+      "bytes": 25,
+      "sha256": "b0cfe4784c148324edda1ddb9d88675cf94e02cbfc104c031674bf089011784a"
+    },
+    {
+      "path": "packages/core/src/studyflow/shared/constants.py",
+      "bytes": 257,
+      "sha256": "3af0202a21efbcc58e67fdd73271dd7adecdb54fb5fde571dce7423dfaa08e2e"
+    },
+    {
+      "path": "packages/core/src/studyflow/shared/domain.py",
+      "bytes": 3576,
+      "sha256": "01d9013a6fd72e8ca38c734b8ad5b467b9edb0925d384307eee93a55e1c8eeba"
+    },
+    {
+      "path": "packages/core/src/studyflow/shared/ids.py",
+      "bytes": 73,
+      "sha256": "a0d5ef8a234d2000c440d3bbb6712d8647055b83f5b9d742d38e246f900b82e7"
+    },
+    {
+      "path": "packages/core/src/studyflow/shared/text.py",
+      "bytes": 151,
+      "sha256": "7d3c8d0f3639b96d269d50b7185578f4c91e9da2ac39565f394ef8edeabac1f7"
+    },
+    {
+      "path": "packages/core/src/studyflow/web.py",
+      "bytes": 190,
+      "sha256": "32de7865ad296254dc58a8d0d8ba83a72290d19a9787b0926ebc6e99d74d2072"
+    },
+    {
+      "path": "packages/core/src/studyflow/workspace.py",
+      "bytes": 564,
+      "sha256": "6dcabdac21ef632cc9f07acd044442c8e52f86dc6b50dea47824828f461256b2"
+    },
+    {
+      "path": "packages/core/tests/conftest.py",
+      "bytes": 611,
+      "sha256": "3355bfc6b9f880aae89da9e53f22108b74c0285436000a66e82f9cef44460c2e"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/01-阈值与边界.md",
+      "bytes": 1293,
+      "sha256": "2b8f015518c7bf1d3a94538b38b6fa3c5ef2d29c5cdf3b261302dc4d86f8357f"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/02-状态与重复通知.md",
+      "bytes": 1452,
+      "sha256": "3fef25ff8798f57217b525ca4deb41992256456a0826a1a483f8441ee577815e"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/03-修正与版本链.md",
+      "bytes": 1475,
+      "sha256": "1ecc32d4d5e2e135c1a333dfd6109c52eb1455a3d2d7df9ee274c96e1a3e20fe"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/作答样例/01-故意错误答案.md",
+      "bytes": 132,
+      "sha256": "b6375a4d1cdc2f3253c62e6f6ab53b5d39055327f3f9cea0ea24eb51429513f0"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/作答样例/02-修正答案.md",
+      "bytes": 154,
+      "sha256": "1aec7f56e663a08cddfb41726ae559de4126ce36c7991c97b0bf019873c8b3d7"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/作答样例/03-复测题.md",
+      "bytes": 254,
+      "sha256": "c262c7e516bcaea2d930fbefc368c1bf475ac056067edc72eee173b0b55ee82b"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/作答样例/04-复测答案.md",
+      "bytes": 161,
+      "sha256": "abb8b95409a5e1161c95284ab62c3e5edc190eb09db7f549425e83b9c736f5d6"
+    },
+    {
+      "path": "packages/core/tests/fixtures/manual_acceptance/2026-09-30/作答样例/05-其他练习参考答案.md",
+      "bytes": 336,
+      "sha256": "584ca8b8f6aeb68e564127f0563d2c51b88485f6ec5fa097e5d3b52db27d3136"
+    },
+    {
+      "path": "packages/core/tests/test_architecture.py",
+      "bytes": 3711,
+      "sha256": "9b32722d7b5d983bbca3d8f42b6594d8923fdbfc509a4045a213463f59e2f864"
+    },
+    {
+      "path": "packages/core/tests/test_audio_responsiveness.py",
+      "bytes": 4744,
+      "sha256": "74ab927dbe6f028468f0b4fdb6b56903c3bf9ea477a7a9d0832dadc0c83a8b05"
+    },
+    {
+      "path": "packages/core/tests/test_authoring_quality.py",
+      "bytes": 18091,
+      "sha256": "db78435307a7f660883e6c9ef26fd7baf51076104d1127bf2d5be2deac741c01"
+    },
+    {
+      "path": "packages/core/tests/test_authoring_tools.py",
+      "bytes": 17182,
+      "sha256": "6ad4b4ce21b54c89964fcc9337137d7362a6a5bf6805a69a0b9bcfb53332a9d9"
+    },
+    {
+      "path": "packages/core/tests/test_cli.py",
+      "bytes": 9629,
+      "sha256": "96c72b2c50b7844f2aecbc41d8efae9746b6aa1e53d0c819cd6ed3cd71520e80"
+    },
+    {
+      "path": "packages/core/tests/test_cli_read_only_entrypoints.py",
+      "bytes": 7478,
+      "sha256": "f18a99b28bddbc66fc0813602cb5e53de4094f9bd153e7b35f54ccad66a9b0e1"
+    },
+    {
+      "path": "packages/core/tests/test_cli_read_only_runtime.py",
+      "bytes": 2279,
+      "sha256": "44ff6078eda1d1e807201f4e794b6f97070e0f03d84b05e643333b8d114508a6"
+    },
+    {
+      "path": "packages/core/tests/test_config.py",
+      "bytes": 574,
+      "sha256": "cb1bc8aa416daef5ffbedb9877b8baf4534042e2c41b86e07e55258bf4e86460"
+    },
+    {
+      "path": "packages/core/tests/test_course_answers.py",
+      "bytes": 9494,
+      "sha256": "a958aba15a31e2e17d80ebf7f18ce4f1de8f27ff25bc4c9876c1c25f4a980f4a"
+    },
+    {
+      "path": "packages/core/tests/test_course_cleanup.py",
+      "bytes": 3953,
+      "sha256": "f16cbe402d4e7a2c2def5b9176ba95784f226d79c4dfb3fb5d016bd1955b6493"
+    },
+    {
+      "path": "packages/core/tests/test_course_learning_reset.py",
+      "bytes": 15172,
+      "sha256": "a4cc8713ebe54116317200ca5575b58920d72301020afa7356eefebfabeaa8d1"
+    },
+    {
+      "path": "packages/core/tests/test_course_packages.py",
+      "bytes": 7617,
+      "sha256": "4fb95a0e7e4024ca33d6575173645b8d6343b0b81c1714d6c1b5275c5db6e9f0"
+    },
+    {
+      "path": "packages/core/tests/test_course_study.py",
+      "bytes": 14678,
+      "sha256": "3685985afafe98abcdb560a0d133cfc51f698f12f23da5d7a3abe17fe8581e47"
+    },
+    {
+      "path": "packages/core/tests/test_domain.py",
+      "bytes": 785,
+      "sha256": "b5abb9911595146082c093c7eeb1b7487b24b4c331ab2b12827cdd5dadcb8900"
+    },
+    {
+      "path": "packages/core/tests/test_engine.py",
+      "bytes": 20432,
+      "sha256": "27a7065b3897b4544b1ed23401c0d5353caa8555385373a2cbb5f3b85843b1fe"
+    },
+    {
+      "path": "packages/core/tests/test_english_focused_practice.py",
+      "bytes": 10769,
+      "sha256": "b65e4778abf67d99a579f2c0c38a9ba929d544caf5bd7f93d3e1fc3e612a1199"
+    },
+    {
+      "path": "packages/core/tests/test_english_remediation.py",
+      "bytes": 18063,
+      "sha256": "8243775d5463ab8045da8a260554e1097ac930c2e8809026946cf4b0177d2ae4"
+    },
+    {
+      "path": "packages/core/tests/test_english_restart.py",
+      "bytes": 4102,
+      "sha256": "3159300688b042688095873e936a4b834aaf05eab66c59db535c2501de2c9c93"
+    },
+    {
+      "path": "packages/core/tests/test_english_specialty.py",
+      "bytes": 29042,
+      "sha256": "2aa84eb0a03da92ad42cf31e87fd3981296bbd4e1f0a0b3144a15861b52bf08e"
+    },
+    {
+      "path": "packages/core/tests/test_learning_experience.py",
+      "bytes": 13990,
+      "sha256": "9b2cf954346d1bc3212cdccb6ce8208b5b6c5c0ca84c3e13d291e77bcb0ea28b"
+    },
+    {
+      "path": "packages/core/tests/test_legacy_note_cleanup.py",
+      "bytes": 6366,
+      "sha256": "c787c1be480256e39a468be8a24e538f6cbf9d45ed5f6eed8153fa5c1a28f448"
+    },
+    {
+      "path": "packages/core/tests/test_markdown.py",
+      "bytes": 1489,
+      "sha256": "6dd302110c52bcfac78d82bae96cc4f72e76049dd0d9879dec99c6eb4dc19c7e"
+    },
+    {
+      "path": "packages/core/tests/test_material_reset.py",
+      "bytes": 11462,
+      "sha256": "966d4c28592e0161ef056cead9e7d0a34fd8086ffc0f7eaab69e9307e61229a6"
+    },
+    {
+      "path": "packages/core/tests/test_migrations.py",
+      "bytes": 14302,
+      "sha256": "d23978d0ccaf385e40374933e2a837bbf957dceb60f4cd528dad0640230029ff"
+    },
+    {
+      "path": "packages/core/tests/test_optimization.py",
+      "bytes": 22483,
+      "sha256": "d892939b9c58ad85e3558da770ed9d88bb661805dffc52a4871d9e53f86439a1"
+    },
+    {
+      "path": "packages/core/tests/test_plan_notebooks.py",
+      "bytes": 6405,
+      "sha256": "974cb56e345b2ac3db7dda094b541190ca1c4f7243fad1b8dfcea0f6e1c14e2b"
+    },
+    {
+      "path": "packages/core/tests/test_plan_notebooks_v2.py",
+      "bytes": 14956,
+      "sha256": "a1e671165fb03b9280aead661fd20de97eedc63b18e06a37db88b7276211505f"
+    },
+    {
+      "path": "packages/core/tests/test_publish_boundary.py",
+      "bytes": 2338,
+      "sha256": "9bdf7511d621e28b10b062372d3d3bb529290ec3374cc0412cc0919f94caf2fb"
+    },
+    {
+      "path": "packages/core/tests/test_q234_delivery.py",
+      "bytes": 13291,
+      "sha256": "1f0763cfec3164f18ce80591b3af853ec1c92b2b9d45147d344290cada2870e5"
+    },
+    {
+      "path": "packages/core/tests/test_quality_check_cli.py",
+      "bytes": 25174,
+      "sha256": "a1dd024b063ab8b2b29c53e7299d5c348e60f0b2bb2dbf2a962c9e548e99ad30"
+    },
+    {
+      "path": "packages/core/tests/test_readback_check.py",
+      "bytes": 8306,
+      "sha256": "a0127783951ca676c8db7ea546e4fdb44cbec200d301d8efa09a011e07175b6d"
+    },
+    {
+      "path": "packages/core/tests/test_reading_practice.py",
+      "bytes": 10968,
+      "sha256": "d776d5748961df8dbd96415a6c0ae22d10b8807577d87043d2b0daaba2624122"
+    },
+    {
+      "path": "packages/core/tests/test_resources.py",
+      "bytes": 2314,
+      "sha256": "040809926697d572cbc124d716c957dd8e9798d289b9bec3e07053cdf3ff91af"
+    },
+    {
+      "path": "packages/core/tests/test_services.py",
+      "bytes": 10289,
+      "sha256": "2e9818982cd3e2a02276a68737eee37690ec39c1c6b83ea0d67fd928feff1d6c"
+    },
+    {
+      "path": "packages/core/tests/test_speech_generation.py",
+      "bytes": 8104,
+      "sha256": "d8ffaa4cee41fe51ffd6f3d2b2f0aef3ef8ad891f829558df25bb7630c78d1e8"
+    },
+    {
+      "path": "packages/core/tests/test_study_notes.py",
+      "bytes": 5029,
+      "sha256": "c222127de1b247835a56988227368aa2e516e6d063bf09fcd3433ef2c698da31"
+    },
+    {
+      "path": "packages/core/tests/test_web.py",
+      "bytes": 3684,
+      "sha256": "6abac9230645dc6e586e561ca105e78ee636a7d8fb687d06d143e9b5690980fa"
+    },
+    {
+      "path": "packages/core/tests/test_workspace.py",
+      "bytes": 8101,
+      "sha256": "1b8d15c062fd64972ad80e6551006d9d03812f5bf551c229d823159d68dfa08e"
+    },
+    {
+      "path": "packages/core/tests/test_write_reliability.py",
+      "bytes": 6680,
+      "sha256": "938930bc41788c4d2c8e2be808e643a54a6d5821c05f97391e960dc272d70ab8"
+    },
+    {
+      "path": "packages/core/tests/ui_learning_server.py",
+      "bytes": 5202,
+      "sha256": "430c0b9e848dabc635823ae7900a72b1281cdb7627cea1266f7c8e375ef291a6"
+    }
+  ],
+  "git_head": "00f01ff65eaf9df2ac1cbb54640e326f08dbb9a2"
+}

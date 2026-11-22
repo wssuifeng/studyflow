@@ -1,0 +1,146 @@
+{
+  "schema": "studyflow.course-package/8",
+  "package_id": "sample-library-english-training",
+  "plan_line": "Example English",
+  "course": {
+    "title": "A library visit: reading, translation and writing",
+    "learning_mode": "english"
+  },
+  "lessons": [
+    {
+      "id": "visit",
+      "title": "Prepare for a library visit",
+      "blocks": [
+        {
+          "id": "purpose",
+          "type": "concept",
+          "title": "Read for a purpose",
+          "body": "Find the place and time before planning the visit."
+        },
+        {
+          "id": "practice",
+          "type": "practice",
+          "title": "Read, translate, and write",
+          "exercise_ids": [
+            "notice",
+            "translate",
+            "essay"
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "notice",
+          "type": "READING_GROUP",
+          "title": "Library visit",
+          "prompt": "Read the notice, choose the best answer, and complete the sentence.",
+          "reading": {
+            "title": "Saturday visit",
+            "paragraphs": [
+              {
+                "id": "p1",
+                "text": "The group will meet at the library at nine."
+              },
+              {
+                "id": "p2",
+                "text": "Bring a notebook for the tour."
+              }
+            ],
+            "questions": [
+              {
+                "id": "where",
+                "prompt": "Where will the group meet?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "At the station"
+                  },
+                  {
+                    "id": "b",
+                    "text": "At the library"
+                  },
+                  {
+                    "id": "c",
+                    "text": "At the park"
+                  },
+                  {
+                    "id": "d",
+                    "text": "At the school"
+                  }
+                ],
+                "correct_option_id": "b",
+                "evidence": [
+                  "p1"
+                ],
+                "explanation": "The first paragraph names the library as the meeting point."
+              },
+              {
+                "id": "meeting-place",
+                "prompt": "Complete the sentence using the passage.",
+                "parts": [
+                  {
+                    "text": "They will meet at "
+                  },
+                  {
+                    "blank_id": "place"
+                  },
+                  {
+                    "text": "."
+                  }
+                ],
+                "blanks": [
+                  {
+                    "id": "place",
+                    "accepted": [
+                      "the library"
+                    ]
+                  }
+                ],
+                "evidence": [
+                  "p1"
+                ],
+                "explanation": "The notice names the library as the meeting point."
+              }
+            ]
+          }
+        },
+        {
+          "id": "translate",
+          "title": "State the meeting time",
+          "prompt": "我们九点见。",
+          "english": {
+            "target": "We will meet at nine.",
+            "accepted_answers": [
+              "We meet at nine."
+            ],
+            "evaluation_mode": "local_exact"
+          }
+        },
+        {
+          "id": "essay",
+          "type": "ESSAY",
+          "title": "A proposal for visitors",
+          "prompt": "Write a proposal for first-time library visitors.",
+          "essay": {
+            "suggested_words": [
+              120,
+              180
+            ],
+            "points": [
+              "Explain the visit’s purpose.",
+              "Recommend two things to bring."
+            ]
+          },
+          "review_reference": {
+            "answer": "First-time visitors should meet at the entrance. Bring a notebook to record useful advice and a library card to borrow a book.",
+            "explanation": "The proposal states the purpose and gives two concrete recommendations.",
+            "criteria": [
+              "State the purpose clearly.",
+              "Recommend two things and explain why."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

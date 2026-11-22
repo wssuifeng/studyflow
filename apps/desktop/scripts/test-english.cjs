@@ -97,7 +97,7 @@ test('English work surface exposes only notes as a drawer and keeps directory in
 test('English training header uses course sequence and compact icon controls without rendering long course summaries',()=>{
  const source=fs.readFileSync(path.join(__dirname,'../src/features/english/training/EnglishTrainingPage.vue'),'utf8')
  assert.ok(source.includes('data.course.sequence'));assert.ok(!source.includes('data.course.summary'))
- assert.ok(source.includes('title="返回课程"'));assert.ok(source.includes('title="训练设置"'));assert.ok(source.includes('title="打开计划笔记"'))
+ assert.ok(source.includes('title="返回学习计划"'));assert.ok(source.includes('title="训练设置"'));assert.ok(source.includes('title="打开计划笔记"'))
  assert.ok(source.includes('M12.22 2h-.44'));assert.ok(!source.includes('M10 3v2M10 15v2'))
  assert.ok(source.includes('english-training-feedback'));assert.ok(source.includes("interactionFeedback('complete')"));assert.ok(source.includes('english-completion-view'));assert.ok(!source.includes('english-answer-feedback-slot'));assert.ok(!source.includes('答案已确认'))
  assert.ok(!source.includes('>{{data.course.title}}</strong>'))
@@ -242,7 +242,8 @@ test('TokenEditor wires boundary navigation with caret placement and keeps IME/m
  assert.ok(page.includes('<kbd>←</kbd><kbd>→</kbd>移词'));assert.ok(page.includes('<kbd>退格</kbd>回退'))
  assert.ok(page.includes('<kbd>Ctrl</kbd><kbd>←</kbd><kbd>→</kbd>跳词'));assert.ok(page.includes('<kbd>Ctrl</kbd><kbd>Home</kbd><kbd>End</kbd>首末'))
  const css=fs.readFileSync(path.join(__dirname,'../src/features/english/training/english.css'),'utf8')
- assert.ok(css.includes('transition:border-color .15s,width .12s ease'))
+ assert.match(css,/\.english-token input\{[^}]*transition:none/)
+ assert.doesNotMatch(css,/\.english-training-feedback\{[^}]*animation:/)
 })
 test('whole-course completion navigates the first missing item instead of opening a save error',async()=>{
  const f=fixture();await f.api.load();await f.api.move(1);f.api.tokens.value=['I','like','tea'];await f.api.check();await f.api.submit()

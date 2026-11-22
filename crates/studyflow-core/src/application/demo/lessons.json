@@ -1,0 +1,23 @@
+[
+  {
+    "title": "对象、引用与方法调用",
+    "summary": "把语言语义、JVM 抽象和实现直觉分开。",
+    "exercise_title": "用自己的话解释引用值副本与对象字段修改。",
+    "prompt": "请解释：调用 device.updateStatus() 后，为什么调用方看到 device.status 发生变化？同时说明 Java 是否存在可直接进行指针运算的指针。",
+    "requirements": "至少写出：值传递、引用值副本、同一对象字段、不能进行地址运算四个要点。"
+  },
+  {
+    "title": "equals 与 hashCode 契约",
+    "summary": "理解对象相等判断与哈希集合行为之间的约束。",
+    "exercise_title": "说明 equals/hashCode 的一致性。",
+    "prompt": "请说明重写 equals 后为什么通常也必须重写 hashCode，并举出放入 HashSet 的影响。",
+    "requirements": "至少写出：相等对象必须拥有相同 hashCode、HashSet 查找依赖两者、破坏契约的后果。"
+  },
+  {
+    "title": "异常链与统一错误处理",
+    "summary": "理解异常包装、根因保留和统一处理边界。",
+    "exercise_title": "设计一个可追踪根因的异常处理方案。",
+    "prompt": "请解释为什么业务层不应只抛出一个丢失根因的通用异常，以及如何保留 cause 并在边界统一转换。",
+    "requirements": "至少写出：原始 cause、异常边界、用户可读错误、日志追踪四个要点。"
+  }
+]

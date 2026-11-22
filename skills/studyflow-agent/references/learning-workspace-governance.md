@@ -44,7 +44,7 @@
 
 ## 6. 只读体检工具与边界
 
-Skill自带scripts/authoring_workspace.py，Python3.10+标准库，无联网/数据库依赖。仅传明确作者资料根。入口路径相对该实际加载Skill解析，不能猜工具在某个桌面目录。
+用确认过的 CLI 执行 `studyflow authoring-workspace --root <作者资料根> audit --config <根内JSON>`。先通过 `capabilities --format json` 确认 `authoring_workspace_audit`。只传获授权的作者资料根。旧版缺少该能力时，按本节手工核对并在回执里记录缺失。
 
 `audit --config <根内JSON>`读取配置指定的三项职责，不扫全工作区。配置format=1，current_stage_id、state_file、stage_file、index_file，max_chars为路径→预算。stage_file包含stage_id、objectives（稳定id）、exit_criteria列表、excluded列表、next_stage（可null）。可以引用现有等价工件；不要为运行检查覆盖现行主控。
 

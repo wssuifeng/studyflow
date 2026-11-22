@@ -1,6 +1,6 @@
 import type {InjectionKey, Ref} from 'vue'
 
-export interface PanelPresentation { visible:boolean; width:number; full:boolean }
+export interface PanelPresentation { visible:boolean; width:number; full:boolean; navigationCollapsed?:boolean }
 export interface PanelGeometry { navigation:number; width:number; maxWidth:number; compact:boolean }
 /** One navigation width feeds both the shell column and the tool-panel budget.
  * Smaller custom rails stay small; full outlines use a compact icon rail only
@@ -16,7 +16,7 @@ export function panelGeometry(viewport:number,preferred=420,full=false,focus=fal
   return {navigation,width:full||compact?available:Math.min(maxWidth,Math.max(280,preferred)),maxWidth,compact}
 }
 export interface WorkspacePanel {
-  navigationVisible?:Readonly<Ref<boolean>>
+  navigationAvailable?:Readonly<Ref<boolean>>
   geometry:Readonly<Ref<PanelGeometry>>
   publish:(owner:symbol,state:PanelPresentation)=>void
   release:(owner:symbol)=>void

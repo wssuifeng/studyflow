@@ -26,9 +26,9 @@ function open(item:QueueItem){
 }
 </script>
 <template>
- <div class="page-intro"><h2>作答与反馈</h2><p class="muted">需要你处理的修正和复测优先；等待批改不影响继续学习。</p></div>
- <nav class="filter-tabs" aria-label="反馈筛选"><button v-for="tab in tabs" :key="tab.id" :class="{selected:filter===tab.id}" @click="filter=tab.id">{{tab.label}}</button></nav>
- <div class="feedback-rows"><button v-for="item in items" :key="item.id" class="feedback-row" @click="open(item)"><span :class="['status-chip',item.status.toLowerCase()]">{{item.label}}</span><div><strong>{{item.exercise_title}}</strong><small>{{item.course_title}} · {{item.lesson_title}}</small><p>{{item.next_action}}</p></div><span>→</span></button></div>
+ <p class="page-lead">需要你处理的修正和复测优先；等待批改不影响继续学习。</p>
+ <nav class="filter-tabs" aria-label="反馈筛选"><button v-for="tab in tabs" :key="tab.id" :class="{selected:filter===tab.id}" :aria-pressed="filter===tab.id" @click="filter=tab.id">{{tab.label}}</button></nav>
+ <div class="feedback-rows"><button v-for="item in items" :key="item.id" class="feedback-row" @click="open(item)"><span :class="['status-chip',item.status.toLowerCase()]">{{item.label}}</span><div><strong>{{item.exercise_title}}</strong><small>{{item.course_title}} · {{item.lesson_title}}</small><p>{{item.next_action}}</p></div><span aria-hidden="true">→</span></button></div>
  <button v-if="cursor" class="secondary-button" :disabled="busy" @click="fetchPage()">{{busy?'读取中…':'加载更多'}}</button>
- <p v-if="!items.length&&!busy" class="empty-state">这里暂时没有记录。<button class="text-button" @click="navigate('/today')">继续学习 →</button></p>
+ <p v-if="!items.length&&!busy" class="empty-state">这里暂时没有记录。<button class="text-button" @click="navigate('/plans')">继续学习 →</button></p>
 </template>

@@ -18,6 +18,7 @@ export const studyApi = {
   saveStudyProgress: (params: {study_session_id: string; lesson_id: string; progress_percent: number; last_position: string; expected_version: number}) => engineCall<LearningProgressData & {version: number}>('course.study.progress.save', params),
   completeCourseReading: (studyId: string) => engineCall<CourseStudyDetailData>('course.study.reading.complete', { study_session_id: studyId }),
   saveCourseAnswers: (params: CourseAnswerWriteParams) => engineCall<CourseAnswerWriteData>('course.answers.draft.save', params),
+  submitEssay: (params: CourseAnswerWriteParams) => engineCall<CourseAnswerWriteData>('practice.essay.submit', params),
   submitCourseAnswers: (params: CourseAnswerWriteParams) => engineCall<CourseAnswerWriteData>('course.answers.submit', params),
   planDetail: (planLineId: string, date?: string) =>
     engineCall<PlanDetailData>('plan.detail', { plan_line_id: planLineId, ...(date ? { date } : {}) }),

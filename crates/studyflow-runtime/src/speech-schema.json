@@ -1,0 +1,263 @@
+{
+  "speech.profile.get": {
+    "additionalProperties": false,
+    "properties": {
+      "profile_id": {
+        "default": "default",
+        "pattern": "^(default|[a-fA-F0-9-]{36})$",
+        "title": "Profile Id",
+        "type": "string"
+      }
+    },
+    "title": "ProfileRead",
+    "type": "object"
+  },
+  "speech.profile.list": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "Request",
+    "type": "object"
+  },
+  "speech.profile.save": {
+    "additionalProperties": false,
+    "properties": {
+      "profile_id": {
+        "default": "default",
+        "pattern": "^(default|[a-fA-F0-9-]{36})$",
+        "title": "Profile Id",
+        "type": "string"
+      },
+      "name": {
+        "default": "阶跃星辰",
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Name",
+        "type": "string"
+      },
+      "provider": {
+        "enum": [
+          "step_plan",
+          "compatible"
+        ],
+        "title": "Provider",
+        "type": "string"
+      },
+      "endpoint": {
+        "default": "",
+        "maxLength": 500,
+        "title": "Endpoint",
+        "type": "string"
+      },
+      "model": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Model",
+        "type": "string"
+      },
+      "voice": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Voice",
+        "type": "string"
+      },
+      "format": {
+        "default": "mp3",
+        "enum": [
+          "mp3",
+          "wav"
+        ],
+        "title": "Format",
+        "type": "string"
+      },
+      "credential": {
+        "anyOf": [
+          {
+            "maxLength": 500,
+            "pattern": "^[!-~]+$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Credential"
+      },
+      "clear_credential": {
+        "default": false,
+        "title": "Clear Credential",
+        "type": "boolean"
+      },
+      "expected_version": {
+        "minimum": 0,
+        "title": "Expected Version",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "provider",
+      "model",
+      "voice",
+      "expected_version"
+    ],
+    "title": "ProfileWrite",
+    "type": "object"
+  },
+  "speech.job.start": {
+    "$defs": {
+      "Segment": {
+        "additionalProperties": false,
+        "properties": {
+          "text": {
+            "maxLength": 1200,
+            "minLength": 1,
+            "title": "Text",
+            "type": "string"
+          },
+          "voice": {
+            "anyOf": [
+              {
+                "maxLength": 160,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Voice"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "Segment",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "job_id": {
+        "maxLength": 36,
+        "minLength": 36,
+        "title": "Job Id",
+        "type": "string"
+      },
+      "profile_id": {
+        "default": "default",
+        "pattern": "^(default|[a-fA-F0-9-]{36})$",
+        "title": "Profile Id",
+        "type": "string"
+      },
+      "retry": {
+        "default": false,
+        "title": "Retry",
+        "type": "boolean"
+      },
+      "segments": {
+        "anyOf": [
+          {
+            "items": {
+              "$ref": "#/$defs/Segment"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Segments"
+      },
+      "expected_profile_version": {
+        "minimum": 0,
+        "title": "Expected Profile Version",
+        "type": "integer"
+      },
+      "text": {
+        "anyOf": [
+          {
+            "maxLength": 1200,
+            "minLength": 1,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Text"
+      },
+      "instruction": {
+        "anyOf": [
+          {
+            "maxLength": 500,
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Instruction"
+      }
+    },
+    "required": [
+      "job_id",
+      "expected_profile_version"
+    ],
+    "title": "JobStart",
+    "type": "object"
+  },
+  "speech.job.get": {
+    "additionalProperties": false,
+    "properties": {
+      "job_id": {
+        "maxLength": 36,
+        "minLength": 36,
+        "title": "Job Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id"
+    ],
+    "title": "JobRead",
+    "type": "object"
+  },
+  "speech.job.preview": {
+    "additionalProperties": false,
+    "properties": {
+      "job_id": {
+        "maxLength": 36,
+        "minLength": 36,
+        "title": "Job Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id"
+    ],
+    "title": "JobRead",
+    "type": "object"
+  },
+  "speech.asset.adopt": {
+    "additionalProperties": false,
+    "properties": {
+      "job_id": {
+        "maxLength": 36,
+        "minLength": 36,
+        "title": "Job Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "job_id"
+    ],
+    "title": "JobRead",
+    "type": "object"
+  }
+}

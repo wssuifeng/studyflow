@@ -4,11 +4,10 @@ import {isTauri,invoke} from '@tauri-apps/api/core'
 import {getCurrentWindow} from '@tauri-apps/api/window'
 import {emitTo,listen} from '@tauri-apps/api/event'
 import { engineCall } from '../shared/api'
-import {QUEUE_PAGE_SIZE, type DoctorData, type Plan, type QueueData, type QueueItem, type TodayData} from '../shared/api/contracts'
+import {QUEUE_PAGE_SIZE, type DoctorData, type Plan, type QueueData, type QueueItem} from '../shared/api/contracts'
 import { confirmNavigation, navigate, reportError, windowStorageKey, workspaceScope } from '../shared/ui'
 import {persistRequestDiagnostic,requestDiagnostic} from '../shared/ui/requestDiagnostics'
 import AppShell from './layout/AppShell.vue'
-import TodayWorkspace from '../features/console/components/TodayWorkspace.vue'
 import FrozenSource from '../features/notes/components/FrozenSource.vue'
 import PlanList from '../features/plans/components/PlanList.vue'
 import PlanDetail from '../features/plans/components/PlanDetail.vue'
@@ -24,39 +23,45 @@ import LeaveStudyDialog from '../features/courses/components/LeaveStudyDialog.vu
 import {isTool} from '../features/courses/dock/state'
 import {listToolWindows,prepareTools,releaseTools,suspendTools} from '../features/courses/dock/toolWindows'
 import WorkspaceSettings from '../features/workspace/components/WorkspaceSettings.vue'
-const today = ref<TodayData | null>(null)
 const plans = ref<Plan[]>([])
 const queue = ref<QueueData | null>(null)
 const doctor = ref<DoctorData | null>(null)
 const loading = ref(true)
 const refreshing = ref(false)
 const failed = ref(false)
-const route = ref(window.location.hash.slice(1) || '/today')
+function homeRoute(path: string) {
+  return !path || path === '/' || path.split('?')[0] === '/today' ? '/plans' : path
+}
+const route = ref(homeRoute(window.location.hash.slice(1)))
+const legacyFocus = ref('')
 const revision = ref(0)
 const parsed = computed(()=>{
   const [path, query] = route.value.split('?')
   const pieces = path!.split('/').filter(Boolean)
-  return {name:pieces[0] || 'today', id:pieces[1] || '', plan:new URLSearchParams(query).get('plan') || undefined, lesson:new URLSearchParams(query).get('lesson') || undefined, tab:new URLSearchParams(query).get('tab') || undefined, study:new URLSearchParams(query).get('study') || undefined, exercise:new URLSearchParams(query).get('exercise') || undefined,block:new URLSearchParams(query).get('block') || undefined,section:new URLSearchParams(query).get('section') || undefined}
+  return {name:pieces[0] || 'plans', id:pieces[1] || '', plan:new URLSearchParams(query).get('plan') || undefined, lesson:new URLSearchParams(query).get('lesson') || undefined, tab:new URLSearchParams(query).get('tab') || undefined, study:new URLSearchParams(query).get('study') || undefined, exercise:new URLSearchParams(query).get('exercise') || undefined,block:new URLSearchParams(query).get('block') || undefined,section:new URLSearchParams(query).get('section') || undefined}
 })
 // Deep-link content identity changes require a guarded remount; focus-only layout changes do not.
 const routeKey = computed(()=>[parsed.value.name, parsed.value.id, parsed.value.plan||'', parsed.value.study || '',
   parsed.value.lesson || '', parsed.value.exercise || '', parsed.value.block || '', parsed.value.tab || '', revision.value].join(':'))
 const active = computed(()=> parsed.value.name==='plan' || parsed.value.name==='course' ? 'plans' : parsed.value.name==='submission' ? 'queue' : parsed.value.name)
-const titles: Record<string,string> = {today:'学习控制台',plans:'我的计划',plan:'学习计划',course:'课程工作区',queue:'作答与反馈',submission:'作答与反馈',settings:'工作区',tool:'学习工具',english:'英语专注训练','english-retest':'英语无提示复测',mistakes:'错误与复习'}
-const title = computed(()=>titles[parsed.value.name] || 'StudyFlow')
+const titles: Record<string,string> = {plans:'我的计划',plan:'学习计划',course:'课程工作区',queue:'作答与反馈',submission:'作答与反馈',settings:'工作区',tool:'学习工具',english:'英语专注训练','english-retest':'英语无提示复测',mistakes:'错误与复习'}
+const focusedLegacy = computed(() => parsed.value.name === 'course' && legacyFocus.value === routeKey.value)
+const title = computed(() => focusedLegacy.value ? '英语专注训练' : titles[parsed.value.name] || 'StudyFlow')
 const detached = isTauri() && getCurrentWindow().label.startsWith('tool-')
-const focusMode = computed(() => detached || ['english','english-retest'].includes(parsed.value.name) || parsed.value.name==='course' && new URLSearchParams(route.value.split('?')[1]).get('focus')==='1')
+const focusMode = computed(() => detached || focusedLegacy.value || ['english','english-retest'].includes(parsed.value.name) || parsed.value.name==='course' && new URLSearchParams(route.value.split('?')[1]).get('focus')==='1')
 const dateLabel = computed(()=>new Date().toLocaleDateString('zh-CN',{month:'long',day:'numeric',weekday:'long'}))
-const feedbackCount = computed(()=> (today.value?.queue_counts.needs_revision || 0)+(today.value?.queue_counts.waiting_retest || 0)+(today.value?.queue_counts.waiting_review || 0))
+const feedbackCount = computed(() => ['NEEDS_REVISION', 'RETEST_REQUIRED', 'WAITING_REVIEW'].reduce((count, key) => count + (queue.value?.counts?.[key] ?? 0), 0))
 function resetMainScrollForRoute(next:string){
- const name=next.split('?')[0]?.split('/').filter(Boolean)[0]||'today'
+ const name=next.split('?')[0]?.split('/').filter(Boolean)[0]||'plans'
  if(name==='course'||name==='tool')return
  document.querySelector<HTMLElement>('.workspace-shell:not(.focus-shell) > .main-content')?.scrollTo({top:0,left:0,behavior:'auto'})
 }
 async function readRoute() {
-  const next=window.location.hash.slice(1) || '/today'
+  const requested = window.location.hash.slice(1)
+  const next = homeRoute(requested)
   if(!await confirmNavigation(next)) {window.history.replaceState(null,'','#'+route.value); return}
   route.value=next
+  if (requested !== next) window.history.replaceState(null, '', '#'+next)
   resetMainScrollForRoute(next)
   try{localStorage.setItem(windowStorageKey('last-route'),next)}catch{/* Optional navigation cache */}
   if(!loading.value && !refreshing.value) load()
@@ -74,9 +79,9 @@ async function checkChanges(){
   if(!alive||loading.value||refreshing.value)return
   if(changeRevision&&changeRevision!==current.revision){
    // Summary data has no editor ownership. Never remount a course or replace its input here.
-   const [nextQueue,nextToday,nextPlans]=await Promise.all([compactQueue(),engineCall<TodayData>('study.today'),engineCall<{plans:Plan[]}>('plan.list',{include_inactive:true})])
+   const [nextQueue, nextPlans] = await Promise.all([compactQueue(), engineCall<{plans:Plan[]}>('plan.list',{include_inactive:true})])
    if(!alive||loading.value||refreshing.value)return
-   queue.value=nextQueue;today.value=nextToday;plans.value=nextPlans.plans
+   queue.value=nextQueue;plans.value=nextPlans.plans
   }
   changeRevision=current.revision
  }catch(cause){void persistRequestDiagnostic({...requestDiagnostic('engine-response',cause),operation:'system.changes'})}
@@ -89,12 +94,13 @@ async function load(refresh=false) {
     const nextDoctor=await engineCall<DoctorData>('system.doctor')
     doctor.value=nextDoctor; workspaceScope.value=nextDoctor.workspace.root
     if (loading.value && !window.location.hash) {
-      let saved:string|null=null;try{saved=localStorage.getItem(windowStorageKey('last-route'))}catch{/* Optional navigation cache */}
-      if (saved) { route.value=saved; window.history.replaceState(null,'','#'+saved) }
+      window.history.replaceState(null, '', '#/plans')
+    } else if (loading.value && route.value !== window.location.hash.slice(1)) {
+      window.history.replaceState(null, '', '#'+route.value)
     }
     if(detached){failed.value=false;return}
-    const results = await Promise.all([engineCall<TodayData>('study.today'),engineCall<{plans:Plan[]}>('plan.list',{include_inactive:true}),compactQueue()])
-    today.value=results[0]; plans.value=results[1].plans; queue.value=results[2]; failed.value=false
+    const [nextPlans, nextQueue] = await Promise.all([engineCall<{plans:Plan[]}>('plan.list',{include_inactive:true}), compactQueue()])
+    plans.value=nextPlans.plans; queue.value=nextQueue; failed.value=false
     if(refresh) revision.value++
   } catch(cause) {failed.value=true;reportError(cause)}
   finally {loading.value=false;refreshing.value=false}
@@ -143,24 +149,23 @@ onBeforeUnmount(()=>{
 
 <template>
   <LeaveStudyDialog v-if="toolCloseDialog" :closing="true" :reason="toolCloseDialog.reason" :retrying="toolCloseDialog.retrying" @retry="retryToolClose" @discard="finishToolClose(true,true)" @cancel="finishToolClose(false)" @export="exportToolInputs"/>
-  <AppShell :focus="focusMode" :window-chrome="detached || parsed.name==='english' || parsed.name==='english-retest'" :active="active" :count="feedbackCount" :connected="!!doctor?.healthy && !failed" :title="title" :date="dateLabel" :refreshing="refreshing" @navigate="navigate" @refresh="load(true)">
+  <AppShell :focus="focusMode" :window-chrome="detached || focusedLegacy || parsed.name==='english' || parsed.name==='english-retest'" :active="active" :count="feedbackCount" :connected="!!doctor?.healthy && !failed" :title="title" :date="dateLabel" :refreshing="refreshing" @navigate="navigate" @refresh="load(true)">
     <div v-if="loading" class="loading-state initial-loading" role="status"><span class="loading-orbit"/><h2>正在打开本地学习空间</h2><p>恢复计划、课程与反馈…</p></div>
     <div v-else-if="failed" class="error-state initial-loading"><h2>工作区暂时无法连接</h2><p>你的记录仍保存在本地。连接恢复后可以继续。</p><button class="primary-button" @click="() => load()">重新连接 ↻</button></div>
     <Transition v-if="!loading&&!failed" name="page" mode="out-in">
       <div :key="routeKey" class="page-content">
         <ToolWindow v-if="parsed.name==='tool' && isTool(parsed.id)" :tool="parsed.id"/>
-        <TodayWorkspace v-else-if="parsed.name==='today' && today" :data="today" />
         <PlanList v-else-if="parsed.name==='plans'" :plans="plans" />
         <PlanDetail v-else-if="parsed.name==='plan' && parsed.id" :id="parsed.id" />
         <FrozenSource v-else-if="parsed.name==='source' && parsed.id && parsed.lesson" :study-id="parsed.id" :lesson-id="parsed.lesson" :block-id="parsed.block" :section-id="parsed.section"/>
-        <CourseReader v-else-if="parsed.name==='course' && parsed.id" :id="parsed.id" :plan-line-id="parsed.plan" :lesson-id="parsed.lesson" :initial-view="parsed.tab" :study-id="parsed.study" :exercise-id="parsed.exercise" />
-        <EnglishTrainingPage v-else-if="parsed.name==='english' && parsed.id" :id="parsed.id"/>
+        <CourseReader v-else-if="parsed.name==='course' && parsed.id" :id="parsed.id" :plan-line-id="parsed.plan" :lesson-id="parsed.lesson" :initial-view="parsed.tab" :study-id="parsed.study" :exercise-id="parsed.exercise" @focused="legacyFocus = routeKey" />
+        <EnglishTrainingPage v-else-if="parsed.name==='english' && parsed.id" :id="parsed.id" :exercise-id="parsed.exercise"/>
         <EnglishRetestPage v-else-if="parsed.name==='english-retest' && parsed.id" :id="parsed.id"/>
         <MistakeWorkspace v-else-if="parsed.name==='mistakes'" :plans="plans"/>
         <QueueView v-else-if="parsed.name==='queue'" :data="queue" />
         <SubmissionFeedback v-else-if="parsed.name==='submission' && parsed.id" :id="parsed.id" />
         <WorkspaceSettings v-else-if="parsed.name==='settings'" :doctor="doctor" />
-        <div v-else class="empty-state"><h2>页面暂不存在</h2><button class="primary-button" @click="navigate('/today')">回到学习控制台</button></div>
+        <div v-else class="empty-state"><h2>页面暂不存在</h2><button class="primary-button" @click="navigate('/plans')">回到我的计划</button></div>
       </div>
     </Transition>
     <footer v-if="!focusMode && parsed.name !== 'course'" class="app-footer"><span>每天向前一点，知识就有了自己的形状。</span><span>StudyFlow · LOCAL FIRST</span></footer>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import {computed,onBeforeUnmount,onMounted,ref,watch} from 'vue'
+import {emitTo} from '@tauri-apps/api/event'
 import {studyApi} from '../../../shared/api'
 import type {CourseStudyDetailData,NotebookBlock} from '../../../shared/api/contracts'
 import {reportError,windowStorageKey} from '../../../shared/ui'
@@ -31,6 +32,11 @@ async function load(){loading.value=true;failed.value=false;try{
 }catch(cause){failed.value=true;emit('failed');reportError(cause)}finally{loading.value=false}}
 watch(index,()=>{const id=data.value?.lessons[index.value]?.id;if(id)localStorage.setItem(windowStorageKey('tool-index:'+props.tool+':'+props.context.studyId),id)})
 async function flush(){if(loading.value||failed.value)return false;return props.tool==='notes'?notebook.save():props.tool==='exercises'?answers.write('save'):true}
+async function openPractice(exerciseId:string) {
+ if (!await flush()) return
+ try {await emitTo('main','studyflow-open-practice',{studyId:props.context.studyId,lessonId:data.value?.lessons[index.value]?.id,exerciseId})}
+ catch(cause) {reportError(cause)}
+}
 async function retry(){if(props.tool==='notes')await notebook.retry();else if(props.tool==='exercises')await answers.retry()}
 function hasProblem(){return props.tool==='notes'?!!(notebook.failed.value||notebook.saveFailed.value||notebook.pending.value||notebook.recovery.value):props.tool==='exercises'?!!(answers.failed.value||answers.saveFailed.value||answers.pending.value||answers.recovery.value):false}
 function suspend(){answers.suspendAutosave();notebook.suspendAutosave()}
@@ -52,7 +58,7 @@ onMounted(load)
  <template v-else-if="data">
   <header v-if="tool!=='notes'" class="tool-course-context"><span>{{context.planTitle||data.course.plan_line}}</span><h2>{{data.course.title}}</h2><label class="tool-knowledge-select">浏览知识点<select :value="index" :disabled="paused" @change="select(Number(($event.target as HTMLSelectElement).value))"><option v-for="(lesson,i) in data.lessons" :key="lesson.id" :value="i">{{i+1}} · {{lesson.title}}</option></select></label></header>
   <div v-if="answers.recovery.value && tool==='exercises'" class="notebook-alert"><p>本窗口有未保存的作答，需要你确认。</p><button class="text-button" @click="answers.restoreCache">恢复</button><button class="text-button" @click="exportUnsaved">导出</button><button class="text-button" @click="answers.discardCache">使用工作区版本</button></div>
-  <div class="native-tool-content" :data-tool="tool"><CourseToolContent :tool="tool" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notebook" :plan-title="context.planTitle||data.course.plan_line||undefined" :course-id="context.courseId"/></div>
+  <div class="native-tool-content" :data-tool="tool"><CourseToolContent :tool="tool" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notebook" :plan-title="context.planTitle||data.course.plan_line||undefined" :course-id="context.courseId" @practice="openPractice"/></div>
   <footer v-if="tool==='exercises'" class="native-tool-footer"><span aria-live="polite">{{answers.busy.value?'正在保存':answers.saveFailed.value?'保存失败，输入已保留':answers.dirty.value?'等待自动保存':answers.savedAt.value?'已保存 '+answers.savedAt.value:'答案自动保存 · 整课提交在主窗口完成'}}</span><button v-if="answers.saveFailed.value||answers.pending.value" class="text-button" @click="retry">重试保存</button></footer>
  </template>
 </template>

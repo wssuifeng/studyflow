@@ -4,7 +4,7 @@
 
 1. 先描述问题和最小变更；删除数据、改变产品边界或技术路线前等待确认。
 2. 使用 Fork 或授权功能分支，新分支默认 `codex/`，不直接推 main。
-3. 运行 Python 测试、Vue 构建和 `scripts/check_publish_boundary.py --tracked`。
+3. 运行 Rust 测试、Vue 构建和 `scripts/check_publish_boundary.py --tracked`。
 4. PR 说明范围、真实验证、数据迁移、未验证项和回滚方式。
 5. 等待所有者审查，不开启自动合并，不跳过检查。
 

@@ -13,3 +13,23 @@
 .sound-volume-control output{justify-self:end;color:var(--theme-text-secondary);font-variant-numeric:tabular-nums}
 .sound-volume-control input{grid-column:1/-1;width:100%;accent-color:var(--theme-accent-primary)}
 @media(max-width:640px){.feedback-preferences .sound-setting-row{align-items:flex-start;flex-direction:column;gap:10px}}
+
+.workspace-settings {max-width:68rem;margin-inline:auto;min-width:0}
+.workspace-settings .workspace-panel {
+  margin-block:18px;
+  padding:min(4vw,28px);
+  overflow-wrap:anywhere;
+}
+.workspace-settings .workspace-panel h3 {margin-block-end:12px}
+.workspace-settings .workspace-panel h4 {margin-block:18px 8px}
+.workspace-settings .workspace-path {
+  padding:10px 12px;
+  margin-block:8px 12px;
+  border:1px solid var(--theme-border-subtle);
+  border-radius:8px;
+  background:var(--theme-code-background);
+  color:var(--theme-text-secondary);
+  user-select:text;
+}
+.workspace-settings .reading-preferences label {align-items:center}
+.workspace-settings input:is([type='range'],[type='checkbox']) {accent-color:var(--theme-accent-primary)}

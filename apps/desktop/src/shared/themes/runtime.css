@@ -145,6 +145,13 @@ input::placeholder,textarea::placeholder {color:var(--theme-text-muted);opacity:
   grid-template-columns:minmax(0,1fr) var(--panel-width,420px)!important;
   grid-template-rows:minmax(0,1fr)!important;
 }
+/* When tools replace the reader, the tool host occupies the usable column. */
+:root[data-theme-shell-contract='v2'] .learning-shell.panel-expanded:not(.focus-shell){
+  grid-template-columns:var(--panel-nav-width,184px) minmax(0,1fr)!important;
+}
+:root[data-theme-shell-contract='v2'] .learning-shell.focus-shell.panel-expanded{
+  grid-template-columns:minmax(0,1fr)!important;
+}
 :root[data-theme-shell-contract='v2'] .learning-shell.focus-shell:not(.panel-open){
   grid-template-columns:minmax(0,1fr)!important;
   grid-template-rows:minmax(0,1fr)!important;

@@ -1,4 +1,4 @@
-"""Run a frozen Engine over raw UTF-8 pipes, never against the learner's workspace."""
+"""Run the bundled native Engine over raw UTF-8 pipes, never against the learner's workspace."""
 from __future__ import annotations
 import argparse
 import json
@@ -13,18 +13,18 @@ parser.add_argument("--engine", type=Path, required=True)
 parser.add_argument("--output", type=Path)
 args = parser.parse_args()
 root = Path(__file__).resolve().parents[3]
-temp_root = root / "apps" / "desktop" / "test-results" / "workspaces"
+temp_root = args.output.resolve().parent if args.output else root / "apps" / "desktop" / "test-results" / "workspaces"
 temp_root.mkdir(parents=True, exist_ok=True)
 workspace = Path(tempfile.mkdtemp(prefix="studyflow-packed-utf8-", dir=temp_root))
-env = {key: value for key, value in os.environ.items() if not key.startswith("STUDYFLOW_DATABASE")}
+env = {key: value for key, value in os.environ.items() if not key.startswith("STUDYFLOW_")}
 env["STUDYFLOW_WORKSPACE"] = str(workspace)
 # Keep all extraction artifacts in the explicitly isolated test boundary.
 temp_runtime = workspace / ".test-temp"; temp_runtime.mkdir()
 env["TEMP"] = env["TMP"] = str(temp_runtime)
 # Deliberately adversarial locale: the protocol must not inherit this encoding.
 env["PYTHONIOENCODING"] = "gbk:surrogateescape"
-subprocess.run([sys.executable, "-X", "utf8", "-m", "studyflow", "plan", "create", "--name", "冻结包回归", "--format", "json"],
-               cwd=root / "packages" / "core", env=env, check=True, capture_output=True)
+subprocess.run([str(args.engine.resolve().with_name("studyflow.exe")), "plan", "create", "--name", "冻结包回归", "--format", "json"],
+               cwd=workspace, env=env, check=True, capture_output=True, timeout=60)
 content = workspace / "content"; content.mkdir(exist_ok=True)
 for index in (1, 2, 3):
     (content / f"知识点{index}.md").write_text(f"---\ncourse: 冻结包回归课\nlesson: 知识点{index}\nplan_line: 冻结包回归\nexercises:\n- title: 第{index}题\n  prompt: 说明中文与状态\n---\n\n# 知识点{index}\n\nUTF-8、中文和 emoji ✅ 必须原样保存。", encoding="utf-8")

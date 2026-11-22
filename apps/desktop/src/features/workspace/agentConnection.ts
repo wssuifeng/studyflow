@@ -21,7 +21,7 @@ export function agentConnection(info:InstallationInfo|null,doctorRoot?:string){
  const text=[
  'StudyFlow Agent 会话启动',
  'Skill（'+(info.skill_kind==='installed'?'安装内':'仓库')+'）：'+info.skill_path,
- 'CLI 绝对路径：'+(info.cli_path||'源码 CLI（见下方参数）'),
+ 'CLI 绝对路径：'+(info.cli_path||info.cli_argv[0]+'（源码 CLI）'),
  'CLI 调用参数（JSON数组）：'+JSON.stringify(info.cli_argv),
  'StudyFlow 数据工作区：'+info.workspace,
  'Agent 协作区入口状态：'+status,
@@ -29,7 +29,8 @@ export function agentConnection(info:InstallationInfo|null,doctorRoot?:string){
  '1. 先读取上述 Skill，并按其中的会话入口流程行动。',
  '2. 使用上述 CLI 参数和明确的数据工作区执行 version、capabilities、doctor；核对返回的工作区路径与状态，不要切换数据根。',
  '3. '+restoreInstruction,
- '4. 恢复后简要汇报核验结果、协作区当前状态，并依据工作区记录和 CLI 实际能力列出当前可做事项。若用户已给出具体任务，直接说明该任务并进入 Skill 对应流程，不要要求用户重新选择。',
+ '4. 制课时使用同一 CLI 的 capabilities --format json 核实 authoring_workspace_* 与 course_quality_check。运行作者命令时明确传入获授权的作者资料根。发现缺失能力时报告 CLI 版本和能力名。',
+ '5. 恢复后简要汇报核验结果、协作区当前状态，并依据工作区记录和 CLI 实际能力列出当前可做事项。若用户已给出具体任务，直接说明该任务并进入 Skill 对应流程，不要要求用户重新选择。',
  '具体业务流程以 Skill 为准；本启动指令不重复定义业务步骤。'
  ].join('\n')
  return {ready:true,reason:status==='invalid'?'协作区指针无效；复制内容将要求停止并报告。':'已确认 CLI、Skill 和工作区路径。',text}

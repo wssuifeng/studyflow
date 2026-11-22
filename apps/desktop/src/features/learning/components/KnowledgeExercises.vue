@@ -6,7 +6,7 @@ import {getCurrentWindow} from '@tauri-apps/api/window'
 import {emitTo} from '@tauri-apps/api/event'
 import type {AnswerRow} from '../composables/useCourseAnswers'
 import {navigate} from '../../../shared/ui'
-const props=defineProps<{rows: AnswerRow[]; blocked: boolean}>()
+const props=defineProps<{rows: AnswerRow[]; blocked: boolean; focused?: boolean}>()
 const answeredCount=computed(()=>props.rows.filter(row=>row.answer.trim()).length)
 const submittedCount=computed(()=>props.rows.filter(row=>!!row.submission).length)
 const feedbackCount=computed(()=>props.rows.filter(row=>(row.submission?.reviews?.length||0)>0).length)
@@ -28,12 +28,12 @@ async function openHistory(id:string) {
 
 <template>
   <section class="knowledge-exercises" aria-label="当前知识点练习">
-    <header class="practice-heading">
+    <header v-if="!focused" class="practice-heading">
       <div><span class="eyebrow accent">学以致用</span><h3>把理解写下来</h3><p class="muted small">可以暂时跳过，最后统一提交本课答案。</p></div>
       <div class="practice-summary" aria-label="本知识点作答摘要"><span><strong>{{rows.length}}</strong> 道题</span><span><strong>{{answeredCount}}</strong> 已填写</span><span><strong>{{submittedCount}}</strong> 已提交</span><span v-if="feedbackCount"><strong>{{feedbackCount}}</strong> 有反馈</span></div>
     </header>
     <article v-for="(row,i) in rows" :key="row.exercise_id" class="knowledge-question" :data-exercise="row.exercise_id" :aria-label="`第 ${i+1} 题`">
-      <div class="exercise-prompt-wrap"><span class="exercise-prompt-index" aria-hidden="true">{{String(i+1).padStart(2,'0')}}</span><p class="exercise-prompt">{{row.prompt}}</p></div>
+      <div class="exercise-prompt-wrap"><span v-if="!focused" class="exercise-prompt-index" aria-hidden="true">{{String(i+1).padStart(2,'0')}}</span><p class="exercise-prompt">{{row.prompt}}</p></div>
       <div v-if="row.requirements" class="question-requirements-box"><strong>作答要求</strong><p>{{row.requirements}}</p></div>
       <p v-if="row.action==='WAITING_RETEST_TASK'" class="waiting-note exercise-action-note">等待 Agent 发布复测题；不用猜评语里的题面。</p>
       <p v-if="row.retest_task" class="retest-objective">复测目标：{{row.retest_task.objective}} · 题面已冻结</p>

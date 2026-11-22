@@ -1,0 +1,481 @@
+{
+  "plan.notebook.read": {
+    "additionalProperties": false,
+    "properties": {
+      "plan_line_id": {
+        "minLength": 1,
+        "title": "Plan Line Id",
+        "type": "string"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "lesson_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Lesson Id"
+      },
+      "entry_ids": {
+        "anyOf": [
+          {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 100,
+            "minItems": 1,
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Entry Ids"
+      },
+      "query": {
+        "default": "",
+        "maxLength": 200,
+        "title": "Query",
+        "type": "string"
+      },
+      "offset": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Offset",
+        "type": "integer"
+      },
+      "limit": {
+        "default": 100,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Limit",
+        "type": "integer"
+      },
+      "expected_version": {
+        "anyOf": [
+          {
+            "minimum": 0,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Expected Version"
+      }
+    },
+    "required": [
+      "plan_line_id"
+    ],
+    "title": "NotebookReadRequest",
+    "type": "object"
+  },
+  "plan.notebook.apply": {
+    "$defs": {
+      "NotebookEntryValue": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "PLAN",
+              "COURSE",
+              "LESSON"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "course_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Course Id"
+          },
+          "lesson_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lesson Id"
+          },
+          "content": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 50000,
+            "minItems": 1,
+            "title": "Content",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "scope",
+          "content"
+        ],
+        "title": "NotebookEntryValue",
+        "type": "object"
+      },
+      "NotebookInsert": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "insert_entry",
+            "title": "Type",
+            "type": "string"
+          },
+          "entry": {
+            "$ref": "#/$defs/NotebookEntryValue"
+          },
+          "after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "After Id"
+          }
+        },
+        "required": [
+          "type",
+          "entry"
+        ],
+        "title": "NotebookInsert",
+        "type": "object"
+      },
+      "NotebookMove": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "move_entry",
+            "title": "Type",
+            "type": "string"
+          },
+          "entry_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "PLAN",
+              "COURSE",
+              "LESSON"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "course_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Course Id"
+          },
+          "lesson_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Lesson Id"
+          },
+          "after_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "After Id"
+          }
+        },
+        "required": [
+          "type",
+          "entry_id",
+          "scope"
+        ],
+        "title": "NotebookMove",
+        "type": "object"
+      },
+      "NotebookRemove": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "remove_entry",
+            "title": "Type",
+            "type": "string"
+          },
+          "entry_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Entry Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "entry_id"
+        ],
+        "title": "NotebookRemove",
+        "type": "object"
+      },
+      "NotebookReplace": {
+        "additionalProperties": false,
+        "properties": {
+          "type": {
+            "const": "replace_entry",
+            "title": "Type",
+            "type": "string"
+          },
+          "entry_id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Entry Id",
+            "type": "string"
+          },
+          "content": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "maxItems": 50000,
+            "minItems": 1,
+            "title": "Content",
+            "type": "array"
+          }
+        },
+        "required": [
+          "type",
+          "entry_id",
+          "content"
+        ],
+        "title": "NotebookReplace",
+        "type": "object"
+      },
+      "NotebookSourceRegistration": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Id",
+            "type": "string"
+          },
+          "original": {
+            "maxLength": 20000,
+            "minLength": 1,
+            "title": "Original",
+            "type": "string"
+          },
+          "course_id": {
+            "title": "Course Id",
+            "type": "string"
+          },
+          "lesson_id": {
+            "title": "Lesson Id",
+            "type": "string"
+          },
+          "source_study_id": {
+            "title": "Source Study Id",
+            "type": "string"
+          },
+          "source_block_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Block Id"
+          },
+          "source_section_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Source Section Id"
+          }
+        },
+        "required": [
+          "id",
+          "original",
+          "course_id",
+          "lesson_id",
+          "source_study_id"
+        ],
+        "title": "NotebookSourceRegistration",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "plan_line_id": {
+        "minLength": 1,
+        "title": "Plan Line Id",
+        "type": "string"
+      },
+      "expected_version": {
+        "minimum": 0,
+        "title": "Expected Version",
+        "type": "integer"
+      },
+      "idempotency_key": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Idempotency Key",
+        "type": "string"
+      },
+      "operations": {
+        "items": {
+          "discriminator": {
+            "mapping": {
+              "insert_entry": "#/$defs/NotebookInsert",
+              "move_entry": "#/$defs/NotebookMove",
+              "remove_entry": "#/$defs/NotebookRemove",
+              "replace_entry": "#/$defs/NotebookReplace"
+            },
+            "propertyName": "type"
+          },
+          "oneOf": [
+            {
+              "$ref": "#/$defs/NotebookInsert"
+            },
+            {
+              "$ref": "#/$defs/NotebookReplace"
+            },
+            {
+              "$ref": "#/$defs/NotebookRemove"
+            },
+            {
+              "$ref": "#/$defs/NotebookMove"
+            }
+          ]
+        },
+        "maxItems": 2000,
+        "title": "Operations",
+        "type": "array"
+      },
+      "new_sources": {
+        "items": {
+          "$ref": "#/$defs/NotebookSourceRegistration"
+        },
+        "maxItems": 100,
+        "title": "New Sources",
+        "type": "array"
+      }
+    },
+    "required": [
+      "plan_line_id",
+      "expected_version",
+      "idempotency_key",
+      "operations"
+    ],
+    "title": "NotebookApplyRequest",
+    "type": "object"
+  },
+  "plan.notebook.search": {
+    "additionalProperties": false,
+    "properties": {
+      "plan_line_id": {
+        "minLength": 1,
+        "title": "Plan Line Id",
+        "type": "string"
+      },
+      "query": {
+        "default": "",
+        "maxLength": 200,
+        "title": "Query",
+        "type": "string"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "lesson_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Lesson Id"
+      }
+    },
+    "required": [
+      "plan_line_id"
+    ],
+    "title": "NotebookSearchRequest",
+    "type": "object"
+  }
+}

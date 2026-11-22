@@ -30,7 +30,12 @@ import {emitTo,listen} from '@tauri-apps/api/event'
 import {useSafeStudyExit} from '../../learning/composables/useSafeStudyExit'
 import {useCourseAnswers} from '../../learning/composables/useCourseAnswers'
 
-const props = defineProps<{id: string; planLineId?:string; lessonId?: string; initialView?: string; studyId?: string; exerciseId?: string}>()
+import PracticeWorkspace from '../../practice/PracticeWorkspace.vue'
+import WritingWorkspace from '../../writing/WritingWorkspace.vue'
+import KnowledgeExercises from '../../learning/components/KnowledgeExercises.vue'
+import PlanNotebook from '../../notes/components/PlanNotebook.vue'
+
+const props = defineProps<{id: string; planLineId?:string; lessonId?: string; initialView?: string; studyId?: string; exerciseId?: string; focusedPractice?: boolean}>()
 const data = ref<CourseStudyDetailData | null>(null)
 const detached=ref<ToolTab[]>([])
 const answersOwner=computed(()=>!detached.value.includes('exercises'))
@@ -39,6 +44,12 @@ const answers = useCourseAnswers(data,answersOwner)
 const notes = usePlanNotebook(computed(()=>data.value?.course.plan_line_id||undefined),notesOwner)
 const shellPanel=inject(workspacePanelKey)
 const panelOwner=Symbol('course-panel')
+const navigationCollapsed = ref(false)
+try {navigationCollapsed.value = localStorage.getItem(windowStorageKey('course-outline-collapsed')) === 'true'} catch {}
+function toggleNavigation() {
+ navigationCollapsed.value = !navigationCollapsed.value
+ try {localStorage.setItem(windowStorageKey('course-outline-collapsed'), String(navigationCollapsed.value))} catch {}
+}
 let storedDockLayout:string|null=null
 try {storedDockLayout=localStorage.getItem(windowStorageKey('course-dock'))}catch {/* Layout preference is optional. */}
 const dock=ref(storedDockLayout?restoreDockLayout(storedDockLayout):normalizeDock({width:activeDisplay.value.tools_width}))
@@ -49,8 +60,89 @@ const layoutClass=computed(()=>['study-unit-layout',sidebarOpen.value?'tools-vis
 const readingShellProps=computed(()=>({class:layoutClass.value,'data-reading-shell':activeDisplay.value.reading_shell,style:{'--study-height':layoutHeight.value+'px'}}))
 const selection=ref<{text:string;x:number;y:number;blockId?:string;sectionId?:string}|null>(null)
 const toolsToggle=ref<HTMLButtonElement|null>(null)
+let practiceDockState: {collapsed: boolean; full: boolean} | null = null
+const focusedItems = computed(() => data.value?.lessons.flatMap((lesson, lessonIndex) =>
+  lesson.exercises.map(exercise => ({exercise, lessonIndex}))) ?? [])
+const focusedPosition = ref(0)
+const focusedItem = computed(() => focusedItems.value[focusedPosition.value]?.exercise)
+const focusedRows = computed(() => answers.rows.value.filter(row => row.exercise_id === focusedItem.value?.id))
+const focusedNotes = ref(false)
+const focusedDirectory = ref(false)
+const focusedScroll = ref<HTMLElement | null>(null)
+const focusedPositionKey = () => windowStorageKey('practice-item:' + data.value?.study.id)
+function selectFocusedItem(position: number) {
+  const item = focusedItems.value[position]
+  if (!item) return
+  focusedPosition.value = position
+  index.value = item.lessonIndex
+  focusedDirectory.value = false
+  const exercise = item.exercise
+  practice.value = isGroup(exercise.type) ? {id: exercise.id, kind: exercise.type === 'READING_GROUP' ? 'reading' : 'listening'} : null
+  writingId.value = exercise.type === 'ESSAY' ? exercise.id : ''
+  try {localStorage.setItem(focusedPositionKey(), exercise.id)} catch { /* Position cache is optional. */ }
+}
+async function moveFocused(position: number) {
+  if (blocked.value || position === focusedPosition.value || !focusedItems.value[position]) return
+  moving.value = true
+  try {
+    if (!await flushCurrent()) return
+    selectFocusedItem(position)
+    focusedScroll.value?.scrollTo({top: 0})
+    await nextTick()
+    if (focusedRows.value.length && !writingRow.value) focusedScroll.value?.focus()
+  } finally {moving.value = false}
+}
+const practice = ref<{id: string; kind: 'reading' | 'listening'} | null>(null)
+const writingId = ref('')
+const writingRow = computed(() => answers.rows.value.find(row => row.exercise_id === writingId.value))
+async function closeWriting() {
+ if (await flushCurrent()) {writingId.value = ''; await closePractice()}
+}
+async function submitWriting() {
+ if (submitting.value || !answersOwner.value || !writingRow.value || !await flushCurrent()) return
+ submitting.value = true
+ try {
+  if (await answers.write('essay', writingRow.value.exercise_id)) await onGroupConfirmed(false)
+ } finally {submitting.value = false}
+}
+const practiceWorkspace = ref<InstanceType<typeof PracticeWorkspace> | null>(null)
+let practiceReturn: HTMLElement | null = null
+const isGroup = (type: string) => ['READING_GROUP', 'LISTENING_GROUP'].includes(type)
+const isSpecialized = (type: string) => isGroup(type) || type === 'ESSAY'
+const groups = computed(() => lesson.value?.exercises.filter(exercise => isSpecialized(exercise.type)) ?? [])
+async function closePractice() {
+ practice.value = null
+ if (practiceDockState) {
+  dock.value = {...dock.value, ...practiceDockState}
+  practiceDockState = null
+ }
+ await nextTick()
+ if (practiceReturn?.isConnected) practiceReturn.focus({preventScroll: true})
+ else body.value?.focus({preventScroll: true})
+}
+async function onGroupConfirmed(submitted: boolean) {
+ if (!data.value) return
+ try {data.value = await studyApi.courseStudy(data.value.study.id)} catch (cause) {reportError(cause)}
+ if (submitted) notify('本次课程作答已提交。')
+}
 async function openPractice(exerciseId:string) {
  if(blocked.value)return
+ const exercise = lesson.value?.exercises.find(item => item.id === exerciseId)
+ if (exercise && isSpecialized(exercise.type)) {
+  if (!await flushCurrent()) return
+  if (!practice.value && !writingId.value) {
+   practiceReturn = document.activeElement instanceof HTMLElement ? document.activeElement : null
+   practiceDockState = {collapsed: dock.value.collapsed, full: dock.value.full}
+  }
+  if (dock.value.full || shellPanel?.geometry.value.compact) dock.value = {...dock.value, collapsed: true}
+  if (exercise.type === 'ESSAY' && !answersOwner.value) {
+   await putBackTool('exercises')
+   if (!answersOwner.value) {notify('请先将练习窗口停靠回课程。','info');return}
+  }
+  if (exercise.type === 'ESSAY') {practice.value = null; writingId.value = exerciseId}
+  else {writingId.value = ''; practice.value = {id: exerciseId, kind: exercise.type === 'READING_GROUP' ? 'reading' : 'listening'}}
+  return
+ }
  dock.value=activateTool(dock.value,'exercises')
  if(detached.value.includes('exercises')) {
    if(!await openToolWindow('exercises',context.value!)){notify('练习窗口尚未就绪，请重试。','info');return}
@@ -208,7 +300,7 @@ async function confirmRestart(){
 const newVersionConfirm = ref(false)
 const openingRequest=ref<{key:string;newVersion:boolean;reviewRound:boolean}|null>(null)
 const lesson = computed(() => data.value?.lessons[index.value])
-watch(()=>[dock.value.collapsed,dock.value.width,dock.value.full,loading.value,!!lesson.value,answers.failed.value],()=>shellPanel?.publish(panelOwner,{visible:!dock.value.collapsed&&!loading.value&&!!lesson.value&&!answers.failed.value,width:dock.value.width,full:dock.value.full}),{immediate:true})
+watch(()=>[dock.value.collapsed,dock.value.width,dock.value.full,loading.value,!!lesson.value,answers.failed.value,navigationCollapsed.value],()=>shellPanel?.publish(panelOwner,{visible:!props.focusedPractice&&!dock.value.collapsed&&!loading.value&&!!lesson.value&&!answers.failed.value,width:dock.value.width,full:dock.value.full,navigationCollapsed:navigationCollapsed.value}),{immediate:true})
 const blocked = computed(() => !!restartPending.value || openingWindow.value || moving.value || submitting.value || !!answers.pending.value && !answers.busy.value || !!answers.recovery.value || !!notes.pending.value && !notes.busy.value || !!notes.recovery.value)
 const feedbackNeeded = computed(() => answers.rows.value.filter(row => row.action === 'REVISION' || row.action === 'RETEST').length)
 const readingPercent = computed(() => data.value?.lessons.length ? Math.round(data.value.lessons.reduce((sum,l)=>sum+l.progress.progress_percent,0)/data.value.lessons.length) : 0)
@@ -272,6 +364,13 @@ async function load(newVersion = false,reviewRound=false) {
     detached.value=(await listToolWindows()).map(w=>w.tool)
     await Promise.all([answers.load(), notes.load()])
     await syncToolContext()
+    if (props.focusedPractice) {
+      let saved: string | null = null
+      try {saved = localStorage.getItem(focusedPositionKey())} catch { /* Position cache is optional. */ }
+      const target = focusedItems.value.findIndex(({exercise}) => exercise.id === (props.exerciseId || saved))
+      selectFocusedItem(Math.max(0, target))
+      return
+    }
     if(['answers','exercises'].includes(props.initialView||'')) dock.value=activateTool(dock.value,'exercises')
     if (!props.lessonId && props.initialView === 'answers') {
       const target = answers.rows.value.find(row=>row.action === 'REVISION' || row.action === 'RETEST') || answers.missing.value[0]
@@ -327,17 +426,18 @@ function savePosition(complete = false): Promise<boolean> {
 function onScroll() {updateActiveHeading();if(restoringReadingScroll.value)return;if(ready.value&&body.value?.getClientRects().length){readingScrollTop.value=body.value.scrollTop;clearTimeout(timer); timer=setTimeout(()=>savePosition(),750)}}
 async function flushCurrent() {
   if (loading.value || !data.value) return true
+  if (practiceWorkspace.value && !await practiceWorkspace.value.save()) return false
   if (materialSuperseded.value || answers.superseded.value) {if (notes.dirty.value || notes.pending.value) return notes.save(); return true}
   const peers=await prepareTools()
   if(!peers.ok) {notify('独立工具窗口尚未保存，请先处理那里的输入。','info');return false}
   if(!answersOwner.value&&!answers.dirty.value&&!answers.pending.value&&!answers.recovery.value)await answers.load()
   if (!(answers.failed.value && !answers.dirty.value && !answers.pending.value) && !await answers.write('save')) return false
   if (!(notes.failed.value && !notes.dirty.value && !notes.pending.value) && !await notes.save()) return false
-  return savePosition()
+  return props.focusedPractice || savePosition()
 }
 const safeExit = useSafeStudyExit({
-  busy: () => moving.value || submitting.value || !!answers.busy.value || notes.busy.value,
-  hasProblem: () => !!(restartPending.value || answers.saveFailed.value || notes.saveFailed.value || progressFailed.value || answers.pending.value || notes.pending.value || answers.recovery.value || notes.recovery.value || (materialSuperseded.value && answers.dirty.value)),
+  busy: () => !!practiceWorkspace.value?.busy || moving.value || submitting.value || !!answers.busy.value || notes.busy.value,
+  hasProblem: () => !!(practiceWorkspace.value?.hasProblem || restartPending.value || answers.saveFailed.value || notes.saveFailed.value || progressFailed.value || answers.pending.value || notes.pending.value || answers.recovery.value || notes.recovery.value || (materialSuperseded.value && answers.dirty.value)),
   flush: flushCurrent, retry: retrySaving,
   suspend: () => {clearTimeout(timer); answers.suspendAutosave(); notes.suspendAutosave(); if(safeExit.dialog.value?.path==='close-window'){void suspendTools();window.dispatchEvent(new CustomEvent('studyflow-discard-close'))}},
 })
@@ -355,6 +455,8 @@ function exportUnsaved() {
   } catch (cause) {reportError(cause)}
 }
 async function moveTo(next:number) {
+ practice.value = null
+ writingId.value = ''
  index.value=next;selection.value=null;interactionFeedback('move')
  const route='/course/'+props.id+'?lesson='+lesson.value!.id
  window.history.replaceState(null,'','#'+route);localStorage.setItem(windowStorageKey('last-route'),route)
@@ -377,10 +479,30 @@ async function continueLearning() {
 }
 async function submitCourse() {
   if (submitting.value || moving.value || !data.value || !await flushCurrent()) return
+  const unconfirmed = data.value.lessons.flatMap((item, lessonIndex) => item.exercises
+    .filter(exercise => isGroup(exercise.type) && !exercise.latest_submission)
+    .map(exercise => ({exercise, lessonIndex})))[0]
+  if (unconfirmed) {
+    if (props.focusedPractice) {
+      await moveFocused(focusedItems.value.findIndex(({exercise}) => exercise.id === unconfirmed.exercise.id))
+      notify('请先确认这个题组。', 'info')
+      return
+    }
+    if (unconfirmed.lessonIndex !== index.value && !await selectLesson(unconfirmed.lessonIndex)) return
+    await openPractice(unconfirmed.exercise.id)
+    notify('请先确认这个题组。', 'info')
+    return
+  }
   if (answers.missing.value.length) {
     const first = answers.missing.value[0]!
+    if (props.focusedPractice) {
+      await moveFocused(focusedItems.value.findIndex(({exercise}) => exercise.id === first.exercise_id))
+      notify('请先补齐未作答的题目。', 'info')
+      return
+    }
     const target = data.value.lessons.findIndex(l=>l.id===first.lessonId)
     if (target!==index.value && !await selectLesson(target)) return
+    if (data.value.lessons[target]?.exercises.find(exercise => exercise.id === first.exercise_id)?.type === 'ESSAY') {await openPractice(first.exercise_id); return}
     sidebarOpen.value = true; tab.value = 'exercises'
     if(detached.value.includes('exercises')){await detachTool('exercises');await emitTo('tool-exercises','studyflow-tool-focus-lesson',{lessonId:first.lessonId})}
     await nextTick()
@@ -399,7 +521,7 @@ async function submitCourse() {
     if(!peers.ok){notify('独立工具窗口保存未确认，本轮没有提交。','info');return}
     if(!answersOwner.value)await answers.load()
     if(answers.missing.value.length){notify('独立窗口还有未作答题，请补充后提交。','info');return}
-    if (!await notes.save() || !await savePosition(true)) return
+    if (!await notes.save() || !props.focusedPractice && !await savePosition(true)) return
     if (!data.value.course.exercise_total) {
       data.value = await studyApi.completeCourseReading(data.value.study.id)
       notify('本次阅读学习已完成。');interactionFeedback('complete')
@@ -422,6 +544,7 @@ async function reloadAfterReset() {
   } catch (cause) { reportError(cause) }
 }
 async function retrySaving() {
+  if (practiceWorkspace.value?.hasProblem && !await practiceWorkspace.value.save()) return
   if(restartPending.value){await confirmRestart();if(restartPending.value)return}
   if (answers.saveFailed.value || answers.pending.value) await answers.retry()
   if (notes.saveFailed.value || notes.pending.value) await notes.retry()
@@ -495,7 +618,13 @@ let disposed=false
 async function listenTools(){
  if(!isTauri())return
  const register=async<T>(name:string,fn:(p:T)=>void|Promise<void>)=>{const off=await listen<T>(name,e=>{void fn(e.payload)});if(disposed)off();else toolListeners.push(off)}
- await register<{lessonId:string;blockId:string;studyId:string}>('studyflow-focus-section',async p=>{
+ await register<{lessonId:string;exerciseId:string;studyId:string}>('studyflow-open-practice',async payload=>{
+  if (payload.studyId !== data.value?.study.id || !data.value) return
+  const target = data.value.lessons.findIndex(item=>item.id === payload.lessonId)
+  if (target < 0 || target !== index.value && !await selectLesson(target)) return
+  await openPractice(payload.exerciseId)
+ })
+ await register<{lessonId:string;blockId:string;studyId:string}>('studyflow-focus-section' ,async p=>{
   if(p.studyId!==data.value?.study.id)return
   const target=data.value.lessons.findIndex(l=>l.id===p.lessonId)
   if(target>=0&&data.value.lessons[target].content_blocks?.some(b=>b.id===p.blockId))await jumpToBlock(target,p.blockId)
@@ -554,9 +683,49 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
   <LeaveStudyDialog v-if="safeExit.dialog.value" :closing="safeExit.dialog.value.path === 'close-window'" :reason="safeExit.dialog.value.reason" :retrying="safeExit.dialog.value.retrying" @retry="safeExit.retry" @discard="safeExit.finish(true, true)" @cancel="safeExit.finish(false)" @export="exportUnsaved"/>
   <div v-if="loading" class="loading-state" role="status">正在恢复课程、笔记与反馈…</div>
   <div v-else-if="!data" class="error-state"><p>课程暂时无法打开，没有覆盖学习记录。</p><button class="secondary-button" @click="load()">重新打开</button></div>
+  <section v-else-if="focusedPractice && focusedItem" class="english-learning" aria-label="英语专注训练">
+    <header class="english-training-header">
+      <button class="english-icon-button" aria-label="返回学习计划" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')">←</button>
+      <div class="english-header-title"><strong>{{ data.course.title }}</strong><span class="english-header-progress">{{ focusedPosition+1 }} / {{ focusedItems.length }}</span></div>
+      <div class="english-header-tools">
+        <button type="button" :aria-expanded="focusedDirectory" @click="focusedDirectory=!focusedDirectory;focusedNotes=false">题目目录</button>
+        <button type="button" :aria-expanded="focusedNotes" @click="focusedNotes=!focusedNotes;focusedDirectory=false">笔记</button>
+      </div>
+    </header>
+    <StudyRecovery :answers="answers" :notebook="notes" :progress-failed="progressFailed" @retry="retrySaving" @notes="focusedNotes=true" />
+    <div class="english-work-surface" :class="{'has-drawer': focusedNotes || focusedDirectory}">
+      <main ref="focusedScroll" class="english-stage english-stage-specialty" tabindex="-1">
+        <div v-if="answers.failed.value" class="error-state"><p>作答状态读取失败。</p><button class="secondary-button" @click="answers.load">重新读取</button></div>
+        <PracticeWorkspace v-else-if="practice" ref="practiceWorkspace" :key="data.study.id+practice.id" training
+          :study-id="data.study.id" :exercise-id="practice.id" :kind="practice.kind" :blocked="blocked" @confirmed="onGroupConfirmed" />
+        <WritingWorkspace v-else-if="writingRow" :key="writingRow.exercise_id" training :row="writingRow"
+          :blocked="blocked" :owned="answersOwner" :saved-at="answers.savedAt.value" @answer="writingRow.answer=$event"
+          @save="answers.write('save')" @submit="submitWriting" />
+        <KnowledgeExercises v-else :key="focusedItem.id" focused :rows="focusedRows" :blocked="blocked || !answersOwner" />
+      </main>
+      <aside v-if="focusedDirectory" class="english-drawer focused-practice-directory" aria-label="题目目录">
+        <ol><li v-for="({exercise}, position) in focusedItems" :key="exercise.id">
+          <button :aria-current="position===focusedPosition ? 'step' : undefined" :disabled="blocked"
+            @click="position===focusedPosition ? focusedDirectory=false : moveFocused(position)">{{ exercise.title }}</button>
+        </li></ol>
+      </aside>
+      <aside v-if="focusedNotes" class="english-drawer" aria-label="计划笔记">
+        <PlanNotebook :notebook="notes" :plan-title="data.course.plan_line || data.course.title" :course-id="data.course.id"
+          :lesson-id="lesson?.id" :blocked="blocked || !notesOwner" />
+      </aside>
+    </div>
+    <footer class="english-training-footer">
+      <button class="secondary-button" :disabled="blocked || focusedPosition===0" @click="moveFocused(focusedPosition-1)">← 上一项</button>
+      <button v-if="focusedPosition < focusedItems.length-1" class="primary-button" :disabled="blocked" @click="moveFocused(focusedPosition+1)">下一项 →</button>
+      <button v-else-if="!data.course.learning_submitted || answers.editable.value.length" class="primary-button" :disabled="blocked || answers.failed.value" @click="submitCourse">提交本课</button>
+      <button v-else class="primary-button" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')">返回学习计划</button>
+      <span role="status">{{ saveLabel }}</span>
+    </footer>
+  </section>
   <div v-else :class="['study-workspace', {'layout-overflow': layoutOverflow}]">
-    <Teleport v-if="shellPanel?.navigationVisible?.value" defer to="#course-sidebar-content"><CourseOutline :plan-title="data.course.plan_line || '我的计划'" :course-title="data.course.title" :position="planPosition.current" :total="planPosition.total" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :headings="documentHeadings" :active-heading="activeHeading" :busy="blocked" :reading-percent="readingPercent" @select="selectLesson" @heading="jumpToHeading" @back="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"/></Teleport>
-    <div class="reader-toolbar"><button type="button" class="course-navigation-action" :title="data.course.plan_line || '我的计划'" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>{{data.course.plan_line || '我的计划'}}</span></button><p class="reader-context" :title="data.course.title">{{data.course.title}}</p><div class="reader-actions"><button v-if="!restartPending&&!['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')" ref="restartToggle" type="button" class="reader-icon-action reader-reset" aria-label="用最新版重新开始" title="用最新版重新开始" aria-haspopup="dialog" aria-controls="study-restart-confirmation" :disabled="blocked" @click="previewRestart"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8a6.5 6.5 0 1 1 .7 6M3 3v5h5"/></svg></button><button type="button" class="reader-icon-action reader-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button type="button" class="text-button" :disabled="blocked" @click="syncFeedback">同步反馈 ↻</button><button ref="toolsToggle" type="button" class="tools-toggle" :aria-expanded="sidebarOpen" aria-controls="workspace-tool-panel" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
+    <Teleport v-if="shellPanel?.navigationAvailable?.value" defer to="#course-sidebar-content"><CourseOutline :plan-title="data.course.plan_line || '我的计划'" :course-title="data.course.title" :position="planPosition.current" :total="planPosition.total" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :headings="documentHeadings" :active-heading="activeHeading" :busy="blocked" :reading-percent="readingPercent" @select="selectLesson" @heading="jumpToHeading" @back="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"/></Teleport>
+    <div class="reader-toolbar"><button v-if="shellPanel" type="button" class="text-button" :aria-expanded="!navigationCollapsed"
+      aria-controls="course-sidebar-content" @click="toggleNavigation">{{ navigationCollapsed ? '展开目录' : '收起目录' }}</button><button type="button" class="course-navigation-action" :title="data.course.plan_line || '我的计划'" @click="navigate(data.course.plan_line_id ? '/plan/'+data.course.plan_line_id : '/plans')"><svg class="navigation-arrow" viewBox="0 0 20 20" aria-hidden="true"><path d="M12 4.5 6.5 10 12 15.5M7 10h10"/></svg><span>{{data.course.plan_line || '我的计划'}}</span></button><p class="reader-context" :title="data.course.title">{{data.course.title}}</p><div class="reader-actions"><button v-if="!restartPending&&!['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')" ref="restartToggle" type="button" class="reader-icon-action reader-reset" aria-label="用最新版重新开始" title="用最新版重新开始" aria-haspopup="dialog" aria-controls="study-restart-confirmation" :disabled="blocked" @click="previewRestart"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8a6.5 6.5 0 1 1 .7 6M3 3v5h5"/></svg></button><button type="button" class="reader-icon-action reader-sound" :aria-pressed="soundEnabled" :aria-label="soundEnabled?'关闭操作音效':'开启操作音效'" :title="soundEnabled?'关闭操作音效':'开启操作音效'" @click="toggleSound"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 8h3l4-4v12l-4-4H3z"/><path v-if="soundEnabled" d="M13 7q3 3 0 6m2-9q6 6 0 12"/><path v-else d="m13 8 4 4m0-4-4 4"/></svg></button><button type="button" class="text-button" :disabled="blocked" @click="syncFeedback">同步反馈 ↻</button><button ref="toolsToggle" type="button" class="tools-toggle" :aria-expanded="sidebarOpen" aria-controls="workspace-tool-panel" :aria-label="sidebarOpen?'收起学习工具':'打开答题与笔记'" @click="toggleTools"><svg viewBox="0 0 20 20" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M12 4v12"/></svg><span>{{sidebarOpen?'收起工具':'答题与笔记'}}</span></button></div></div>
     <div v-if="['PASSED','READ_COMPLETED'].includes(data.course.study_status||'')&&!data.study.source_changed" class="study-version-note"><span>本轮已通过。可以只回看，或明确开启一轮新的复习；旧答案保留。</span><button class="text-button" @click="newVersionConfirm=true">开启复习轮次</button><span v-if="newVersionConfirm"><button class="text-button" @click="async()=>{if(await flushCurrent()){newVersionConfirm=false;await load(false,true)}}">确认重新学习与作答</button><button class="text-button" @click="newVersionConfirm=false">取消</button></span></div>
     <div v-if="materialSuperseded||answers.superseded.value" class="study-version-note" role="status"><span>课程内容已更新，本轮已收口保留为历史，学习进度已重置。重新读取课程将从最新材料开始。</span><button class="text-button" @click="reloadAfterReset">重新读取课程</button></div>
     <div v-if="restartPending" class="study-version-note" role="status"><span>重新开始的结果待确认，原请求已保留。请勿重复创建轮次。</span><span v-if="restartCacheUnavailable">本机缓存不可用；原请求仅在本窗口保留。离开前可导出未保存数据。</span><button class="text-button" :disabled="restartBusy" @click="confirmRestart">{{restartBusy?'确认中…':'重试原请求'}}</button></div>
@@ -566,18 +735,29 @@ onBeforeUnmount(()=>{shellPanel?.release(panelOwner);layoutObserver?.disconnect(
     <template v-else-if="lesson">
       <DisplaySlot slot="reading-shell" :fallback="'div'" :view-props="readingShellProps">
         <div ref="studyLayout" :style="{'--study-height': layoutHeight+'px'}" :class="layoutClass">
-        <article :key="lesson.id" class="study-material" aria-label="知识点正文"><div ref="body" data-reading-scroll-container class="study-material-body" tabindex="0" @scroll.passive="onScroll();selection=null" @mouseup="captureSelection" @keyup="captureSelection"><header class="study-unit-heading"><ThemeReadingArtwork/><p class="eyebrow">知识点 {{String(index+1).padStart(2,'0')}} / {{data.lessons.length}}</p><h3>{{lesson.title.replace(/^\d+[｜|·.、\s]+/,'')}}</h3><p v-if="lesson.summary" class="sequence-lesson-summary">{{lesson.summary}}</p><span class="sequence-reading-status">{{courseStatus}} · 本课阅读 {{readingPercent}}%</span></header><TeachingContent :lesson-title="lesson.title" v-if="lesson.content_blocks?.length" :blocks="lesson.content_blocks" :exercises="lesson.exercises" :notes="notes.blocks.value" :study-id="data.study.id" :lesson-id="lesson.id" :blocked="blocked" :preference-scope="(data.study.workspace_key||data.study.id)+':'+data.study.content_hash" @practice="openPractice"/><div v-else class="markdown-body legacy-teaching-content" v-html="renderedLesson"/>
-        <section v-if="lesson.exercises.length" class="sequence-practice-entry"><div><span class="sequence-practice-icon">✓</span><h4>知识点练习</h4><span>{{lesson.exercises.length}} 道练习</span></div><p>把理解写下来，答案会随本课自动保存。也可以暂时跳过，最后统一提交。</p><button class="secondary-button" :disabled="blocked" @click="openPractice(lesson.exercises[0].id)">打开本节练习 <span>→</span></button></section>
+        <PracticeWorkspace v-if="practice" ref="practiceWorkspace" :key="data.study.id + practice.id" :study-id="data.study.id"
+          :exercise-id="practice.id" :kind="practice.kind" :blocked="blocked" @back="closePractice" @confirmed="onGroupConfirmed"/>
+        <WritingWorkspace v-else-if="writingRow" :key="writingRow.exercise_id" :row="writingRow" :blocked="blocked || !!answers.pending.value && !answers.busy.value"
+          :owned="answersOwner" :saved-at="answers.savedAt.value" @answer="writingRow.answer = $event" @back="closeWriting"
+          @save="flushCurrent" @submit="submitWriting"/>
+        <article v-show="!practice && !writingRow" :key="lesson.id" class="study-material" aria-label="知识点正文"><div ref="body" data-reading-scroll-container class="study-material-body" tabindex="0" @scroll.passive="onScroll();selection=null" @mouseup="captureSelection" @keyup="captureSelection"><header class="study-unit-heading"><ThemeReadingArtwork/><p class="eyebrow">知识点 {{String(index+1).padStart(2,'0')}} / {{data.lessons.length}}</p><h3>{{lesson.title.replace(/^\d+[｜|·.、\s]+/,'')}}</h3><p v-if="lesson.summary" class="sequence-lesson-summary">{{lesson.summary}}</p><span class="sequence-reading-status">{{courseStatus}} · 本课阅读 {{readingPercent}}%</span></header><TeachingContent :lesson-title="lesson.title" v-if="lesson.content_blocks?.length" :blocks="lesson.content_blocks" :exercises="lesson.exercises" :notes="notes.blocks.value" :study-id="data.study.id" :lesson-id="lesson.id" :blocked="blocked" :preference-scope="(data.study.workspace_key||data.study.id)+':'+data.study.content_hash" @practice="openPractice"/><div v-else class="markdown-body legacy-teaching-content" v-html="renderedLesson"/>
+        <section v-if="groups.length" class="sequence-practice-entry" aria-label="专项题组">
+          <h4>专项题组</h4>
+          <p v-for="group in groups" :key="group.id"><button type="button" class="secondary-button" :disabled="blocked" @click="openPractice(group.id)">
+            {{ group.title }} · {{ group.type === 'ESSAY' ? '打开作文' : group.latest_submission ? '查看解析' : group.draft ? '继续练习' : '开始练习' }}
+          </button></p>
+        </section>
+        <section v-if="lesson.exercises.some(exercise => !isSpecialized(exercise.type))" class="sequence-practice-entry"><div><span class="sequence-practice-icon">✓</span><h4>知识点练习</h4><span>{{lesson.exercises.length}} 道练习</span></div><p>把理解写下来，答案会随本课自动保存。也可以暂时跳过，最后统一提交。</p><button class="secondary-button" :disabled="blocked" @click="openPractice(lesson.exercises.find(exercise => !isSpecialized(exercise.type))!.id)">打开本节练习 <span>→</span></button></section>
         <nav class="sequence-page-turn" aria-label="上下知识点"><button :disabled="index===0||blocked" @click="selectLesson(index-1)"><small>‹ 上一节</small><span>{{index>0?data.lessons[index-1].title:'已是第一节'}}</span></button><span class="sequence-page-number"><b>{{String(index+1).padStart(2,'0')}}</b> / {{String(data.lessons.length).padStart(2,'0')}}</span><button :disabled="index===data.lessons.length-1||blocked" @click="selectLesson(index+1)"><small>下一节 ›</small><span>{{index<data.lessons.length-1?data.lessons[index+1].title:'已是最后一节'}}</span></button></nav>
         </div></article>
         <Teleport defer to="#workspace-tool-panel">
-        <CourseToolsSidebar v-if="!answers.loading.value" :dock="dock" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notes" :plan-title="data.course.plan_line||undefined" :course-id="data.course.id" :detached="detached" :max-width="dockMaxWidth" :effective-width="shellPanel?.geometry.value.width||dock.width" :course-title="data.course.title" :compact="shellPanel?.geometry.value.compact" :course-position="planPosition.current" :course-total="planPosition.total" :course-progress="courseProgressPercent" :save-label="saveLabel" :save-failed="answers.saveFailed.value||notes.saveFailed.value||progressFailed" @activate="(t,p)=>dock=activateTool(dock,t,p)" @close="t=>dock=closeTool(dock,t)" @select="selectLesson" @collapse="sidebarOpen=false" @width="setDockWidth" @full="dock={...dock,full:!dock.full}" @split="splitTool" @unsplit="dock={...dock,panes:dock.panes.slice(0,1)}" @ratio="r=>dock={...dock,split:r}" @detach="detachTool" @dock="putBackTool" @reorder="(from,to)=>dock=reorderTools(dock,from,to)"/>
+        <CourseToolsSidebar v-if="!answers.loading.value" :dock="dock" :lessons="data.lessons" :index="index" :rows="answers.rows.value" :blocked="blocked" :notebook="notes" :plan-title="data.course.plan_line||undefined" :course-id="data.course.id" :detached="detached" :max-width="dockMaxWidth" :effective-width="shellPanel?.geometry.value.width||dock.width" :course-title="data.course.title" :compact="shellPanel?.geometry.value.compact" :course-position="planPosition.current" :course-total="planPosition.total" :course-progress="courseProgressPercent" :save-label="saveLabel" :save-failed="answers.saveFailed.value||notes.saveFailed.value||progressFailed" @activate="(t,p)=>dock=activateTool(dock,t,p)" @close="t=>dock=closeTool(dock,t)" @select="selectLesson" @collapse="sidebarOpen=false" @width="setDockWidth" @full="dock={...dock,full:!dock.full}" @split="splitTool" @unsplit="dock={...dock,panes:dock.panes.slice(0,1)}" @ratio="r=>dock={...dock,split:r}" @detach="detachTool" @dock="putBackTool" @practice="openPractice" @reorder="(from,to)=>dock=reorderTools(dock,from,to)"/>
         <div v-else class="loading-state" role="status">正在恢复学习工具…</div>
         </Teleport>
         </div>
       </DisplaySlot>
       <p v-if="answers.cacheUnavailable?.value" class="recovery-note" role="status">本机恢复缓存不可用，输入仍在当前窗口；成功写入工作区后才算保存。失败时请导出再退出。</p>
-      <footer ref="actionBar" class="study-action-bar"><div class="study-save-status" aria-live="polite"><span :class="['save-dot',{'is-error':answers.saveFailed.value || notes.saveFailed.value || progressFailed,'is-saving':!!answers.busy.value || notes.busy.value || progressSaving}]"/><div><strong>{{saveLabel}}</strong><span>{{answers.editable.value.length ? '待作答 '+answers.editable.value.length+' 道 · 未答 '+answers.missing.value.length+' 道' : feedbackNeeded ? '按反馈完成修正或复测' : data.course.learning_submitted ? '本次学习已提交，阅读与通过分别记录' : '确认学习不代表长期掌握'}}</span></div></div><StudyActions :blocked="blocked||progressSaving||answers.loading.value" :read="lesson.progress.status==='COMPLETED'" :last="index===data.lessons.length-1" :can-submit="!!answers.editable.value.length||!data.course.exercise_total&&!data.course.learning_submitted" :submitting="submitting" :feedback-needed="!!feedbackNeeded" :has-exercises="!!data.course.exercise_total" @read="confirmRead" @next="continueLearning" @submit="submitCourse" @done="navigate('/today')"/></footer>
+      <footer ref="actionBar" class="study-action-bar"><div class="study-save-status" aria-live="polite"><span :class="['save-dot',{'is-error':answers.saveFailed.value || notes.saveFailed.value || progressFailed,'is-saving':!!answers.busy.value || notes.busy.value || progressSaving}]"/><div><strong>{{saveLabel}}</strong><span>{{answers.editable.value.length ? '待作答 '+answers.editable.value.length+' 道 · 未答 '+answers.missing.value.length+' 道' : feedbackNeeded ? '按反馈完成修正或复测' : data.course.learning_submitted ? '本次学习已提交，阅读与通过分别记录' : '确认学习不代表长期掌握'}}</span></div></div><StudyActions :blocked="blocked||progressSaving||answers.loading.value" :read="lesson.progress.status==='COMPLETED'" :last="index===data.lessons.length-1" :can-submit="!!answers.editable.value.length||!data.course.exercise_total&&!data.course.learning_submitted" :submitting="submitting" :feedback-needed="!!feedbackNeeded" :has-exercises="!!data.course.exercise_total" @read="confirmRead" @next="continueLearning" @submit="submitCourse" @done="navigate('/plans')"/></footer>
     </template>
   </div>
 </template>

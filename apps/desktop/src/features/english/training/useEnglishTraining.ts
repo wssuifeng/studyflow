@@ -4,7 +4,7 @@ import {makeRequestKey, windowStorageKey} from '../../../shared/ui'
 import type {EnglishStudy, EnglishReference, EnglishDifference} from '../../../shared/api/contracts/english'
 
 type Pending = {method: string; params: Record<string, unknown>; exerciseId: string; text: string; revealMode?: 'hint'|'answer'}
-type WriteResult = Partial<EnglishReference> & {answer_version?: number; state_version?: number; matched?: boolean | null; differences?: EnglishDifference[]; status?: string; completed?: boolean; position?: number; error_count?: number}
+type WriteResult = Partial<EnglishReference> & {answer_version?: number; submission_id?:string; state_version?: number; matched?: boolean | null; differences?: EnglishDifference[]; status?: string; completed?: boolean; position?: number; error_count?: number}
 const writeMethods = new Set(['course.english.save','course.english.check','course.english.reveal','course.english.navigate','course.english.submit','course.english.request-review'])
 
 export function useEnglishTraining(studyId: string) {
@@ -14,7 +14,9 @@ export function useEnglishTraining(studyId: string) {
   const validationNotice = ref('')
   const reference = ref<EnglishReference | null>(null), phase = ref<'input'|'correction'|'answer'|'result'>('input')
   const pending = ref<Pending | null>(null), recovery = ref<{exerciseId: string; text: string} | null>(null), baseline = ref('')
-  const item = computed(() => data.value?.items[position.value]), text = computed(() => tokens.value.join(' ').trim())
+  const item = computed(() => data.value?.items[position.value])
+  const essayText = ref('')
+  const text = computed(() => item.value?.kind === 'ESSAY' ? essayText.value : tokens.value.join(' ').trim())
   const dirty = computed(() => text.value !== baseline.value)
   let timer: ReturnType<typeof setTimeout> | undefined, disposed = false, suspended = false
   let requestFlight: Promise<boolean> | null = null, saveFlight: Promise<boolean> | null = null
@@ -37,9 +39,10 @@ export function useEnglishTraining(studyId: string) {
   function bind() {
     const current = item.value; if (!current) return
     baseline.value = current.answer_text
-    tokens.value = current.answer_text ? current.answer_text.split(/\s+/) : Array(current.token_count).fill('')
+    essayText.value = current.kind === 'ESSAY' ? current.answer_text : ''
+    tokens.value = current.kind === 'ESSAY' ? [] : current.answer_text ? current.answer_text.split(/\s+/) : Array(current.token_count ?? 0).fill('')
     reference.value = null; hintMode.value = null; validationNotice.value = ''
-    phase.value = current.matched || ['PASSED','RECHECKED','REVIEWED'].includes(current.status) ? 'answer' : 'input'
+    phase.value = (!current.kind || current.kind === 'tokens') && (current.matched || ['PASSED','RECHECKED','REVIEWED'].includes(current.status)) ? 'answer' : 'input'
   }
   async function load() {
     data.value = await engineCall<EnglishStudy>('course.english.get', {study_session_id: studyId})
@@ -63,6 +66,7 @@ export function useEnglishTraining(studyId: string) {
     cache(); clearTimeout(timer)
     if (!failed.value && !pending.value && !recovery.value && !superseded.value) timer = setTimeout(() => {void save()}, 750)
   }
+  function editEssay(value: string) {essayText.value = value; edited()}
   async function performPending() {
     if (!pending.value) return true
     const request = pending.value; busy.value = true
@@ -75,6 +79,13 @@ export function useEnglishTraining(studyId: string) {
       if (row && result.answer_version !== undefined) row.answer_version = result.answer_version
       if (request.method === 'course.english.save' && row) {
         row.answer_text = request.text; row.matched = false; row.skipped = request.params.skipped === true
+        if (row.kind === 'ESSAY') {
+          // Keep the previous feedback mounted while saving a revision draft.
+          if (row.status !== 'NEEDS_REVISION') {
+            row.submission_id = result.submission_id || row.submission_id
+            row.status = 'DRAFT'
+          }
+        }
         if (current) baseline.value = request.text
       } else if (request.method === 'course.english.check' && row) {
         row.differences = result.differences || []; row.matched = result.matched ?? null; row.skipped = false; row.error_count = result.error_count ?? (result.matched ? 0 : (row.error_count || 0)+1)
@@ -89,7 +100,10 @@ export function useEnglishTraining(studyId: string) {
         position.value = Number(request.params.position); bind()
       } else if (request.method === 'course.english.submit' && data.value) {
         data.value.completed = result.completed === true; phase.value = 'result'
-      } else if (request.method === 'course.english.request-review' && row) row.status = result.status || row.status
+      } else if (request.method === 'course.english.request-review' && row) {
+        row.status = result.status || row.status
+        row.submission_id = result.submission_id || row.submission_id
+      }
       pending.value = null; failed.value = ''; validationNotice.value = ''; cache()
       if (request.method === 'course.english.check' && result.matched && current && text.value === request.text) {
         // The write is already confirmed. A failed reference read must never replay the check.
@@ -220,7 +234,9 @@ export function useEnglishTraining(studyId: string) {
   function restore() {
     if (!recovery.value || !data.value) return
     position.value = data.value.items.findIndex(i => i.exercise_id === recovery.value!.exerciseId); bind()
-    tokens.value = recovery.value.text.split(/\s+/); recovery.value = null; cache()
+    if (item.value?.kind === 'ESSAY') essayText.value = recovery.value.text
+    else tokens.value = recovery.value.text.split(/\s+/)
+    recovery.value = null; cache()
   }
   async function discardRecovery() {
     if (busy.value) return
@@ -239,5 +255,5 @@ export function useEnglishTraining(studyId: string) {
   function resumeInput() {reference.value = null; hintMode.value = null; phase.value = 'input'}
   function suspend() {suspended = true; clearTimeout(timer); cache()}
   onBeforeUnmount(() => {disposed = true; clearTimeout(timer); cache()})
-  return {data, item, tokens, position, navigationNotice, validationNotice, busy: actionBusy, actionRunning: actionInFlight, inputLocked: computed(() => actionInFlight.value && actionIntent.value !== 'reveal'), saving: busy, failed, superseded, reference, hintMode, phase, pending, recovery, dirty, load, loadReference, edited, save, check: exclusive(check, 'check'), reveal: exclusive(reveal, 'reveal'), move: exclusive(move, 'move'), submit: exclusive(submit, 'submit'), requestReview: exclusive(requestReview, 'review'), retryPending, restore, discardRecovery, exportInput, resumeInput, hideHint, suspend}
+  return {data, item, tokens, essayText, editEssay, position, navigationNotice, validationNotice, busy: actionBusy, actionRunning: actionInFlight, inputLocked: computed(() => actionInFlight.value && actionIntent.value !== 'reveal'), saving: busy, failed, superseded, reference, hintMode, phase, pending, recovery, dirty, load, loadReference, edited, save, check: exclusive(check, 'check'), reveal: exclusive(reveal, 'reveal'), move: exclusive(move, 'move'), submit: exclusive(submit, 'submit'), requestReview: exclusive(requestReview, 'review'), retryPending, restore, discardRecovery, exportInput, resumeInput, hideHint, suspend}
 }

@@ -1,10 +1,12 @@
 {
   "name": "studyflow-desktop",
   "private": true,
-  "version": "1.8.21",
+  "version": "1.8.29",
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "desktop:dev": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-engine.ps1 -Profile debug -BuildOnly && vite",
+    "desktop:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-engine.ps1 && npm run build",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
     "tauri": "tauri",
@@ -12,7 +14,6 @@
     "test:themes": "node --test scripts/test-themes.cjs scripts/test-white-violet.cjs scripts/test-sequence-light.cjs scripts/test-workspace-shell.cjs scripts/test-theme-lint.cjs scripts/test-cinnabar-paper.cjs",
     "theme:check": "node scripts/check-theme.cjs",
     "theme:lint": "node scripts/theme-lint.cjs",
-    "test:ui-contract": "python scripts/test_ui_contract.py",
     "test:english": "node --test scripts/test-english.cjs"
   },
   "dependencies": {

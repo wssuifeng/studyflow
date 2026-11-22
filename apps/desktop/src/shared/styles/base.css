@@ -2,8 +2,8 @@
 *{box-sizing:border-box}
 body{margin:0}
 button,input,textarea{font:inherit}
-button{cursor:pointer;border:0;transition:background .18s,transform .18s,box-shadow .18s;color:inherit}
-button:active:not(:disabled){transform:scale(.975)}
+button{cursor:pointer;border:0;transition:background-color var(--sf-control-duration),color var(--sf-control-duration),border-color var(--sf-control-duration),box-shadow var(--sf-control-duration);color:inherit}
+button:active:not(:disabled){transition-duration:0s}
 button:disabled{cursor:not-allowed;opacity:.48}
 button:focus-visible,a:focus-visible,summary:focus-visible,textarea:focus-visible,input:focus-visible{outline:3px solid var(--theme-focus-ring);outline-offset:3px}
 a{color:var(--accent)}

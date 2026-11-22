@@ -1,16 +1,21 @@
-"""Frozen CLI contract, arbitrary cwd, no source/Python dependency in the child."""
+"""Native CLI contract, arbitrary cwd, no source/Python dependency in the child."""
 import argparse,json,os,subprocess,tempfile
 from pathlib import Path
 from hashlib import sha256
-ROOT=Path(__file__).resolve().parents[1]
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument("--cli",required=True);parser.add_argument("--notebook-v2",action="store_true");args=parser.parse_args()
+    parser=argparse.ArgumentParser()
+    parser.add_argument("--cli",required=True)
+    parser.add_argument("--expected-version", required=True, help="application version expected from the tested package")
+    parser.add_argument("--notebook-v2",action="store_true")
+    parser.add_argument("--evidence", type=Path, required=True)
+    args=parser.parse_args()
     cli=Path(args.cli).resolve()
-    results=ROOT/"test-results/implementation-20261003";results.mkdir(parents=True,exist_ok=True)
+    results = args.evidence.resolve()
+    results.mkdir(parents=True, exist_ok=True)
     root=Path(tempfile.mkdtemp(prefix="独立 CLI 合成工作区-",dir=results)).resolve()
     temp_root=root/".runtime-temp";temp_root.mkdir()
-    environment={k:v for k,v in os.environ.items() if k not in {"PYTHONPATH","VIRTUAL_ENV","STUDYFLOW_DATABASE_PATH","STUDYFLOW_DATABASE_URL","STUDYFLOW_WORKSPACE"}}
+    environment={k:v for k,v in os.environ.items() if not k.startswith("STUDYFLOW_") and k not in {"PYTHONPATH","VIRTUAL_ENV"}}
     environment["STUDYFLOW_WORKSPACE"]=str(root)
     environment["TEMP"]=environment["TMP"]=str(temp_root)
     environment["PATH"]=str(Path(os.environ.get("WINDIR","C:/Windows"))/"System32")
@@ -27,7 +32,8 @@ def main():
         assert data.get("ok")==expect_ok,data
         commands.append({"arguments":list(arguments[:3]),"ok":data.get("ok")})
         return data
-    version=run("version","--format","json");assert version["app_version"]==__import__("studyflow").__version__
+    version=run("version","--format","json")
+    assert version["app_version"] == args.expected_version and version["runtime"] == "rust", version
     caps=run("capabilities","--format","json");assert any(i.get("method")=="course.update.apply" for i in caps["engine_capabilities"])
     run("doctor","--format","json")
     plan=run("plan","create","--name","合成独立CLI计划","--format","json")
@@ -39,7 +45,8 @@ def main():
         request=root/"request.json";request.write_text(json.dumps(params or {},ensure_ascii=False),encoding="utf-8")
         return run("call","--method",method,"--file",str(request),"--format","json",expect_ok=expect_ok)
     installation=call("system.installation")
-    assert installation["workspace"]==str(root)
+    assert Path(installation["workspace"]).resolve() == root
+    assert Path(installation["cli_argv"][0]).resolve() == cli
     assert installation["agent_workspace_entry_status"] in {"found","missing","invalid"}
     if installation["agent_workspace_entry_status"]=="found":assert Path(installation["agent_workspace_entry_path"]).is_file()
     else:assert installation["agent_workspace_entry_path"] is None

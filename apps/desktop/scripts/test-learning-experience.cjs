@@ -30,7 +30,10 @@ test('统一阅读骨架保持保存退出链与工具归属，动作区唯一',
  assert.ok(!reader.includes('#actions'))
  assert.ok(!reader.includes('#recovery'))
  assert.equal((reader.match(/<StudyActions/g)||[]).length,1)
- assert.equal((reader.match(/<StudyRecovery/g)||[]).length,1)
+ const [focused, theory] = reader.split("  <div v-else :class=\"['study-workspace'")
+ assert.equal((focused.match(/<StudyRecovery/g)||[]).length,1)
+ assert.equal((theory.match(/<StudyRecovery/g)||[]).length,1)
+ assert.match(focused,/v-else-if="focusedPractice && focusedItem"/)
  // 动作区四按钮disabled语义一致（含末位“继续学习”）
  assert.equal((actions.match(/:disabled="blocked"/g)||[]).length,4)
 })
@@ -52,8 +55,8 @@ test('Agent entry gives explicit found, missing, and invalid collaboration-root 
 const root=path.resolve(__dirname,'../../..'),skill=path.join(root,'skills/studyflow-agent')
 const read=name=>fs.readFileSync(path.join(skill,name),'utf8')
 test('authoring entry is versioned and task references are all resolvable',()=>{
-  const entry=read('SKILL.md');assert.match(entry,/version: "2\.9\.13"/);assert.match(entry,/Course-authoring task routing/)
-  for(const file of ['entry-workflow.md','workspace-structure.md','course-authoring.md','authoring-presentation.md','authoring-prompts.md','authoring-workflows.md','english-course-authoring.md','authoring-review-examples.md']){assert.ok(entry.includes(file));assert.ok(fs.statSync(path.join(skill,'references',file)).isFile())}
+  const entry=read('SKILL.md');assert.match(entry,/version: "2\.10\.0"/);assert.match(entry,/Course-authoring task routing/)
+  for(const file of ['entry-workflow.md','workspace-structure.md','course-authoring.md','authoring-presentation.md','authoring-prompts.md','authoring-workflows.md','english-course-authoring.md','authoring-review-examples.md','english-practice-v7.md']){assert.ok(entry.includes(file));assert.ok(fs.statSync(path.join(skill,'references',file)).isFile())}
  for(const file of fs.readdirSync(path.join(skill,'references')).filter(x=>x.endsWith('.md'))){const text=read('references/'+file);for(const link of text.matchAll(/\[[^\]]*\]\(([^)]+)\)/g)){if(/^https?:|^#/.test(link[1]))continue;assert.ok(fs.existsSync(path.resolve(skill,'references',link[1].split('#')[0])),file+': '+link[1])}}
 })
 function assertCurrentAuthoringRoute(text){
@@ -65,10 +68,10 @@ function assertCurrentAuthoringRoute(text){
  assert.match(text,/Public\/installed Skill copies do not automatically receive repository edits/)
 }
 test('long-term authoring routes to bounded material helpers without full upfront splitting',()=>{
- const entry=read('SKILL.md');assert.ok(entry.includes('learning-workspace-governance.md'));assert.ok(entry.includes('vocabulary-selection.md'));assert.ok(entry.includes('scripts/authoring_workspace.py'))
+ const entry=read('SKILL.md');assert.ok(entry.includes('learning-workspace-governance.md'));assert.ok(entry.includes('vocabulary-selection.md'));assert.ok(entry.includes('authoring-workspace --root'));assert.ok(entry.includes('authoring_workspace_*'))
  const governance=read('references/learning-workspace-governance.md');assert.ok(governance.includes('没有可靠正向证据'));assert.ok(governance.includes('不为获得证据擅自open'));assert.ok(governance.includes('不自动判断'))
  const words=read('references/vocabulary-selection.md');assert.ok(words.includes('不要先全库AI分类'));assert.ok(words.includes('learning_evidence=false'));assert.ok(words.includes('--exclude-selections-dir'));assert.ok(words.includes('不能认证回执来自CLI'))
- assert.ok(fs.existsSync(path.join(skill,'scripts','authoring_workspace.py')))
+ assert.ok(words.includes('旧版 CLI 未列出能力时'));assert.ok(words.includes('capabilities --format json'))
 })
 test('authoring routing has one current capability-based source without legacy proposal wording',()=>{
  assertCurrentAuthoringRoute(read('SKILL.md'))

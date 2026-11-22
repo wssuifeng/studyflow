@@ -1,0 +1,1444 @@
+{
+  "assignment.summary": {
+    "additionalProperties": false,
+    "properties": {
+      "role": {
+        "default": "all",
+        "enum": [
+          "agent",
+          "learner",
+          "all"
+        ],
+        "title": "Role",
+        "type": "string"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "status": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Status"
+      },
+      "cursor": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Cursor"
+      },
+      "limit": {
+        "default": 50,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Limit",
+        "type": "integer"
+      },
+      "history": {
+        "default": false,
+        "title": "History",
+        "type": "boolean"
+      }
+    },
+    "title": "QueueRequest",
+    "type": "object"
+  },
+  "assignment.context": {
+    "additionalProperties": false,
+    "properties": {
+      "submission_ids": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 100,
+        "minItems": 1,
+        "title": "Submission Ids",
+        "type": "array"
+      }
+    },
+    "required": [
+      "submission_ids"
+    ],
+    "title": "ContextRequest",
+    "type": "object"
+  },
+  "review.write": {
+    "$defs": {
+      "Issue": {
+        "additionalProperties": false,
+        "properties": {
+          "quote": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Quote",
+            "type": "string"
+          },
+          "location": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Location",
+            "type": "string"
+          },
+          "reason": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Reason",
+            "type": "string"
+          },
+          "guidance": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Guidance",
+            "type": "string"
+          },
+          "next_action": {
+            "maxLength": 10000,
+            "minLength": 1,
+            "title": "Next Action",
+            "type": "string"
+          }
+        },
+        "required": [
+          "quote",
+          "location",
+          "reason",
+          "guidance",
+          "next_action"
+        ],
+        "title": "Issue",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "submission_id": {
+        "minLength": 1,
+        "title": "Submission Id",
+        "type": "string"
+      },
+      "summary": {
+        "minLength": 1,
+        "title": "Summary",
+        "type": "string"
+      },
+      "detail_markdown": {
+        "default": "",
+        "title": "Detail Markdown",
+        "type": "string"
+      },
+      "issue_count": {
+        "default": 0,
+        "minimum": 0,
+        "title": "Issue Count",
+        "type": "integer"
+      },
+      "needs_revision": {
+        "default": false,
+        "title": "Needs Revision",
+        "type": "boolean"
+      },
+      "idempotency_key": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Idempotency Key"
+      },
+      "source": {
+        "default": "AGENT_CLI",
+        "title": "Source",
+        "type": "string"
+      },
+      "decision": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Decision"
+      },
+      "next_action": {
+        "default": "",
+        "title": "Next Action",
+        "type": "string"
+      },
+      "issues": {
+        "anyOf": [
+          {
+            "items": {
+              "$ref": "#/$defs/Issue"
+            },
+            "type": "array"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Issues"
+      },
+      "reference_hash": {
+        "anyOf": [
+          {
+            "pattern": "^[a-f0-9]{64}$",
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Reference Hash"
+      },
+      "reference_revision": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Reference Revision"
+      },
+      "reference_reason": {
+        "default": "",
+        "maxLength": 3000,
+        "title": "Reference Reason",
+        "type": "string"
+      }
+    },
+    "required": [
+      "submission_id",
+      "summary"
+    ],
+    "title": "ReviewRequest",
+    "type": "object"
+  },
+  "review.retest.publish": {
+    "additionalProperties": false,
+    "properties": {
+      "parent_submission_id": {
+        "title": "Parent Submission Id",
+        "type": "string"
+      },
+      "title": {
+        "maxLength": 200,
+        "minLength": 1,
+        "title": "Title",
+        "type": "string"
+      },
+      "prompt": {
+        "maxLength": 20000,
+        "minLength": 1,
+        "title": "Prompt",
+        "type": "string"
+      },
+      "objective": {
+        "maxLength": 20000,
+        "minLength": 1,
+        "title": "Objective",
+        "type": "string"
+      },
+      "requirements": {
+        "default": "",
+        "title": "Requirements",
+        "type": "string"
+      },
+      "agent_reference": {
+        "default": "",
+        "title": "Agent Reference",
+        "type": "string"
+      },
+      "idempotency_key": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Idempotency Key",
+        "type": "string"
+      }
+    },
+    "required": [
+      "parent_submission_id",
+      "title",
+      "prompt",
+      "objective",
+      "idempotency_key"
+    ],
+    "title": "RetestRequest",
+    "type": "object"
+  },
+  "mistakes.notebooks": {
+    "additionalProperties": false,
+    "properties": {},
+    "title": "Request",
+    "type": "object"
+  },
+  "mistakes.summary": {
+    "additionalProperties": false,
+    "properties": {
+      "notebook_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notebook Id"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "enum": [
+              "general",
+              "english"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Domain"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "archived": {
+        "default": false,
+        "title": "Archived",
+        "type": "boolean"
+      },
+      "objective_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Objective Id"
+      },
+      "since": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Since"
+      },
+      "until": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Until"
+      },
+      "view": {
+        "default": "training_errors",
+        "enum": [
+          "training_errors",
+          "review_queue"
+        ],
+        "title": "View",
+        "type": "string"
+      }
+    },
+    "title": "ScopeRequest",
+    "type": "object"
+  },
+  "mistakes.list": {
+    "additionalProperties": false,
+    "properties": {
+      "notebook_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notebook Id"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "enum": [
+              "general",
+              "english"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Domain"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "archived": {
+        "default": false,
+        "title": "Archived",
+        "type": "boolean"
+      },
+      "objective_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Objective Id"
+      },
+      "since": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Since"
+      },
+      "until": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Until"
+      },
+      "view": {
+        "default": "training_errors",
+        "enum": [
+          "training_errors",
+          "review_queue"
+        ],
+        "title": "View",
+        "type": "string"
+      },
+      "cursor": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Cursor"
+      },
+      "limit": {
+        "default": 30,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Limit",
+        "type": "integer"
+      }
+    },
+    "title": "MistakeListRequest",
+    "type": "object"
+  },
+  "mistakes.context": {
+    "additionalProperties": false,
+    "properties": {
+      "notebook_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notebook Id"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "enum": [
+              "general",
+              "english"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Domain"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "archived": {
+        "default": false,
+        "title": "Archived",
+        "type": "boolean"
+      },
+      "objective_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Objective Id"
+      },
+      "since": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Since"
+      },
+      "until": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Until"
+      },
+      "view": {
+        "default": "training_errors",
+        "enum": [
+          "training_errors",
+          "review_queue"
+        ],
+        "title": "View",
+        "type": "string"
+      },
+      "cursor": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Cursor"
+      },
+      "limit": {
+        "default": 30,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Limit",
+        "type": "integer"
+      },
+      "identifier": {
+        "minLength": 1,
+        "title": "Identifier",
+        "type": "string"
+      },
+      "expected_version": {
+        "anyOf": [
+          {
+            "minimum": 1,
+            "type": "integer"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Expected Version"
+      }
+    },
+    "required": [
+      "identifier"
+    ],
+    "title": "MistakeContextRequest",
+    "type": "object"
+  },
+  "mistakes.english.review.select": {
+    "additionalProperties": false,
+    "properties": {
+      "notebook_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notebook Id"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "enum": [
+              "general",
+              "english"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Domain"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "archived": {
+        "default": false,
+        "title": "Archived",
+        "type": "boolean"
+      },
+      "objective_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Objective Id"
+      },
+      "since": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Since"
+      },
+      "until": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Until"
+      },
+      "view": {
+        "default": "training_errors",
+        "enum": [
+          "training_errors",
+          "review_queue"
+        ],
+        "title": "View",
+        "type": "string"
+      },
+      "idempotency_key": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Idempotency Key",
+        "type": "string"
+      },
+      "identifier": {
+        "minLength": 1,
+        "title": "Identifier",
+        "type": "string"
+      },
+      "expected_version": {
+        "minimum": 1,
+        "title": "Expected Version",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "idempotency_key",
+      "identifier",
+      "expected_version"
+    ],
+    "title": "MistakeSelectRequest",
+    "type": "object"
+  },
+  "mistakes.retest.request": {
+    "additionalProperties": false,
+    "properties": {
+      "notebook_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notebook Id"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "enum": [
+              "general",
+              "english"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Domain"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "archived": {
+        "default": false,
+        "title": "Archived",
+        "type": "boolean"
+      },
+      "objective_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Objective Id"
+      },
+      "since": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Since"
+      },
+      "until": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Until"
+      },
+      "view": {
+        "default": "training_errors",
+        "enum": [
+          "training_errors",
+          "review_queue"
+        ],
+        "title": "View",
+        "type": "string"
+      },
+      "idempotency_key": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Idempotency Key",
+        "type": "string"
+      },
+      "identifier": {
+        "minLength": 1,
+        "title": "Identifier",
+        "type": "string"
+      },
+      "expected_version": {
+        "minimum": 1,
+        "title": "Expected Version",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "idempotency_key",
+      "identifier",
+      "expected_version"
+    ],
+    "title": "MistakeRetestRequest",
+    "type": "object"
+  },
+  "mistakes.archive.preview": {
+    "additionalProperties": false,
+    "properties": {
+      "notebook_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notebook Id"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "enum": [
+              "general",
+              "english"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Domain"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "archived": {
+        "default": false,
+        "title": "Archived",
+        "type": "boolean"
+      },
+      "objective_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Objective Id"
+      },
+      "since": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Since"
+      },
+      "until": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Until"
+      },
+      "view": {
+        "default": "training_errors",
+        "enum": [
+          "training_errors",
+          "review_queue"
+        ],
+        "title": "View",
+        "type": "string"
+      }
+    },
+    "title": "ScopeRequest",
+    "type": "object"
+  },
+  "mistakes.archive.apply": {
+    "additionalProperties": false,
+    "properties": {
+      "notebook_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Notebook Id"
+      },
+      "plan_line_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Plan Line Id"
+      },
+      "domain": {
+        "anyOf": [
+          {
+            "enum": [
+              "general",
+              "english"
+            ],
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Domain"
+      },
+      "course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Course Id"
+      },
+      "archived": {
+        "default": false,
+        "title": "Archived",
+        "type": "boolean"
+      },
+      "objective_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Objective Id"
+      },
+      "since": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Since"
+      },
+      "until": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Until"
+      },
+      "view": {
+        "default": "training_errors",
+        "enum": [
+          "training_errors",
+          "review_queue"
+        ],
+        "title": "View",
+        "type": "string"
+      },
+      "idempotency_key": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Idempotency Key",
+        "type": "string"
+      },
+      "preview_hash": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Preview Hash",
+        "type": "string"
+      }
+    },
+    "required": [
+      "idempotency_key",
+      "preview_hash"
+    ],
+    "title": "ArchiveApplyRequest",
+    "type": "object"
+  },
+  "course.remediation.preview": {
+    "$defs": {
+      "Source": {
+        "additionalProperties": false,
+        "properties": {
+          "aggregate_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Aggregate Id",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "aggregate_id",
+          "expected_version",
+          "evidence_ids"
+        ],
+        "title": "Source",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "plan_line_id": {
+        "minLength": 1,
+        "title": "Plan Line Id",
+        "type": "string"
+      },
+      "path": {
+        "minLength": 1,
+        "title": "Path",
+        "type": "string"
+      },
+      "objective_ids": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 5,
+        "minItems": 1,
+        "title": "Objective Ids",
+        "type": "array"
+      },
+      "rationale": {
+        "maxLength": 4000,
+        "minLength": 1,
+        "title": "Rationale",
+        "type": "string"
+      },
+      "sources": {
+        "items": {
+          "$ref": "#/$defs/Source"
+        },
+        "maxItems": 30,
+        "minItems": 1,
+        "title": "Sources",
+        "type": "array"
+      }
+    },
+    "required": [
+      "plan_line_id",
+      "path",
+      "objective_ids",
+      "rationale",
+      "sources"
+    ],
+    "title": "PreviewRequest",
+    "type": "object"
+  },
+  "course.remediation.publish": {
+    "$defs": {
+      "Source": {
+        "additionalProperties": false,
+        "properties": {
+          "aggregate_id": {
+            "maxLength": 100,
+            "minLength": 1,
+            "title": "Aggregate Id",
+            "type": "string"
+          },
+          "expected_version": {
+            "minimum": 1,
+            "title": "Expected Version",
+            "type": "integer"
+          },
+          "evidence_ids": {
+            "items": {
+              "type": "string"
+            },
+            "maxItems": 10,
+            "minItems": 1,
+            "title": "Evidence Ids",
+            "type": "array"
+          }
+        },
+        "required": [
+          "aggregate_id",
+          "expected_version",
+          "evidence_ids"
+        ],
+        "title": "Source",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "plan_line_id": {
+        "minLength": 1,
+        "title": "Plan Line Id",
+        "type": "string"
+      },
+      "path": {
+        "minLength": 1,
+        "title": "Path",
+        "type": "string"
+      },
+      "objective_ids": {
+        "items": {
+          "type": "string"
+        },
+        "maxItems": 5,
+        "minItems": 1,
+        "title": "Objective Ids",
+        "type": "array"
+      },
+      "rationale": {
+        "maxLength": 4000,
+        "minLength": 1,
+        "title": "Rationale",
+        "type": "string"
+      },
+      "sources": {
+        "items": {
+          "$ref": "#/$defs/Source"
+        },
+        "maxItems": 30,
+        "minItems": 1,
+        "title": "Sources",
+        "type": "array"
+      },
+      "preview_hash": {
+        "pattern": "^[a-f0-9]{64}$",
+        "title": "Preview Hash",
+        "type": "string"
+      },
+      "idempotency_key": {
+        "maxLength": 160,
+        "minLength": 1,
+        "title": "Idempotency Key",
+        "type": "string"
+      }
+    },
+    "required": [
+      "plan_line_id",
+      "path",
+      "objective_ids",
+      "rationale",
+      "sources",
+      "preview_hash",
+      "idempotency_key"
+    ],
+    "title": "PublishRequest",
+    "type": "object"
+  },
+  "course.remediation.list": {
+    "additionalProperties": false,
+    "properties": {
+      "plan_line_id": {
+        "minLength": 1,
+        "title": "Plan Line Id",
+        "type": "string"
+      },
+      "source_course_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Source Course Id"
+      },
+      "aggregate_id": {
+        "anyOf": [
+          {
+            "type": "string"
+          },
+          {
+            "type": "null"
+          }
+        ],
+        "default": null,
+        "title": "Aggregate Id"
+      },
+      "limit": {
+        "default": 30,
+        "maximum": 100,
+        "minimum": 1,
+        "title": "Limit",
+        "type": "integer"
+      },
+      "offset": {
+        "default": 0,
+        "maximum": 100000,
+        "minimum": 0,
+        "title": "Offset",
+        "type": "integer"
+      }
+    },
+    "required": [
+      "plan_line_id"
+    ],
+    "title": "ListRequest",
+    "type": "object"
+  },
+  "course.remediation.get": {
+    "additionalProperties": false,
+    "properties": {
+      "course_id": {
+        "minLength": 1,
+        "title": "Course Id",
+        "type": "string"
+      }
+    },
+    "required": [
+      "course_id"
+    ],
+    "title": "GetRequest",
+    "type": "object"
+  }
+}

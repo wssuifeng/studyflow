@@ -28,11 +28,6 @@ apps/desktop/test-results/
 **/.studyflow/
 **/runtime/
 **/content/
-!packages/core/src/studyflow/resources/content/
-packages/core/src/studyflow/resources/content/**
-!packages/core/src/studyflow/resources/content/lessons/
-packages/core/src/studyflow/resources/content/lessons/**
-!packages/core/src/studyflow/resources/content/lessons/java-reference.md
 **/*.db*
 **/*.sqlite*
 **/*.log
@@ -96,3 +91,9 @@ test-results-white-after.png
 docs/30_系统设计/studyflow-*.delivery.json
 docs/30_系统设计/studyflow-*.browser-check.json
 docs/30_系统设计/studyflow-*.finalize*.json
+
+# Native resource staging and retained build inputs
+/apps/desktop/src-tauri/.studyflow-binaries-*/
+
+# Local source snapshot for the retired Python runtime.
+/docs/archive/python-runtime-20261121/source/

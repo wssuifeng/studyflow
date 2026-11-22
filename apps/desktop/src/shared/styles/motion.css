@@ -1,0 +1,32 @@
+/* Short entrance cues for panels the learner opens explicitly. */
+:root {
+  --sf-control-duration: 110ms;
+  --sf-surface-duration: 150ms;
+  --sf-surface-easing: cubic-bezier(.2, .7, .35, 1);
+}
+
+@keyframes studyflow-surface-in {
+  from { opacity: .55; translate: 0 3px; }
+  to { opacity: 1; translate: 0 0; }
+}
+
+@keyframes studyflow-surface-fade {
+  from { opacity: .65; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  :root:not([data-theme-motion='minimal'], [data-theme-motion='none']) .surface-enter-popover {
+    animation: studyflow-surface-in var(--sf-surface-duration) var(--sf-surface-easing);
+  }
+
+  :root:not([data-theme-motion='none']) :is(.surface-enter[open], .leave-study-backdrop .surface-enter),
+  :root[data-theme-motion='minimal'] .surface-enter-popover,
+  :root:not([data-theme-motion='none']) .panel-open > .workspace-tool-panel,
+  :root:not([data-theme-motion='none']) .learning-shell:not(.navigation-collapsed) .sequence-course-outline,
+  :root:not([data-theme-motion='none']) .listening-caption {
+    animation: studyflow-surface-fade var(--sf-surface-duration) var(--sf-surface-easing);
+  }
+
+  :root[data-theme-motion='minimal'] { --sf-surface-duration: 80ms; }
+}

@@ -1,5 +1,7 @@
 # AGENTS.md · StudyFlow
 
+> **2026-11-21 架构交接**　1.8.28 是 Tauri + Vue、单一 Rust Core、原生 CLI/Engine、SQLite 的首个 Windows x64 en-US MSI 候选。已完成 W0.1–W6.2，W6.3 解包与旧数据预检通过，实际首装与覆盖待隔离 Windows VM。1.8.27 为 Python 后端安装基线，旧条目用于核对历史实现。续接按[总控](docs/00_总控.md)和[正式实施计划](docs/40_开发实施/2026-11-21-全Rust后端替换实施计划.md)第 8 节。旧源归档见[索引](docs/archive/python-runtime-20261121/INDEX.md)。
+
 > 2026-11-10 仓库维护：现有源码增量已按主题整理，App/Core 1.8.18，Skill 2.9.13；新增 README 和源码/安装包版本表。本轮验证与未覆盖范围见 `docs/40_开发实施/2026-11-10-仓库收口与验证记录.md`（路径相对仓库根目录）。原安装版、公共 Skill、真实数据及业务验收阶段未推进。
 
 > **公开历史隐私清理（2026-11-10）**：审阅未发现毕业设计或求职材料；隔离副本已将本人已核实的提交邮箱映射为 GitHub noreply。候选历史仅重写提交身份并保留项目文件树；本次历史替换经用户单独授权，操作范围限定为临时允许 `main` 强推、使用精确旧 SHA lease 推送，并立即恢复 `allow_force_pushes=false`；其他保护条件保持不变。最终远端提交与保护状态以本轮 GitHub 核验为准。源码、真实学习数据和阶段状态不在本次变更范围。
@@ -32,8 +34,8 @@
 
 - 最新安装包构建（2026-11-12）：StudyFlow App/Core/CLI/Engine 1.8.21，MSI内 Skill 2.9.13；内置主题序光/白紫/国风朱红三套（默认白紫；国风朱红原名朱批纸白，2026-11-12经用户确认改名并由候选提升内置，安装即可选，技术ID仍cinnabar-paper），并含英语词框边界自由导航与三项手感优化（Ctrl+Home/End跳首末、Ctrl+方向键直接跳词、导航型Backspace静音）。未签名候选 `MsiVerifyPackageW=0`，45个文件载荷中42个Skill文件逐项匹配源，CLI/Engine匹配，桌面EXE版本为1.8.21且仅含已识别的MSI bundle标记替换。MSI SHA-256：`6D4589D6580F09E70C60979E19D99C755BFBCA0134B4230A9C34E5AA69D44BCB`。主题97/学习136/英语59/build/内置主题浏览器30/键盘21/冻结Engine48+CLI闭环/实际release原生smoke44项通过；发布前边界清理（工具缓存与archify交付清单gitignore、7份文档个人路径脱敏、白名单+test-cinnabar-paper.cjs），--worktree 718文件0问题。本轮经用户授权提交推送main并创建GitHub Release v1.8.21上传MSI；公共Skill仍2.9.11未同步，未改真实学习数据。安装后待用户直选国风朱红验收观感并让外部 Agent 检查设置页复制指令与跨会话入口效果。详见`docs/40_开发实施/2026-11-12-1.8.21-国风朱红主题改名与发布记录.md`。
 
-- Vue/TypeScript 唯一正式 UI 在 `apps/desktop/src/`；Tauri/Rust只承载窗口和Engine。旧FastAPI/Jinja2是兼容开发层，不新建第二套前端。
-- Python Core/CLI/Engine和测试在 `packages/core/`；默认SQLite自动管理，可选MySQL只读环境变量。
+- Vue/TypeScript 唯一正式 UI 在 `apps/desktop/src/`。Tauri 宿主管理窗口、Engine 进程与桥接协议。旧 FastAPI/Jinja2 随 Python 后端归档。
+- Rust Core 和测试在 `crates/studyflow-core/`，CLI/Engine 与协议测试在 `crates/studyflow-runtime/`。SQLite 由 Core 自动管理。
 - 工程文档在 `docs/`；公共Skill源在 `skills/studyflow-agent/`，外部Agent按Skill和CLI返回值操作，不依赖聊天记忆。
 - 源码、安装目录、数据工作区独立；模拟作答需要明确授权，不直接SQL，不复制活SQLite，不提交私人内容。
 - 最近一次源码功能增量（2026-10-31）见docs/40_开发实施/2026-10-31-1.8.15英语解析布局与安装包构建记录.md：英语完成态解析说明文字居中，解析面板按内容扩展且最大宽度760px，超限后在框内换行/滚动；输入阶段布局不变。英语56、学习136、主题89、冻结Engine48、实际release Tauri/WebView2隔离 smoke 44项及production build通过。1.8.15 MSI完整性校验与维护副本SHA-256一致；候选未签名、未安装、未作人工验收或Git发布，阶段与business_acceptance不推进。

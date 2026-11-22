@@ -13,16 +13,14 @@ import subprocess
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-TOP_FILES = {".gitignore", ".gitattributes", "README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md"}
-TREES = {"apps", "packages", "docs", "skills", "scripts", ".github"}
-APP_TREES = {"src", "tests"}
-APP_FILES = {"pyproject.toml", ".env.example", "engine_entry.py", "README.md"}
+TOP_FILES = {".gitignore", ".gitattributes", "README.md", "AGENTS.md", "CONTRIBUTING.md", "SECURITY.md", "Cargo.toml", "Cargo.lock"}
+TREES = {"apps", "crates", "docs", "skills", "scripts", ".github"}
+RUST_CRATES = {"studyflow-core", "studyflow-runtime"}
 DESKTOP_TREES = {"src", "scripts", "src-tauri"}
 DESKTOP_FILES = {"package.json", "package-lock.json", "index.html", "tsconfig.json", "tsconfig.node.json", "vite.config.ts"}
 TAURI_TREES = {"src", "capabilities", "icons"}
-TAURI_FILES = {"Cargo.toml", "Cargo.lock", "build.rs", "tauri.conf.json"}
+TAURI_FILES = {"Cargo.toml", "build.rs", "tauri.conf.json"}
 PACKAGING_SOURCES = {"apps/desktop/src-tauri/wix/upgrade-compatibility.wxs"}
-DEMO = "packages/core/src/studyflow/resources/content/lessons/java-reference.md"
 BINARY_ASSETS = {"apps/desktop/src-tauri/icons/icon.png", "apps/desktop/src-tauri/icons/icon.ico", "apps/desktop/src/shared/themes/assets/white-violet-book.png", "apps/desktop/src/shared/themes/assets/sequence-light-landscape.png", "apps/desktop/src/shared/themes/assets/sequence-light-origami.png"}
 SHOWCASE_ASSETS = {"docs/assets/showcase/course-reading.png", "docs/assets/showcase/notes.png", "docs/assets/showcase/english-training.png"}
 BINARY_ASSETS.update(SHOWCASE_ASSETS)
@@ -48,25 +46,20 @@ def path_problem(relative: str) -> str | None:
         return "private-or-generated-directory"
     if FORBIDDEN.search(path.name) or path.name.startswith(".env") and path.name != ".env.example":
         return "private-or-generated-file"
-    if relative in PACKAGING_SOURCES:
+    if relative == ".cargo/config.toml" or relative in PACKAGING_SOURCES:
         return None
     if len(parts) == 1:
         return None if relative in TOP_FILES else "unapproved-root-file"
     if parts[0] not in TREES:
         return "unapproved-root-directory"
-    if parts[0] == "packages":
-        if len(parts) < 3 or parts[1] != "core":
-            return "unapproved-package"
-        tail = parts[2:]
-        if relative == DEMO:
-            return None
-        if len(tail) == 1 and tail[0] not in APP_FILES:
-            return "unapproved-core-file"
-        if len(tail) > 1 and tail[0] not in APP_TREES:
-            return "unapproved-core-directory"
-        if tail[0] == "src" and (len(tail) < 3 or tail[1] != "studyflow"):
-            return "unapproved-source-package"
-        if "content" in tail:
+    if parts[0] == "crates":
+        if len(parts) < 3 or parts[1] not in RUST_CRATES:
+            return "unapproved-rust-crate"
+        if len(parts) == 3 and parts[2] != "Cargo.toml":
+            return "unapproved-rust-crate-file"
+        if len(parts) > 3 and parts[2] not in {"src", "tests"}:
+            return "unapproved-rust-crate-directory"
+        if "content" in parts[2:]:
             return "unapproved-learning-content"
     if parts[0] == "apps":
         if len(parts) < 3 or parts[1] != "desktop":
@@ -84,6 +77,8 @@ def path_problem(relative: str) -> str | None:
             if tail[1] == "icons" and relative not in BINARY_ASSETS:
                 return "unapproved-binary-asset"
     if relative in BINARY_ASSETS:
+        return None
+    if parts[:5] == ("crates", "studyflow-core", "src", "infrastructure", "sqlite") and len(parts) == 7 and parts[5] == "migrations" and re.fullmatch(r"\d{4}_[a-z_]+\.sql", path.name):
         return None
     if path.suffix not in TEXT_SUFFIXES and relative not in {".github/CODEOWNERS", "apps/desktop/scripts/test-course-answers.cjs", "apps/desktop/scripts/test-study-tools.cjs", "apps/desktop/scripts/test-dock.cjs", "apps/desktop/scripts/test-plan-notebook.cjs", "apps/desktop/scripts/test-white-violet.cjs", "apps/desktop/scripts/test-sequence-light.cjs", "apps/desktop/scripts/test-workspace-panel.cjs", "apps/desktop/scripts/test-workspace-shell.cjs", "apps/desktop/scripts/test-themes.cjs", "apps/desktop/scripts/test-cinnabar-paper.cjs", "apps/desktop/scripts/check-theme.cjs", "apps/desktop/scripts/test-english.cjs", "apps/desktop/scripts/test-learning-experience.cjs", "apps/desktop/scripts/test-notebook-v2.cjs", "apps/desktop/scripts/test-q234.cjs", "apps/desktop/scripts/test-reading-progress.cjs", "apps/desktop/scripts/theme-lint.cjs", "apps/desktop/scripts/test-theme-lint.cjs", "apps/desktop/scripts/theme-lint/source-ast.cjs", "apps/desktop/scripts/theme-lint/css-ast.cjs", "apps/desktop/scripts/theme-lint/config-gate.cjs"}:
         return "unapproved-file-type"

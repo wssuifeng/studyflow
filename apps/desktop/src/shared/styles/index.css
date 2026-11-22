@@ -13,7 +13,6 @@
 @import "./responsive.css";
 @import "./theme.css";
 @import "../../app/styles/desktop.css";
-@import "../../features/console/styles/today.css";
 @import "./navigation.css";
 @import "../../features/courses/styles/desktop-reader.css";
 @import "../../features/learning/styles/answers.css";
@@ -47,3 +46,5 @@
 @import "../../features/notes/styles/notebook-v2.css";
 
 @import "../../features/courses/styles/navigation-actions.css";
+
+@import "./motion.css";

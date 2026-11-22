@@ -1,0 +1,97 @@
+{
+  "schema": "studyflow.course-package/7",
+  "package_id": "sample-library-practice",
+  "plan_line": "Example English",
+  "course": {
+    "title": "Library practice"
+  },
+  "lessons": [
+    {
+      "id": "visit",
+      "title": "Prepare for a library visit",
+      "blocks": [
+        {
+          "id": "purpose",
+          "type": "concept",
+          "title": "Read for a purpose",
+          "body": "Find the place and time before planning the visit."
+        },
+        {
+          "id": "practice",
+          "type": "practice",
+          "title": "Read and write",
+          "exercise_ids": [
+            "notice",
+            "essay"
+          ]
+        }
+      ],
+      "exercises": [
+        {
+          "id": "notice",
+          "type": "READING_GROUP",
+          "title": "Library visit",
+          "prompt": "Read the notice and choose the best answer.",
+          "reading": {
+            "title": "Saturday visit",
+            "paragraphs": [
+              {
+                "id": "p1",
+                "text": "The group will meet at the library at nine."
+              },
+              {
+                "id": "p2",
+                "text": "Bring a notebook for the tour."
+              }
+            ],
+            "questions": [
+              {
+                "id": "where",
+                "prompt": "Where will the group meet?",
+                "options": [
+                  {
+                    "id": "a",
+                    "text": "At the station"
+                  },
+                  {
+                    "id": "b",
+                    "text": "At the library"
+                  },
+                  {
+                    "id": "c",
+                    "text": "At the park"
+                  },
+                  {
+                    "id": "d",
+                    "text": "At the school"
+                  }
+                ],
+                "correct_option_id": "b",
+                "evidence": [
+                  "p1"
+                ],
+                "explanation": "The first paragraph names the library as the meeting point."
+              }
+            ]
+          }
+        },
+        {
+          "id": "essay",
+          "type": "ESSAY",
+          "title": "A proposal for visitors",
+          "prompt": "Write a proposal for first-time library visitors.",
+          "essay": {
+            "suggested_words": [
+              120,
+              180
+            ],
+            "points": [
+              "Explain the visit’s purpose.",
+              "Recommend two things to bring."
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

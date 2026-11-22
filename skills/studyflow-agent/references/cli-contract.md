@@ -4,15 +4,11 @@ This file includes historical compatibility sections from earlier Skill/app vers
 
 ## CLI versus desktop Engine boundary
 
-The desktop Vue frontend uses a separate JSON-RPC protocol over the Python Engine. It includes `plan.detail`, `course.detail`, `document.read`, `submission.get`, `submission.draft.save`, `submission.submit`, and `learning.progress.save`. These are Engine method names, not shell commands. `studyflow plan detail --id <id>`, `studyflow course detail --id <id>`, `studyflow submission get --id <id>` and `studyflow document read --path <relative-path>` are real read-only CLI commands sharing the Engine service data. All support `--format json`. External Agents must call only capabilities advertised by `studyflow capabilities`; do not run these method names as CLI commands or claim that they are available through the CLI.
+The Vue frontend sends Tauri `invoke` requests to the desktop host, which uses the JSONL 1.2 protocol with the native Engine. It includes `plan.detail`, `course.detail`, `document.read`, `submission.get`, `submission.draft.save`, `submission.submit`, and `learning.progress.save`. These are Engine method names, not shell commands. `studyflow plan detail --id <id>`, `studyflow course detail --id <id>`, `studyflow submission get --id <id>` and `studyflow document read --path <relative-path>` are real read-only CLI commands sharing the Engine service data. All support `--format json`. External Agents must call only capabilities advertised by `studyflow capabilities`; do not run these method names as CLI commands or claim that they are available through the CLI.
 
 ## Invocation
 
-The preferred interface is an installed `studyflow` executable. For this repository's development checkout, invoke:
-
-```powershell
-.\packages\core\.venv\Scripts\python.exe -m studyflow <command>
-```
+Use the `cli_argv` reported by `system.installation`, or the explicit Cargo artifact from the development build manifest. For example, set `$studyflow` to its verified absolute path and run `& $studyflow version --format json`.
 
 Use `--format json` for advertised automation commands. `init` has text-only output; do not append an unsupported flag or run init on healthy existing data. Verify initialization with JSON doctor. Human-readable text is not a machine contract.
 
@@ -42,7 +38,7 @@ Use `--format json` for advertised automation commands. `init` has text-only out
 
 `doctor` additionally reports `workspace.governance_files`, `workspace.governance_ready`, `database.required_tables`, `database.path` for SQLite, and `healthy`. Database URLs are rendered with passwords hidden. `healthy=true` is authoritative operational readiness; `governance_ready=false` is normal for app-data and does not authorize adding project docs.
 
-`version` additionally reports `app_version` and `python_version`.
+`version` reports `app_version`. The native build additionally reports `runtime: "rust"`. The doctor response describes current filesystem and database availability.
 
 `capabilities` reports a list of capability objects:
 

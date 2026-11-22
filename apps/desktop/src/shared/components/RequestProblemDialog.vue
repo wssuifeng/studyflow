@@ -23,7 +23,7 @@ onBeforeUnmount(() => {generation++; close()})
 defineExpose({open})
 </script>
 <template>
- <Teleport to="body"><dialog ref="dialog" class="request-problem-modal" role="alertdialog" :aria-labelledby="titleId" :aria-describedby="bodyId" @cancel.prevent="close" @click="event=>{if(event.target===dialog)close()}">
+ <Teleport to="body"><dialog ref="dialog" class="request-problem-modal surface-enter" role="alertdialog" :aria-labelledby="titleId" :aria-describedby="bodyId" @cancel.prevent="close" @click="event=>{if(event.target===dialog)close()}">
   <section class="leave-study-dialog request-problem-card">
    <h2 :id="titleId">{{description.title}}</h2>
    <p :id="bodyId">{{description.description}}</p>

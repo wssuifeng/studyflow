@@ -79,7 +79,7 @@ test('白紫工具侧栏复用共享结构并保留主阅读区',()=>{
 test('white-violet course shell shares fixed navigation and course outline behavior',()=>{
  const reader=fs.readFileSync(path.join(root,'features/courses/components/CourseReader.vue'),'utf8')
  const css=fs.readFileSync(path.join(root,'features/courses/styles/white-violet.css'),'utf8')
- assert.match(reader,/Teleport v-if="shellPanel\?\.navigationVisible\?\.value"/)
+ assert.match(reader,/Teleport v-if="shellPanel\?\.navigationAvailable\?\.value"/)
  assert.ok(css.includes('.sequence-course-outline'))
  assert.ok(css.includes('.course-sidebar-slot'))
  const shell=fs.readFileSync(path.join(root,'shared/themes/runtime.css'),'utf8')+fs.readFileSync(path.join(root,'app/styles/workspace.css'),'utf8')

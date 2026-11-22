@@ -1,14 +1,14 @@
 import {emit} from '@tauri-apps/api/event'
 import { computed, onBeforeUnmount, ref, watch, type Ref } from 'vue'
 import { EngineError, studyApi, isTauri } from '../../../shared/api'
-import type { CourseAnswerState, CourseAnswerWriteParams, CourseStudyDetailData } from '../../../shared/api/contracts'
+import type { CourseAnswerState, CourseAnswerWriteParams, CourseStudyDetailData, LessonDetail } from '../../../shared/api/contracts'
 import { makeRequestKey, notify, reportError, windowStorageKey } from '../../../shared/ui'
 
 export type AnswerRow = CourseAnswerState & {
   studyId?:string; lessonId: string; lessonTitle: string; title: string; prompt: string; requirements: string
-  answer: string; savedAnswer: string
+  answer: string; savedAnswer: string; essay?: LessonDetail['exercises'][number]['essay']
 }
-type PendingWrite = {operation: 'save' | 'submit'; params: CourseAnswerWriteParams}
+type PendingWrite = {operation: 'save' | 'submit' | 'essay'; params: CourseAnswerWriteParams}
 
 export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enabled:Ref<boolean> = ref(true)) {
   const rows = ref<AnswerRow[]>([])
@@ -52,12 +52,12 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
     loading.value = true; failed.value = false
     try {
       const sheet = await studyApi.courseAnswers(course.value.course.id, course.value.study.id)
-      rows.value = course.value.lessons.flatMap(lesson => lesson.exercises.map(ex => {
+      rows.value = course.value.lessons.flatMap(lesson => lesson.exercises.filter(ex => !['READING_GROUP', 'LISTENING_GROUP'].includes(ex.type)).map(ex => {
         const state = sheet.answers.find(row => row.exercise_id === ex.id)
         if (!state) throw new Error('本轮题目状态不完整，请重新读取课程。')
         const answer = state.draft?.answer_text || (state.action === 'LOCKED' ? state.submission?.answer_text || '' : '')
         return {...state, studyId:course.value?.study.id, lessonId: lesson.id, lessonTitle: lesson.title, title: state.retest_task?.title || ex.title, prompt: state.retest_task?.prompt || ex.prompt,
-          requirements: state.retest_task?.requirements || ex.requirements, answer, savedAnswer: answer}
+          requirements: state.retest_task?.requirements || ex.requirements, essay: state.retest_task ? undefined : ex.essay, answer, savedAnswer: answer}
       }))
       recovery.value = null; pending.value = null; pendingFromStorage = false
       // A fresh load (e.g. reopening after a revision reset) must clear the sealed-round state,
@@ -72,7 +72,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
       const request = cacheRead(requestKey())
       if (request) {
         const value = JSON.parse(request)
-        if (value.params?.study_session_id === course.value.study.id && ['save','submit'].includes(value.operation)) {pending.value = value; pendingFromStorage = true}
+        if (value.params?.study_session_id === course.value.study.id && ['save','submit','essay'].includes(value.operation)) {pending.value = value; pendingFromStorage = true}
       }
       saveFailed.value = false
       return true
@@ -93,8 +93,8 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
     link.href=url; link.download='StudyFlow-未保存内容.json'; link.click(); URL.revokeObjectURL(url)
   }
   function discardCache() { recovery.value = null; cacheRemove(cacheKey()); schedule() }
-  function entries(operation: 'save' | 'submit') {
-    return editable.value.filter(row => operation === 'submit' || row.answer !== row.savedAnswer).map(row => ({
+  function entries(operation: 'save' | 'submit' | 'essay', exerciseId?: string) {
+    return editable.value.filter(row => (!exerciseId || row.exercise_id === exerciseId) && (operation !== 'save' || row.answer !== row.savedAnswer)).map(row => ({
       exercise_id: row.exercise_id, answer_text: row.answer,
       ...(row.draft ? {submission_id:row.draft.id, expected_version:row.draft.version} : {}),
       ...(row.submission ? {parent_submission_id:row.submission.id} : {}),
@@ -107,7 +107,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
     pending.value = request
     try {
       cacheWrite(requestKey(), JSON.stringify(request))
-      const result = operation === 'save' ? await studyApi.saveCourseAnswers(params) : await studyApi.submitCourseAnswers(params)
+      const result = operation === 'save' ? await studyApi.saveCourseAnswers(params) : operation === 'essay' ? await studyApi.submitEssay(params) : await studyApi.submitCourseAnswers(params)
       if (disposed) return true
       // Do not replace input typed while an autosave was in flight with its older payload.
       const state = await studyApi.courseAnswers(course.value!.course.id, course.value!.study.id)
@@ -126,7 +126,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
         if (next) {
           const changedParent = next.submission?.id !== row.submission?.id
           row.action = next.action; row.retest_task=next.retest_task; row.draft = next.draft; row.submission = next.submission
-          if (operation === 'submit' && ack) row.answer = next.submission?.answer_text || ack.answer_text
+          if (operation !== 'save' && ack) row.answer = next.submission?.answer_text || ack.answer_text
           else if (changedParent && next.action === 'LOCKED' && row.answer !== (next.submission?.answer_text || '')) {
             recovery.value = {...recovery.value, [row.exercise_id]:row.answer}
           }
@@ -142,6 +142,7 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
       pending.value = null; pendingFromStorage = false; cacheRemove(requestKey())
       savedAt.value = new Date().toLocaleTimeString('zh-CN', {hour:'2-digit',minute:'2-digit'})
       if (isTauri()) void emit('studyflow-tool-saved',{tool:'exercises',studyId:params.study_session_id}).catch(() => {})
+      if (operation === 'essay') notify('作文已提交，等待批改。')
       if (operation === 'submit') notify('本次课程学习已提交，等待批改。你可以继续下一门课程。')
       return !!result
     } catch (cause) {
@@ -158,14 +159,15 @@ export function useCourseAnswers(course: Ref<CourseStudyDetailData | null>, enab
       reportError(cause); return false
     } finally { busy.value = ''; keepCache(); schedule() }
   }
-  async function write(operation: 'save' | 'submit'): Promise<boolean> {
+  async function write(operation: 'save' | 'submit' | 'essay', exerciseId?: string): Promise<boolean> {
     clearTimeout(timer)
-    if (inFlight) { if (!await inFlight) return false; return write(operation) }
+    if (inFlight) { if (!await inFlight) return false; return write(operation, exerciseId) }
     if (disposed || failed.value || loading.value || recovery.value || pending.value || saveFailed.value || superseded.value) return false
     if (!enabled.value && operation === 'save') return !dirty.value
     if (operation === 'submit' && missing.value.length) return false
     if (operation === 'save' && !dirty.value) return true
-    const answers = entries(operation)
+    if (operation === 'essay' && (!exerciseId || missing.value.some(row => row.exercise_id === exerciseId))) return false
+    const answers = entries(operation, exerciseId)
     if (!answers.length) return operation === 'save'
     inFlight = perform({operation, params:{course_id:course.value!.course.id, study_session_id:course.value!.study.id,
       answers, idempotency_key:makeRequestKey('course-' + operation)}})

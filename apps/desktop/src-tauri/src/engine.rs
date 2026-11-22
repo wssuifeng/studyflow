@@ -1,15 +1,18 @@
-use super::workspace::{build_engine_command, discover_project_root, resolve_workspace};
-use serde_json::Value;
-use std::env;
+use super::workspace::{build_engine_command, resolve_workspace};
+use serde_json::{json, Value};
 use std::fs;
-use std::io::{BufRead, BufReader, Write};
+use std::io::{BufRead, BufReader, Read, Write};
+use std::path::Path;
 use std::process::{Child, Stdio};
 use std::sync::{
     mpsc::{self, Receiver, Sender},
     Mutex,
 };
 use std::time::Duration;
-use tauri::{AppHandle, State};
+use tauri::AppHandle;
+
+const PROTOCOL: &str = "1.2";
+const MAX_REPLY: u64 = 16 * 1024 * 1024 + 1;
 
 pub(super) struct EngineClient {
     pub(super) child: Child,
@@ -19,50 +22,28 @@ pub(super) struct EngineClient {
 
 impl EngineClient {
     pub(super) fn start(app: &AppHandle) -> Result<Self, String> {
-        // Only development builds need the source tree for the Python fallback.
-        // A packaged release must run from an installed copy with no repository present.
-        let source_workspace = if cfg!(debug_assertions) {
-            Some(discover_project_root()?.join("packages").join("core"))
-        } else {
-            None
-        };
-        let workspace = resolve_workspace(app, source_workspace.as_deref())?;
-        fs::create_dir_all(&workspace)
+        Self::start_in(app, &resolve_workspace(app)?)
+    }
+
+    pub(super) fn start_in(app: &AppHandle, workspace: &Path) -> Result<Self, String> {
+        fs::create_dir_all(workspace)
             .map_err(|error| format!("无法创建 StudyFlow 工作区：{error}"))?;
-        let mut command = build_engine_command(app, source_workspace.as_deref())?;
+        let version = env!("CARGO_PKG_VERSION");
+        let mut command = build_engine_command(app)?;
         #[cfg(windows)]
         {
             use std::os::windows::process::CommandExt;
-            command.creation_flags(0x08000000); // CREATE_NO_WINDOW for the managed Engine.
+            command.creation_flags(0x08000000);
         }
-        // The Engine keeps its database and Markdown paths under the selected
-        // workspace. Release builds use that workspace as cwd; development keeps
-        // the source package as cwd for `python -m studyflow.engine`.
-        let working_directory = source_workspace.as_deref().unwrap_or(workspace.as_path());
         command
-            .current_dir(working_directory)
-            .env("STUDYFLOW_WORKSPACE", &workspace)
-            .env("PYTHONIOENCODING", "utf-8")
+            .arg("--managed-desktop")
+            .arg(version)
+            .arg(PROTOCOL)
+            .current_dir(workspace)
+            .env("STUDYFLOW_WORKSPACE", workspace)
             .stdin(Stdio::piped())
             .stdout(Stdio::piped())
             .stderr(Stdio::inherit());
-
-        // Development keeps the existing checked-in database for compatibility.
-        // Packaged builds intentionally use the managed .studyflow path under
-        // the selected workspace, never a database from the source tree.
-        if env::var_os("STUDYFLOW_WORKSPACE").is_none()
-            && env::var_os("STUDYFLOW_DATABASE_PATH").is_none()
-            && env::var_os("STUDYFLOW_DATABASE_URL").is_none()
-            && cfg!(debug_assertions)
-        {
-            let source_workspace = source_workspace
-                .as_ref()
-                .expect("debug builds must have a source workspace");
-            command.env(
-                "STUDYFLOW_DATABASE_PATH",
-                source_workspace.join("studyflow.db"),
-            );
-        }
 
         let mut child = command
             .spawn()
@@ -97,8 +78,11 @@ impl EngineClient {
             let mut reader = BufReader::new(stdout);
             loop {
                 let mut line = String::new();
-                let response = match reader.read_line(&mut line) {
+                let response = match (&mut reader).take(MAX_REPLY).read_line(&mut line) {
                     Ok(0) => Err("ENGINE_EXITED: Engine已退出，写入结果待确认".to_string()),
+                    Ok(_) if !line.ends_with('\n') => {
+                        Err("INVALID_RESPONSE: Engine响应缺少分隔符或超限".into())
+                    }
                     Ok(_) => serde_json::from_str(&line)
                         .map_err(|_| "INVALID_RESPONSE: Engine返回无效JSON".to_string()),
                     Err(_) => Err("ENGINE_IO: Engine读取失败，写入结果待确认".to_string()),
@@ -109,19 +93,18 @@ impl EngineClient {
                 }
             }
         });
-        Ok(Self {
+        let mut client = Self {
             child,
             requests,
             responses,
-        })
+        };
+        let handshake = json!({"id":"desktop-handshake","method":"system.version","params":{}});
+        let response = client.exchange(&handshake, Duration::from_secs(120))?;
+        validate_handshake(&response, version, workspace)?;
+        Ok(client)
     }
 
     pub(super) fn call(&mut self, request: &Value) -> Result<Value, String> {
-        let line =
-            serde_json::to_string(request).map_err(|error| format!("请求序列化失败：{error}"))?;
-        self.requests
-            .send(line)
-            .map_err(|_| "ENGINE_UNCONFIRMED: Engine写入管道已关闭".to_string())?;
         let seconds = if matches!(
             request["method"].as_str(),
             Some("workspace.export" | "workspace.restore" | "system.doctor")
@@ -130,8 +113,44 @@ impl EngineClient {
         } else {
             20
         };
-        receive_response(&self.responses, request, Duration::from_secs(seconds))
+        self.exchange(request, Duration::from_secs(seconds))
     }
+
+    fn exchange(&mut self, request: &Value, timeout: Duration) -> Result<Value, String> {
+        let line =
+            serde_json::to_string(request).map_err(|error| format!("请求序列化失败：{error}"))?;
+        self.requests
+            .send(line)
+            .map_err(|_| "ENGINE_NOT_SENT: Engine写入管道已关闭".to_string())?;
+        receive_response(&self.responses, request, timeout)
+    }
+}
+
+fn validate_handshake(
+    response: &Value,
+    version: &str,
+    expected_workspace: &Path,
+) -> Result<(), String> {
+    if response["ok"] != true {
+        let error = &response["error"];
+        let code = error["code"].as_str().unwrap_or("ENGINE_STARTUP_FAILED");
+        let message = error["message"].as_str().unwrap_or("无法打开工作区。");
+        return Err(format!("{code}: {message}"));
+    }
+    let data = &response["data"];
+    if data["protocol_version"] != PROTOCOL
+        || data["app_version"] != version
+        || data["runtime"] != "rust"
+    {
+        return Err("ENGINE_VERSION_MISMATCH: 桌面与 Rust Engine 构建不匹配。".into());
+    }
+    let actual = data["workspace"]["root"]
+        .as_str()
+        .and_then(|root| fs::canonicalize(root).ok());
+    if actual.is_none() || actual != fs::canonicalize(expected_workspace).ok() {
+        return Err("ENGINE_WORKSPACE_MISMATCH: Engine 返回的工作区与所选目录不一致。".into());
+    }
+    Ok(())
 }
 
 impl Drop for EngineClient {
@@ -146,23 +165,24 @@ pub(super) struct EngineState {
     pub(super) client: Mutex<Option<EngineClient>>,
 }
 
-pub(super) fn ensure_engine(state: &State<'_, EngineState>, app: &AppHandle) -> Result<(), String> {
-    let mut guard = state
-        .client
-        .lock()
-        .map_err(|_| "Engine 状态锁已损坏".to_string())?;
-    let needs_start = match guard.as_mut() {
+pub(super) fn ensure_engine<'a>(
+    guard: &'a mut Option<EngineClient>,
+    app: &AppHandle,
+) -> Result<&'a mut EngineClient, String> {
+    let start = match guard.as_mut() {
         Some(client) => client
             .child
             .try_wait()
-            .map_err(|error| format!("读取 Engine 状态失败：{error}"))?
+            .map_err(|_| "Engine 状态读取失败。".to_string())?
             .is_some(),
         None => true,
     };
-    if needs_start {
+    if start {
         *guard = Some(EngineClient::start(app)?);
     }
-    Ok(())
+    guard
+        .as_mut()
+        .ok_or_else(|| "Engine 尚未启动。".to_string())
 }
 
 fn receive_response(
@@ -180,7 +200,7 @@ fn receive_response(
                 "ENGINE_UNCONFIRMED: Engine断线，写入结果待确认".to_string()
             }
         })??;
-    if response.get("id") != request.get("id") {
+    if response.get("id") != request.get("id") || !response["ok"].is_boolean() {
         return Err("INVALID_RESPONSE: 响应ID不匹配，写入结果待确认".into());
     }
     Ok(response)
@@ -207,6 +227,22 @@ mod rpc_tests {
                 .starts_with("INVALID_RESPONSE")
         );
     }
+    #[test]
+    fn handshake_rejects_the_previous_engine_even_at_the_same_release_version() {
+        let workspace = std::env::temp_dir();
+        let mut reply = json!({"ok":true,"data":{"app_version":"1.8.27","protocol_version":"1.2","workspace":{"root":workspace}}});
+        assert!(validate_handshake(&reply, "1.8.27", &workspace)
+            .unwrap_err()
+            .starts_with("ENGINE_VERSION_MISMATCH"));
+        reply["data"]["runtime"] = json!("rust");
+        assert!(validate_handshake(&reply, "1.8.27", &workspace).is_ok());
+        assert!(
+            validate_handshake(&reply, "1.8.27", &workspace.join("another-workspace"))
+                .unwrap_err()
+                .starts_with("ENGINE_WORKSPACE_MISMATCH")
+        );
+    }
+
     #[test]
     fn process_exit_is_unconfirmed() {
         let (sender, receiver) = mpsc::channel();

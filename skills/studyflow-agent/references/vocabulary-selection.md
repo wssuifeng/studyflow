@@ -12,15 +12,15 @@
 
 ## 2. 来源身份和查询接口
 
-自带工具：scripts/authoring_workspace.py，Python3.10+标准库。不依赖Core/Engine、不打开数据库，也不是新的studyflow子命令。独立复制整个Skill后同样可用；无Python时只做有界人工选择/蓝图，不自行安装或称工具已运行。
+原生入口为 `studyflow authoring-workspace`。使用 `system.installation` 核实 CLI 的绝对路径及参数，并用该 CLI 的 `capabilities --format json` 核实对应的 `authoring_workspace_query`、`authoring_workspace_select`、`authoring_workspace_coverage`、`authoring_workspace_link` 或 `authoring_workspace_audit`。旧版 CLI 未列出能力时，报告当前版本和缺失项，按现有资料人工完成有界选择或核对。新版随包 Skill 使用原生 CLI。旧版 Skill 内的 Python 工具原有参数可按下述方式迁移。
 
 指定`--root <作者资料根>`，不能是AppData数据根。`--source base=词表/base.tsv`可以重复，路径必须在根内、不能链接。源支持UTF-8四列TSV：word/phonetic/meaning/origin，中文列音标/释义/来源可替代；不自动猜其它格式。source_id要长期固定，否则条目ID随标识变化。entry_id由来源标识+原词形生成，排序/释义变化不改ID；词形纠错要保存旧→新关联。
 
-命令示例（把脚本路径替换为实际加载Skill目录）：
+将旧命令中的 `python -X utf8 "<skill-root>/scripts/authoring_workspace.py"` 换为已核实的 CLI 加 `authoring-workspace`。既有 `--root`、子命令选项、JSON 回执及选择产物均可继续使用。以下 PowerShell 示例中 `$studyflow` 是该 CLI 的绝对路径。
 
 ```powershell
-python -X utf8 "<skill-root>/scripts/authoring_workspace.py" --root "<author-root>" query --source "base=词表/base.tsv" --word read --word data --limit 20
-python -X utf8 "<skill-root>/scripts/authoring_workspace.py" --root "<author-root>" query --source "base=词表/base.tsv" --contains "数据" --limit 20
+& $studyflow authoring-workspace --root "<author-root>" query --source "base=词表/base.tsv" --word read --word data --limit 20
+& $studyflow authoring-workspace --root "<author-root>" query --source "base=词表/base.tsv" --contains "数据" --limit 20
 ```
 
 输出含稳定ID、完整释义/来源、原行、母表hash和有界items。默认limit20，上限60；默认max_chars16000，上限32000。单条超预算拒绝，不截释义。筛选改变/源内容改变后旧cursor拒绝。没有条件时拒绝查询；`--browse --purpose "有限检查理由"`仅用于候选检查，不按返回顺序教课。

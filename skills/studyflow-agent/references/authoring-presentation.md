@@ -67,7 +67,7 @@
 
 ## 5. 只读质量工具
 
-使用已确认CLI绝对路径执行`course quality-check --file <package.json> --format json`。可加`--blueprint`、`--sources`、重复`--related`、`--validation-receipt`、`--rendering-receipt`，只读指定JSON；不读真实工作区、不重写课程。源Skill的`authoring_quality.py`只是CLI薄代理，其PATH定位不能替代已确认的安装路径。
+使用已确认CLI绝对路径执行`course quality-check --file <package.json> --format json`。可加`--blueprint`、`--sources`、重复`--related`、`--validation-receipt`、`--rendering-receipt`，只读指定JSON；不读真实工作区、不重写课程。旧 `authoring_quality.py` 的参数直接传给上述原生命令。使用 `system.installation` 核实 CLI 安装路径，再查询 `course_quality_check` 能力。
 
 蓝图若供工具使用，`objectives[].teaching_ids/exercise_ids`指实际内容ID；工具核对引用与覆盖。其他关系/先修说明是作者工件，工具不会验证其意义。`teaching_chain_list`仅列英语progression，不是普通课语义分析。
 

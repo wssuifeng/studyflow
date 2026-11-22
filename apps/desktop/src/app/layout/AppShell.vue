@@ -11,10 +11,11 @@ const props=defineProps<{ focus?: boolean; windowChrome?: boolean; active:string
 const emit=defineEmits<{navigate:[path:string];refresh:[]}>()
 const panel=reactive<PanelPresentation>({visible:false,width:420,full:false})
 const viewport=ref(window.innerWidth)
-const navigationWidth=computed(()=>navigationRailWidth(viewport.value,activeDisplay.value.navigation_width))
+const showNavigation = computed(() => !props.focus && !panel.navigationCollapsed)
+const navigationWidth=computed(()=>showNavigation.value ? navigationRailWidth(viewport.value,activeDisplay.value.navigation_width) : 0)
 const geometry=computed(()=>panelGeometry(viewport.value,panel.width,panel.full,!!props.focus,navigationWidth.value))
 let owner:symbol|undefined
-provide(workspacePanelKey,{geometry,navigationVisible:computed(()=>!props.focus),publish:(id,state)=>{owner=id;Object.assign(panel,state)},release:id=>{if(owner===id){panel.visible=false;panel.full=false;owner=undefined}}})
+provide(workspacePanelKey,{geometry,navigationAvailable:computed(()=>!props.focus),publish:(id,state)=>{owner=id;Object.assign(panel,{navigationCollapsed:false},state)},release:id=>{if(owner===id){panel.visible=false;panel.full=false;panel.navigationCollapsed=false;owner=undefined}}})
 const resize=()=>{viewport.value=window.innerWidth}
 onMounted(()=>window.addEventListener('resize',resize))
 onBeforeUnmount(()=>window.removeEventListener('resize',resize))
@@ -23,7 +24,7 @@ onBeforeUnmount(()=>window.removeEventListener('resize',resize))
  * 缺图或用户选择「无图」时 primaryBackground() 返回 null，走纯色回退。
  */
 const background=computed(()=>props.focus?null:primaryBackground())
-const shellClass=computed(()=>['app-shell',{'desktop-shell':isTauri(),'focus-shell':props.focus,'workspace-shell':!props.focus,'learning-shell':props.title==='课程工作区','panel-open':panel.visible,'panel-expanded':panel.visible&&(panel.full||geometry.value.compact),'has-theme-background':!!background.value,'theme-shell-owned':hasDisplayView('shell')}])
+const shellClass=computed(()=>['app-shell',{'desktop-shell':isTauri(),'focus-shell':props.focus,'workspace-shell':!props.focus,'navigation-collapsed':!props.focus&&!showNavigation.value,'learning-shell':props.title==='课程工作区','panel-open':panel.visible,'panel-expanded':panel.visible&&(panel.full||geometry.value.compact),'has-theme-background':!!background.value,'theme-shell-owned':hasDisplayView('shell')}])
 const shellProps=computed(()=>({
   class:shellClass.value,
   'data-theme-display':displayThemeId.value,
@@ -43,14 +44,13 @@ const titlebarProps=computed(()=>({context:props.title}))
 // need the custom titlebar because native decorations are disabled. Without
 // it a tool window has no reliable close/minimize/maximize/always-on-top entry.
 const showTitlebar=computed(()=>!props.focus || !!props.windowChrome)
-const showNavigation=computed(()=>!props.focus)
 </script>
 <template>
   <!-- 窗口壳：产品默认结构保留拖动与窗口按钮；候选可提供不同容器语言，功能入口不变。 -->
   <DisplaySlot v-if="showTitlebar" slot="titlebar" :fallback="WindowTitlebar" :view-props="titlebarProps"/>
   <DisplaySlot slot="shell" :fallback="'div'" :view-props="shellProps">
     <template #navigation>
-      <DisplaySlot v-if="showNavigation" slot="navigation" :fallback="SidebarNav" :view-props="navigationProps" @navigate="emit('navigate',$event)"/>
+      <DisplaySlot v-if="!focus" slot="navigation" :fallback="SidebarNav" :view-props="navigationProps" @navigate="emit('navigate',$event)"/>
     </template>
     <template #main>
       <main class="main-content">
